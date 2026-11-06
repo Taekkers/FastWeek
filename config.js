@@ -8,5 +8,5 @@ window.UGEKURV_CONFIG = {
     appId: "1:3280358977:web:fb5935f32b1b19d8b600c0"
   },
   /* Offentlig VAPID-nøgle til notifikationer. Valgfri, se README.md, del 3. */
-  vapidPublicKey: ""
+  vapidPublicKey: "BGwmt0-W_8Vur-ZzghpM7Cf0idvGslRwX1qc1Mk-MWMhohLAFs-zwdLDXkyD8KFKZD05VSH2x-ErU9qXQJX9LWk"
 };
