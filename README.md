@@ -20,7 +20,7 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 - **Madbudget** pr. uge eller pr. måned: planen vælger billigere retter, og indkøbslisten viser, om du holder budgettet.
 - **Kost og allergener:** kun vegetarretter, hurtige hverdagsretter (højst 30 min.) og 11 allergener, der holdes ude af madplanen. Allergenerne gættes ud fra ingrediensernes navne, så tjek altid varedeklarationen.
 - **Indkøbslisten** samles automatisk ud fra madplanens ingredienser.
-- **Tilbud i webversionen** ligger stadig i `data/offers.json`. Den er opdateret med uge 46 fra Meny, Spar, Lidl, Føtex, SuperBrugsen og Kvickly. Løvbjerg har ingen læsbare tilbud (pdf-avis), så den regnes på normalpris.
+- **Tilbud i webversionen** ligger i `data/offers.json` og opdateres hver fredag med den nye uges tilbud fra alle butikkerne. Løvbjerg har ingen læsbare tilbud (pdf-avis), så den regnes på normalpris.
 
 ## Det kan appen (version 2)
 
@@ -58,7 +58,7 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ## Del 3. Notifikationer: ugentlig påmindelse (valgfri, ca. 10 min)
 
-Hver torsdag kl. 18-19 får alle, der har slået det til, en besked om at lave ugens madplan.
+Hver fredag kl. 18-19 får alle, der har slået det til, en besked om at lave ugens madplan.
 
 1. Dobbeltklik på **tools/vapid.html** og tryk **Lav nøgler**. Du får en offentlig og en privat nøgle.
 2. Indsæt den **offentlige** nøgle i **config.js** ved `vapidPublicKey`. Gå ind på filen i GitHub (ikonet med blyant), indsæt, og tryk **Commit changes**.

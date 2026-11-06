@@ -1659,8 +1659,8 @@ function webRefresh(){
     if(s.state==='unsupported'){t.textContent=s.msg||'Notifikationer virker ikke i denne browser.';b.innerHTML='';return}
     if(s.state==='needhome'){t.textContent='På iPhone skal appen først lægges på hjemmeskærmen: tryk på Del og vælg Føj til hjemmeskærm. Åbn den derfra, og slå så notifikationer til her.';b.innerHTML='';return}
     if(s.state==='denied'){t.textContent='Du har blokeret notifikationer for denne side. Slå dem til i telefonens indstillinger.';b.innerHTML='';return}
-    if(s.state==='off'){t.textContent='Få en påmindelse torsdag aften om at lave ugens madplan og tjekke indkøbslisten.';b.innerHTML='<button class="btn sm" data-act="pushon">Slå notifikationer til</button>';return}
-    t.textContent='Slået til. Du får en påmindelse torsdag aften, når ugens tilbud er klar.';b.innerHTML='<button class="btn ghost sm" data-act="pushoff">Slå fra</button><button class="btn ghost sm" data-act="pushtest">Send en test</button>';
+    if(s.state==='off'){t.textContent='Få en påmindelse fredag aften om at lave ugens madplan og tjekke indkøbslisten.';b.innerHTML='<button class="btn sm" data-act="pushon">Slå notifikationer til</button>';return}
+    t.textContent='Slået til. Du får en påmindelse fredag aften, når ugens tilbud er klar.';b.innerHTML='<button class="btn ghost sm" data-act="pushoff">Slå fra</button><button class="btn ghost sm" data-act="pushtest">Send en test</button>';
   }).catch(function(){var t=$('#pn-t');if(t)t.textContent='Kunne ikke tjekke notifikationer.'});
 }
 

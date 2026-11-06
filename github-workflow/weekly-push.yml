@@ -1,9 +1,9 @@
-# Sender en påmindelse hver torsdag til alle, der har slået notifikationer til i FastWeek.
+# Sender en påmindelse hver fredag til alle, der har slået notifikationer til i FastWeek.
 # Gem denne fil i dit GitHub-repo som: .github/workflows/weekly-push.yml
 name: Ugentlig påmindelse
 on:
   schedule:
-    - cron: '0 17 * * 4'   # torsdag 17:00 UTC = 18:00 vinter / 19:00 sommer i Danmark
+    - cron: '0 17 * * 5'   # fredag 17:00 UTC = 18:00 vinter / 19:00 sommer i Danmark (efter at ugens tilbud er hentet)
   workflow_dispatch:        # giver en knap, så du kan sende en test med det samme
     inputs:
       dry_run:
