@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Hver bruger kan kun læse og skrive sit eget område.
+    match /data/users/{uid}/{rest=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Alt andet er lukket.
+  }
+}

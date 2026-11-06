@@ -1,0 +1,2075 @@
+<!doctype html>
+<html lang="da"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FastWeek</title>
+<meta name="description" content="Ugens madplan, lager og indkøbsliste med tilbud">
+<meta name="theme-color" content="#1B5E43">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="FastWeek"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<style>
+/* Layout: a calm, image-led weekly planner. Floating tab bar, soft cards with drawn plates, bottom sheets with a two-step guide. Pine for actions, tilbud-red only for prices, amber for the weekend. */
+:root{
+  --bg:#F1F3EE; --surface:#FFFFFF; --surface2:#F6F8F3; --ink:#15231C; --ink2:#566860; --line:#DDE3DB;
+  --pine:#1B5E43; --pine-ink:#FFFFFF; --pine-soft:#E0EDE4; --pine-deep:#123F2E;
+  --offer:#C4212C; --offer-soft:#FCE6E7;
+  --weekend:#8A5A0B; --weekend-soft:#F8EDD6;
+  --warn:#9A5400; --scrim:rgba(14,22,18,.5);
+  --sh:0 1px 2px rgba(18,40,30,.06),0 12px 28px -16px rgba(18,40,30,.24);
+  --sh-up:0 -10px 40px -12px rgba(18,40,30,.28);
+  --glass:rgba(255,255,255,.82);
+  --f-display:'Schibsted Grotesk',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  --f-body:'Schibsted Grotesk',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F1612; --surface:#17211C; --surface2:#1B2721; --ink:#E9EFEB; --ink2:#9CADA4; --line:#2A3830;
+  --pine:#5CC08F; --pine-ink:#08170E; --pine-soft:#1C3629; --pine-deep:#8BD9B2;
+  --offer:#FF7A82; --offer-soft:#3A1B1E;
+  --weekend:#E8B95F; --weekend-soft:#2E2818;
+  --warn:#F0A94B; --scrim:rgba(0,0,0,.62);
+  --sh:0 1px 2px rgba(0,0,0,.45),0 12px 28px -16px rgba(0,0,0,.7);
+  --sh-up:0 -10px 40px -12px rgba(0,0,0,.7);
+  --glass:rgba(23,33,28,.82); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F1612; --surface:#17211C; --surface2:#1B2721; --ink:#E9EFEB; --ink2:#9CADA4; --line:#2A3830;
+  --pine:#5CC08F; --pine-ink:#08170E; --pine-soft:#1C3629; --pine-deep:#8BD9B2;
+  --offer:#FF7A82; --offer-soft:#3A1B1E;
+  --weekend:#E8B95F; --weekend-soft:#2E2818;
+  --warn:#F0A94B; --scrim:rgba(0,0,0,.62);
+  --sh:0 1px 2px rgba(0,0,0,.45),0 12px 28px -16px rgba(0,0,0,.7);
+  --sh-up:0 -10px 40px -12px rgba(0,0,0,.7);
+  --glass:rgba(23,33,28,.82); color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 128px;-webkit-text-size-adjust:100%}
+body.lock{overflow:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+h1,h2,h3,p{margin:0}
+[hidden]{display:none!important}
+h2{font:700 18px/1.25 var(--f-display);text-wrap:balance}
+.lbl{font:600 11.5px var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--ink2)}
+.sm{font-size:13px}
+
+/* header */
+#top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg)}
+.top-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 8px}
+.brand{font:800 22px/1 var(--f-display);letter-spacing:-.02em}
+.brand i{font-style:normal;color:var(--pine)}
+.icon-btn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0;box-shadow:var(--sh)}
+.icon-btn svg,.tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* floating tab bar */
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;pointer-events:none;
+  padding:0 max(14px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(14px,env(safe-area-inset-left,0px))}
+.tabs-in{pointer-events:auto;max-width:420px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px;border-radius:24px;background:var(--glass);border:1px solid var(--line);box-shadow:var(--sh-up);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px 7px;border:0;background:none;color:var(--ink2);font:600 11.5px var(--f-body);border-radius:18px;transition:background .2s,color .2s}
+.tab[aria-current="page"]{color:var(--pine);background:var(--pine-soft)}
+
+/* controls */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 20px;border-radius:14px;border:1px solid var(--pine);background:var(--pine);color:var(--pine-ink);font-weight:700;transition:transform .12s,opacity .2s}
+.btn:active{transform:scale(.98)}
+.btn.ghost{background:transparent;color:var(--pine)}
+.btn.danger{background:transparent;border-color:var(--offer);color:var(--offer)}
+.btn.sm{min-height:38px;padding:0 14px;font-size:13.5px;border-radius:12px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.5;cursor:default}
+.x{width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:var(--ink2);font-size:24px;line-height:1;display:grid;place-items:center;padding:0}
+.chip{display:inline-flex;align-items:center;gap:4px;font:600 11.5px var(--f-body);padding:3px 9px;border-radius:999px;background:var(--pine-soft);color:var(--pine);white-space:nowrap}
+.chip.wk{background:var(--weekend-soft);color:var(--weekend)}
+.chip.off{background:var(--offer-soft);color:var(--offer)}
+.chip.warn{background:var(--weekend-soft);color:var(--warn)}
+.chip.ex{background:transparent;border:1px solid var(--line);color:var(--ink2)}
+.was{font:400 12px var(--f-mono);color:var(--ink2);text-decoration:line-through}
+
+/* sections */
+#view{max-width:640px;margin:0 auto;padding-block:8px 0;display:flex;flex-direction:column;gap:18px}
+.sec{display:flex;flex-direction:column;gap:8px}
+.banner{border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:10px 12px;font-size:13.5px;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.banner.warn{border-color:var(--warn);color:var(--warn)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh)}
+
+/* week header */
+.wnav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:6px}
+.wnav .x{width:44px;height:44px;border:1px solid var(--line);border-radius:14px;font-size:24px;background:var(--surface)}
+.wnav div.c{text-align:center}
+.wt{font:800 28px/1.05 var(--f-display);letter-spacing:-.02em}
+.wr{font-size:13px;color:var(--ink2);margin-top:2px}
+.wishes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.wishes .chip{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.wishes .chip.on{background:var(--pine-soft);border-color:transparent;color:var(--pine)}
+.edit-w{border:0;background:none;color:var(--pine);font-weight:700;font-size:13.5px;padding:6px 4px}
+
+/* hero (no plan yet) */
+.hero{padding:20px 18px 18px;display:flex;flex-direction:column;gap:14px;overflow:hidden;position:relative}
+.hero .fan{display:flex;justify-content:center;height:96px;margin-bottom:2px}
+.hero .fan .art{width:96px;height:96px;border-radius:50%;box-shadow:var(--sh);border:3px solid var(--surface)}
+.hero .fan .art:nth-child(1){transform:translateX(18px) rotate(-6deg);z-index:1}
+.hero .fan .art:nth-child(2){transform:translateY(-6px);z-index:3}
+.hero .fan .art:nth-child(3){transform:translateX(-18px) rotate(6deg);z-index:2}
+.hero h2{font-size:22px;letter-spacing:-.01em}
+.hero p{color:var(--ink2);max-width:44ch}
+.hero .alt{border:0;background:none;color:var(--ink2);text-decoration:underline;text-underline-offset:3px;font-size:13.5px;padding:4px 0;align-self:flex-start}
+
+/* day cards */
+.days{display:flex;flex-direction:column;gap:10px}
+.dc{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px;padding:10px 10px 10px 10px;border-radius:20px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--sh);transition:transform .15s,opacity .2s}
+.dc.wk{background:linear-gradient(180deg,var(--weekend-soft),var(--surface) 70%)}
+.dc.today{border-color:var(--pine);box-shadow:0 0 0 2px var(--pine-soft),var(--sh)}
+.dc-main{min-width:0;border:0;background:none;text-align:left;padding:0;display:grid;grid-template-columns:68px minmax(0,1fr);gap:14px;align-items:center}
+.dc:active{transform:scale(.995)}
+.art{border-radius:16px;overflow:hidden;background:var(--line);display:block;flex:none;position:relative}
+.art svg,.art img{display:block;width:100%;height:100%;object-fit:cover}
+.dc .art{width:68px;height:68px}
+.dc-t{display:flex;flex-direction:column;gap:3px;min-width:0}
+.dc-d{font:600 11.5px var(--f-body);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);display:flex;gap:8px;align-items:center}
+.dc.today .dc-d{color:var(--pine)}
+.dc.wk .dc-d{color:var(--weekend)}
+.dc-n{font:700 17px/1.2 var(--f-display);overflow-wrap:break-word;hyphens:auto;text-wrap:balance}
+.dc.done .dc-n{color:var(--ink2);text-decoration:line-through;text-decoration-thickness:1.5px}
+.dc.done .art{opacity:.55}
+.dc-m{font-size:12.5px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center}
+.dc-a{display:flex;gap:2px;align-items:center}
+.dc.lo{background:var(--surface2);border-style:dashed;box-shadow:none}
+.dc.lo .art{opacity:.6}
+.dc.lo .art::after{content:"↻";position:absolute;inset:0;display:grid;place-items:center;font-size:26px;color:#fff;background:rgba(16,34,26,.38)}
+.dc.none{box-shadow:none;background:transparent;border-style:dashed}
+.dc.none .art{background:transparent;display:grid;place-items:center;color:var(--ink2);border:1.5px dashed var(--line)}
+.dc.none .art svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.ck{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--ink2);display:grid;place-items:center;padding:0;transition:background .2s,border-color .2s,transform .2s}
+.ck svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.ck.on{background:var(--pine);border-color:var(--pine);color:var(--pine-ink)}
+.ol{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink2);text-decoration:none;flex:none}
+.ol svg,.srcl svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ol:hover,.srcl:hover{color:var(--pine)}
+.srcl{display:inline-flex;align-items:center;gap:8px;color:var(--pine);font-weight:600;font-size:14.5px;text-decoration:none;padding:6px 0}
+.srcl span{text-decoration:underline;text-underline-offset:3px}
+.foot{display:flex;gap:10px;flex-wrap:wrap}
+.foot .btn{flex:1 1 auto}
+
+/* shopping */
+.stores{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(108px,1fr);gap:10px;overflow-x:auto;scroll-snap-type:x proximity;padding:12px 2px 6px;margin:-12px 0 -6px;scrollbar-width:none}
+.stores::-webkit-scrollbar{display:none}
+.sto{scroll-snap-align:start}
+.sto{position:relative;display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px 12px 12px;border-radius:18px;border:1.5px solid var(--line);background:var(--surface);box-shadow:var(--sh);transition:border-color .2s,background .2s,transform .12s;min-width:0}
+.sto:active{transform:scale(.985)}
+.sto[aria-pressed="true"]{border-color:var(--pine);background:var(--pine-soft)}
+.sto b{font:700 13px var(--f-display);color:var(--ink2);white-space:nowrap}
+.sto .tot{font:600 21px/1.1 var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.sto .tot small{font:500 12px var(--f-mono);color:var(--ink2);margin-left:2px}
+.sto .sv{font-size:12px;color:var(--ink2)}
+.sto .best{position:absolute;top:-9px;left:12px;background:var(--pine);color:var(--pine-ink);font:700 10.5px var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+.sto .bar{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}
+.sto .bar i{display:block;height:100%;background:var(--pine);border-radius:4px}
+.reco{padding:16px;display:flex;flex-direction:column;gap:12px}
+.reco .big{font:800 20px/1.2 var(--f-display);letter-spacing:-.01em}
+.reco .big em{font-style:normal;color:var(--pine)}
+.fine{font-size:12.5px;color:var(--ink2)}
+.group{display:flex;flex-direction:column;border-radius:18px;background:var(--surface);border:1px solid var(--line);overflow:hidden}
+.it{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line);align-items:center}
+.it:last-child{border-bottom:0}
+.it input{width:22px;height:22px;margin:0;accent-color:var(--pine)}
+.it-n{font-weight:600;overflow-wrap:anywhere}
+.it.on .it-n{text-decoration:line-through;color:var(--ink2)}
+.it-m{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12.5px;color:var(--ink2);align-items:center}
+.it-p{text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.it-p .pr{font:600 14px var(--f-mono);font-variant-numeric:tabular-nums}
+.it-p .pr.off{color:var(--offer)}
+.it-x{display:flex;justify-content:space-between;gap:8px;align-items:center;width:100%}
+.add-row{display:flex;gap:8px}
+.add-row input{flex:1;min-width:0}
+
+/* stock + recipe lists */
+.li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:none;border-left:0;border-right:0;border-top:0;width:100%;text-align:left}
+.li:last-child{border-bottom:0}
+.li .nm{font-weight:600;overflow-wrap:anywhere;display:block}
+.li .sub{font-size:12.5px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:2px 8px;align-items:center}
+.li .qt{font:500 14px var(--f-mono);text-align:right}
+.li.rec{grid-template-columns:48px minmax(0,1fr) auto;padding:10px 14px}
+.li.rec .art{width:48px;height:48px;border-radius:13px}
+.list{border-radius:18px;background:var(--surface);border:1px solid var(--line);overflow:hidden}
+.stat{display:flex;flex-wrap:wrap;gap:6px}
+
+/* forms + sheet */
+input[type=text],input[type=number],input[type=date],input:not([type]),select,textarea{width:100%;min-height:46px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px}
+input[type=checkbox]{accent-color:var(--pine)}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:12.5px;font-weight:600;color:var(--ink2)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.chk{display:flex;gap:10px;align-items:center;min-height:36px}
+.chk input{width:20px;height:20px}
+.ing{display:grid;grid-template-columns:minmax(0,1fr) 76px 66px 36px;gap:6px;align-items:center}
+.ing input,.ing select{padding:8px 6px}
+#sheet .scrim{position:fixed;inset:0;background:var(--scrim);z-index:40}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;margin:0 auto;max-width:600px;max-height:92dvh;overflow:auto;background:var(--bg);border-radius:26px 26px 0 0;border:1px solid var(--line);box-shadow:var(--sh-up);
+  padding:0 max(18px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px))}
+.sh-grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:8px auto 0}
+.sh-head{position:sticky;top:0;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:10px 0 10px;z-index:1}
+.sh-body{display:flex;flex-direction:column;gap:14px}
+.photo{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.photo input[type=file]{min-height:0;border:0;padding:0;background:none;font-size:14px}
+.hero-img{border-radius:20px;overflow:hidden;aspect-ratio:16/10;position:relative;box-shadow:var(--sh)}
+.hero-img .art{width:100%;height:100%;border-radius:0}
+.hero-img .cam{position:absolute;right:10px;bottom:10px}
+.cam{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;background:var(--glass);color:var(--ink);font:600 13px var(--f-body);padding:9px 14px;box-shadow:var(--sh);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.cam svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.kcal-line{display:flex;flex-wrap:wrap;gap:6px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:14px;max-width:calc(100vw - 32px);box-shadow:var(--sh)}
+.rv{display:grid;grid-template-columns:24px minmax(0,1fr) 78px 70px;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+
+/* segmented controls and toggles */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.seg button{min-height:42px;border:0;border-left:1px solid var(--line);background:none;font-weight:600;color:var(--ink2);transition:background .18s,color .18s}
+.seg button:first-child{border-left:0}
+.seg button.on{background:var(--pine-soft);color:var(--pine)}
+.seg button[disabled]{opacity:.45;cursor:default}
+.ingw{display:flex;flex-direction:column;gap:4px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.rl{border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.rl summary{padding:9px 12px;font-size:13px;color:var(--ink2);cursor:pointer}
+.rl .rule{padding:4px 12px 12px}
+.rule{display:flex;flex-direction:column;gap:10px}
+.hint{font-size:13px;color:var(--ink2)}
+.lnk{background:none;border:0;color:var(--pine);font-weight:700;padding:4px 0;font-size:14px}
+
+/* guide (ugens ønsker) */
+.sheet.wiz{padding-bottom:0;display:flex;flex-direction:column;max-height:94dvh;overflow:hidden}
+.wz-head{padding:12px 0 6px;display:flex;flex-direction:column;gap:10px}
+.wz-top{display:flex;align-items:center;justify-content:space-between}
+.wz-step{font:600 12px var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--ink2)}
+.wz-bar{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.wz-bar i{height:4px;border-radius:4px;background:var(--line);transition:background .3s}
+.wz-bar i.on{background:var(--pine)}
+.wz-body{overflow:auto;padding:12px 2px 18px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0}
+.wz-q{font:800 24px/1.15 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.wz-s{color:var(--ink2);max-width:46ch}
+.wz-foot{border-top:1px solid var(--line);background:var(--bg);padding:12px 0 calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
+.wz-sum{font-size:13px;color:var(--ink2);text-align:center}
+.wd{display:grid;grid-template-columns:46px minmax(0,1fr) 46px 50px;gap:8px;align-items:center;padding:8px 10px;border-radius:16px;background:var(--surface);border:1px solid var(--line)}
+.wd.wk{background:var(--weekend-soft);border-color:transparent}
+.wd.off{opacity:.6}
+.wd.lo{grid-template-columns:46px minmax(0,1fr);background:var(--surface2);border-style:dashed}
+.wd-l{display:flex;flex-direction:column;line-height:1.15}
+.wd-l b{font:700 13px var(--f-mono)}
+.wd-l span{font:400 12px var(--f-mono);color:var(--ink2)}
+.wd-lo{font-size:13.5px;color:var(--ink2)}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--bg)}
+.seg3 button{min-height:40px;border:0;border-left:1px solid var(--line);background:none;font:600 13.5px var(--f-mono);color:var(--ink2);transition:background .18s,color .18s}
+.seg3 button:first-child{border-left:0}
+.seg3 button.on{background:var(--pine);color:var(--pine-ink)}
+.seg3 button[disabled]{opacity:.5}
+.tg{min-height:40px;border-radius:12px;border:1px solid var(--line);background:var(--bg);font:600 13px var(--f-body);color:var(--ink2);transition:background .18s,color .18s,border-color .18s}
+.tg.on{background:var(--pine-soft);border-color:var(--pine);color:var(--pine)}
+.wz-all{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.wz-all .seg3{width:176px}
+.pr-row{display:flex;flex-direction:column;gap:6px}
+.pr-row b{font:700 15px var(--f-display)}
+.seg5{display:grid;grid-template-columns:1.25fr 1.25fr 1fr 1fr 1fr;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--surface)}
+.seg5 button{min-height:44px;border:0;border-left:1px solid var(--line);background:none;font:600 13.5px var(--f-body);color:var(--ink2);transition:background .18s,color .18s}
+.seg5 button:first-child{border-left:0}
+.seg5 button.on{background:var(--pine);color:var(--pine-ink)}
+.seg5 button.on.no{background:var(--offer);color:#fff}
+.lowcard{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;text-align:left;width:100%;padding:16px;border-radius:20px;border:1.5px solid var(--line);background:var(--surface);box-shadow:var(--sh);transition:border-color .2s,background .2s}
+.lowcard[aria-checked="true"]{border-color:var(--pine);background:var(--pine-soft)}
+.lowcard b{font:700 17px var(--f-display)}
+.lowcard .lc{display:flex;flex-direction:column;gap:3px}
+.lowcard .lc span{font-size:13px;color:var(--ink2)}
+.sw{width:52px;height:32px;border-radius:32px;background:var(--line);position:relative;transition:background .2s;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .22s cubic-bezier(.3,1.4,.5,1)}
+.lowcard[aria-checked="true"] .sw{background:var(--pine)}
+.lowcard[aria-checked="true"] .sw::after{transform:translateX(20px)}
+@media (max-width:380px){.ing{grid-template-columns:minmax(0,1fr) 64px 60px 32px}.rv{grid-template-columns:24px minmax(0,1fr) 64px 60px}.wd{grid-template-columns:40px minmax(0,1fr) 42px 46px;gap:6px}.sto .tot{font-size:18px}}
+@media (prefers-reduced-motion:no-preference){
+  .sheet{animation:up .32s cubic-bezier(.2,.9,.3,1)}
+  @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+  #sheet .scrim{animation:fade .25s ease-out}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .wz-body.fresh>*{animation:rise .3s ease-out both}
+  @keyframes rise{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+  .days .dc{animation:rise .35s ease-out both}
+  .days .dc:nth-child(2){animation-delay:.03s}.days .dc:nth-child(3){animation-delay:.06s}.days .dc:nth-child(4){animation-delay:.09s}.days .dc:nth-child(5){animation-delay:.12s}.days .dc:nth-child(6){animation-delay:.15s}.days .dc:nth-child(7){animation-delay:.18s}
+  .ck.on{animation:pop .3s cubic-bezier(.3,1.5,.5,1)}
+  @keyframes pop{0%{transform:scale(.8)}100%{transform:scale(1)}}
+}
+
+.ask{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:14px 16px;border-radius:18px;border:1px solid var(--pine);background:var(--pine-soft);color:var(--pine-deep)}
+.ask-t{display:flex;flex-direction:column;gap:2px}
+.ask-t b{font:700 16px var(--f-display)}
+.ask-t span{font-size:13px;color:var(--ink2)}
+.ask-go{font-size:28px;line-height:1;color:var(--pine)}
+.it-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.it-o{font-size:12.5px;color:var(--offer)}
+.hero-img .art.wide{width:100%;height:100%;border-radius:0}
+.hero h2{text-align:left}
+.sec>.btn{align-self:flex-start}
+.fan .art{display:block}
+
+.art.plate{display:grid;place-items:center;background:transparent;color:var(--ink2);border:1.5px dashed var(--line)}
+.art.plate svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+@media (max-width:380px){.dc-main{grid-template-columns:58px minmax(0,1fr);gap:11px}.dc .art{width:58px;height:58px;border-radius:14px}.dc-n{font-size:16px}.ck{width:40px;height:40px}.dc{padding:9px}}
+
+.sto.pair{background:linear-gradient(160deg,var(--weekend-soft),var(--surface) 75%);border-color:var(--weekend)}
+.sto.pair[aria-pressed="true"]{border-color:var(--pine);background:var(--pine-soft)}
+.sto.pair b{white-space:normal;line-height:1.2}
+.sto.pair .best{background:var(--weekend);color:#fff}
+.pairbox{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.reco .big.sm{font-size:17px}
+.storehead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 2px 0;font-size:13px;color:var(--ink2)}
+.storehead b{font:800 18px var(--f-display);color:var(--ink);letter-spacing:-.01em}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* v9: favourites, rating, cook view */
+.hrt{color:var(--offer);font-size:14px;line-height:1;font-weight:700}
+.dc-d .hrt{margin-left:6px}
+.rt{display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface2);font:600 12px var(--f-body);color:var(--weekend);cursor:pointer;width:max-content}
+.rt:focus-visible{outline:2px solid var(--pine);outline-offset:2px}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px}
+.btnrow .btn{flex:1 1 auto}
+.stars{display:flex;justify-content:center;gap:6px;margin:6px 0 18px}
+.stars button{width:52px;height:52px;border-radius:14px;border:1px solid var(--line);background:var(--surface2);font-size:28px;line-height:1;color:var(--ink2);transition:background .18s,color .18s,transform .12s}
+.stars button.on{background:var(--weekend-soft);color:var(--weekend);border-color:transparent}
+.stars button:active{transform:scale(.94)}
+.seg3 button.no.on{background:var(--offer);color:#fff}
+.fvrow{width:100%;text-align:left}
+.fvrow .hb{font-size:24px;line-height:1;color:var(--ink2);padding:0 6px}
+.fvrow[aria-pressed="true"] .hb{color:var(--offer)}
+.fvrow[aria-pressed="true"]{background:var(--surface2)}
+.steps{margin:0;padding:0 0 0 22px;display:flex;flex-direction:column;gap:12px;line-height:1.5}
+.steps li::marker{font:600 13px var(--f-mono);color:var(--pine)}
+.cookl .ci{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-top:1px solid var(--line)}
+.cookl .ci:first-child{border-top:0}
+.srcl{display:flex;align-items:center;gap:8px;margin:14px 0 0;color:var(--pine);font-weight:600;text-decoration:none}
+.srcl svg{width:18px;height:18px;flex:none}
+/* v10: budget card, allergen grid */
+.bud{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.bud-r{font:600 15px/1.35 var(--f-body)}
+.bud-r b{font:800 18px var(--f-display)}
+.bbar{height:8px;border-radius:99px;background:var(--pine-soft);overflow:hidden}
+.bbar i{display:block;height:100%;background:var(--pine);border-radius:99px}
+.bbar.over i{background:var(--warn)}
+.algs{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+/* v11: én butik eller flere */
+.opts{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
+.optl{display:flex;flex-direction:column;gap:8px}
+.opt{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;text-align:left;padding:12px;border-radius:16px;border:1.5px solid var(--line);background:var(--surface2);min-width:0}
+.opt[aria-pressed="true"]{border-color:var(--pine);background:var(--pine-soft)}
+.opt.rec{border-color:var(--pine)}
+.opt .o-n{font:700 14px/1.25 var(--f-display);color:var(--ink);min-width:0;overflow-wrap:anywhere;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.opt .o-t{font:600 18px/1.1 var(--f-mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em;text-align:right;white-space:nowrap}
+.opt .o-t small{font:500 12px var(--f-mono);color:var(--ink2)}
+.opt .o-d,.opt .o-s{grid-column:1/-1;font-size:12.5px;color:var(--ink2)}
+.opt .best{background:var(--pine);color:var(--pine-ink);font:700 10.5px var(--f-body);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px}
+
+/* v12 foretrukne mærker */
+.chip.bk{min-height:28px;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer;background:transparent;border:1px dashed var(--line);color:var(--ink2);padding:3px 10px}
+.chip.bk.on{background:var(--pine-soft);border:1px solid transparent;color:var(--pine)}
+.brs{display:flex;flex-wrap:wrap;gap:8px}
+.brs .chip{min-height:36px;padding:6px 12px;font-size:13px;cursor:pointer;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.brs .chip.on{background:var(--pine-soft);border-color:transparent;color:var(--pine)}
+
+#login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
+#login[hidden]{display:none!important}
+.lg-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(21,35,28,.08)}
+.lg-brand{font-weight:800;font-size:26px;letter-spacing:-.02em;color:var(--ink)}
+.lg-brand i{font-style:normal;color:var(--pine)}
+.lg-card h1{margin:6px 0 0;font-size:20px;line-height:1.2;color:var(--ink)}
+.lg-card p{margin:0 0 6px;color:var(--ink2);font-size:14px;line-height:1.45}
+.lg-card label{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink2);margin-top:8px}
+.lg-card input{font:inherit;font-size:16px;padding:13px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);color:var(--ink);width:100%;box-sizing:border-box}
+.lg-card input:focus{outline:2px solid var(--pine);outline-offset:1px;border-color:var(--pine)}
+.lg-err{min-height:20px;color:var(--offer);font-size:13.5px;font-weight:600}
+.lg-btn{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:14px;padding:14px;background:var(--pine);color:var(--pine-ink);cursor:pointer}
+.lg-btn:disabled{opacity:.5}
+.lg-alt{font:inherit;font-size:14px;font-weight:600;background:none;border:0;color:var(--pine);padding:10px;cursor:pointer}
+.lg-fine{font-size:12.5px!important}
+</style></head><body>
+
+<header id="top"><div class="top-in"><div class="brand">Fast<i>Week</i></div><button class="icon-btn" data-act="gear" aria-label="Indstillinger"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
+<main id="view" aria-live="polite"></main>
+<nav id="tabs" aria-label="Hovedmenu"><div class="tabs-in">
+  <button class="tab" data-act="tab" data-tab="week"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Ugeplan</button>
+  <button class="tab" data-act="tab" data-tab="stock"><svg viewBox="0 0 24 24"><path d="M3 7l9-4 9 4v10l-9 4-9-4V7z"/><path d="M3 7l9 4 9-4M12 11v10"/></svg>Lager</button>
+  <button class="tab" data-act="tab" data-tab="shop"><svg viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>Indkøb</button>
+</div></nav>
+<div id="sheet"></div>
+<div id="toast" hidden></div>
+
+
+<script src="config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="platform-web.js"></script>
+<script>
+(function(){
+'use strict';
+var $=function(s){return document.querySelector(s)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var DAY=864e5;
+var DAYS=['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'];
+var DS=['Man','Tir','Ons','Tor','Fre','Lør','Søn'];
+var MON=['jan','feb','mar','apr','maj','jun','jul','aug','sep','okt','nov','dec'];
+var STORES=['Bilka','Netto','Rema 1000','Coop 365','Lidl','Føtex','SuperBrugsen','Kvickly','Meny','Spar','Løvbjerg'];
+var CATS=['Frugt & grønt','Kød & fisk','Mejeri & æg','Kolonial','Frost','Andet'];
+var UNITS=['g','ml','stk'];
+var PROTS=[['','Ingen/andet'],['okse','Okse'],['kylling','Kylling'],['svin','Svin'],['fisk','Fisk'],['vegetar','Vegetar'],['aeg','Æg']];
+var ASK=[['fisk','Fisk'],['kylling','Fjerkræ'],['okse','Oksekød'],['svin','Svinekød'],['vegetar','Vegetar']];
+var LOW_MAX=660,KALLOW=70;
+var PIDX0={'Bilka':1.11,'Netto':1.054,'Rema 1000':1,'Coop 365':1.09,'Lidl':0.989,'Føtex':1.14,'SuperBrugsen':1.184,'Kvickly':1.172,'Meny':1.252,'Spar':1.196,'Løvbjerg':1.15};
+var KID_W=.6;
+var PAIR_MIN=25;
+var DEF={persons:2,adults:2,kids:0,budget:0,budgetPer:'week',stopVal:50,veg:false,quick:false,allergens:[],friWeekend:false,candy:true,oko:true,free:true,welfare:true,drive:40,stores:STORES.slice(),example:false};
+var LINK='<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
+var CHECK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+var CAM='<svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>';
+var PLATE='<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/></svg>';
+
+/* ---------- helpers ---------- */
+var slug=function(s){return String(s||'').toLowerCase().trim().replace(/æ/g,'ae').replace(/ø/g,'oe').replace(/å/g,'aa').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x'};
+var nf=function(n,d){return Number(n).toLocaleString('da-DK',{maximumFractionDigits:d==null?1:d})};
+var kr=function(n){n=Number(n)||0;return n.toLocaleString('da-DK',{minimumFractionDigits:(Math.round(n*100)%100?2:0),maximumFractionDigits:2})+' kr'};
+var num=function(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:0};
+var r1=function(n){return Math.round(n*10)/10};
+var dec=function(n){return String(n).replace('.',',')};
+function fq(q,u){q=Number(q)||0;if(u==='g'&&q>=1000)return nf(q/1000,2)+' kg';if(u==='ml'&&q>=1000)return nf(q/1000,2)+' l';return nf(q,1)+' '+u}
+function pq(p,q){return p.leftover?nf(q,1)+' port.':fq(q,p.unit)}
+var uid=function(){return Math.random().toString(36).slice(2,9)};
+function parseYmd(s){var p=String(s).split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]))}
+function ymd(d){return d.toISOString().slice(0,10)}
+function todayStr(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')}
+function addDays(s,n){return ymd(new Date(parseYmd(s).getTime()+n*DAY))}
+function mondayOf(s){var d=parseYmd(s);var wd=(d.getUTCDay()+6)%7;return ymd(new Date(d.getTime()-wd*DAY))}
+function isoWeek(s){var d=parseYmd(s);var day=(d.getUTCDay()+6)%7;d.setUTCDate(d.getUTCDate()-day+3);var y=d.getUTCFullYear();var f=new Date(Date.UTC(y,0,4));var fd=(f.getUTCDay()+6)%7;f.setUTCDate(f.getUTCDate()-fd+3);return[y,1+Math.round((d-f)/(7*DAY))]}
+function weekId(mon){var w=isoWeek(mon);return w[0]+'-W'+String(w[1]).padStart(2,'0')}
+function daysBetween(a,b){var x=(parseYmd(b)-parseYmd(a))/DAY;return isFinite(x)?x:999}
+function fmtDate(d){var x=parseYmd(d);return x.getUTCDate()+'. '+MON[x.getUTCMonth()]}
+function wdIdx(s){return (parseYmd(s).getUTCDay()+6)%7}
+function monOfWeek(w){var m=String(w).match(/^(\d{4})-W(\d{2})$/);if(!m)return mondayOf(todayStr());return addDays(mondayOf(m[1]+'-01-04'),(Number(m[2])-1)*7)}
+/* Old settings had one switch (welfare). It now has two: oekologi and frilands. Old settings had "persons"; it is now adults + kids (a child counts KID_W). */
+function normSettings(d){
+  var s=Object.assign({},DEF,d||{});
+  if(d&&d.oko===undefined&&d.free===undefined&&d.welfare!==undefined){s.oko=!!d.welfare;s.free=!!d.welfare}
+  s.oko=!!s.oko;s.free=!!s.free;s.welfare=s.oko||s.free;
+  var ad=(d&&d.adults!=null)?d.adults:((d&&d.persons>0)?Math.round(d.persons):DEF.adults);
+  s.adults=Math.min(12,Math.max(1,Math.round(num(ad))||1));
+  s.kids=Math.min(10,Math.max(0,Math.round(num(s.kids))||0));
+  s.persons=r1(s.adults+KID_W*s.kids);
+  delete s.zip;delete s.area;
+  s.budget=Math.max(0,Math.round(num(s.budget)));
+  s.budgetPer=s.budgetPer==='month'?'month':'week';
+  s.stopVal=Math.min(500,Math.max(0,Math.round(num(s.stopVal==null?DEF.stopVal:s.stopVal))));
+  s.veg=!!s.veg;s.quick=!!s.quick;
+  s.allergens=(Array.isArray(s.allergens)?s.allergens:[]).filter(function(k){return ALG[k]});
+  return s;
+}
+function hhLabel(x){x=x||S.settings;var a=x.adults,k=x.kids;return a+(a===1?' voksen':' voksne')+(k?' og '+k+(k===1?' barn':' børn'):'')}
+
+/* ---------- allergens and diet (guessed from the ingredient names) ---------- */
+var ALG={
+  gluten:{n:'Gluten',re:/hvede|(?:^|[^a-zæøå])rug|(?:^|[^a-zæøå])byg|havre|mel(?![a-zæøå])|pasta|spaghetti|penne|fusilli|farfalle|tagliatelle|lasagne|nudler|noodle|brød|bolle|tortilla|wrap|naan|pita|couscous|bulgur|semulje|rasp|panko|kiks|toast|pizzabund|dej(?![a-zæøå])|soja|teriyaki|hoisin/,no:/kartoffelmel|majsmel|rismel|mandelmel|kikærtemel|karamel|karrypasta|currypasta|tomatpasta|chilipasta|kødbolle|fiskebolle|risnudler|glasnudler|majsstivelse/g},
+  maelk:{n:'Mælk',re:/mælk|fløde|smør|(?:^|[^a-zæøå])ost|[a-zæøå]ost(?![a-zæøå])|parmesan|mozzarella|cheddar|feta|mascarpone|ricotta|gouda|emmental|halloumi|yoghurt|cremefraiche|creme fraiche|skyr|ghee|budding/,no:/kokosmælk|kokosfløde|mandelmælk|havremælk|sojamælk|risdrik|jordnøddesmør|nøddesmør|cashewsmør|kakaosmør|peanutbutter|sesamsmør/g},
+  aeg:{n:'Æg',re:/(?:^|[^a-zæøå])æg(?![a-zæøå])|(?:høns|ande|vagtel|kylling|frilands)e?æg|æggeblomme|æggehvide|ægge|mayonnaise|remoulade/},
+  nodder:{n:'Nødder',re:/mandl|mandel|valnød|hasselnød|cashew|pistac|pekan|macadamia|paranød|nøddemix|nødder|nøddeblanding/,no:/muskatnød|kokosnød|jordnød/g},
+  jordnodder:{n:'Jordnødder',re:/jordnød|peanut/},
+  soja:{n:'Soja',re:/soja|tofu|edamame|teriyaki|miso(?![a-zæøå])|tempeh|hoisin/},
+  fisk:{n:'Fisk',re:/fisk|laks|torsk|(?:^|[^a-zæøå])tun(?![a-zæøå])|(?:^|[^a-zæøå])sej(?![a-zæøå])|makrel|sild|rødspætte|ansjos|fishsauce|fish sauce|skrubbe|sardin|hellefisk|kuller|ørred|havtaske|kaviar/},
+  skaldyr:{n:'Skaldyr',re:/rejer|(?:^|[^a-zæøå])reje(?![a-zæøå])|krabbe|hummer|musling|østers|blæksprutte|calamari|skaldyr|krebs/},
+  sesam:{n:'Sesam',re:/sesam|tahin/},
+  selleri:{n:'Selleri',re:/selleri|bouillon|(?:^|[^a-zæøå])fond(?![a-zæøå])/},
+  sennep:{n:'Sennep',re:/sennep|dijon|mustard/}
+};
+var ALG_KEYS=Object.keys(ALG);
+var MEATRE=/bacon|kød|kylling|svin|okse|skinke|pølse|salsiccia|medister|frikadelle|laks|torsk|(?:^|[^a-zæøå])tun(?![a-zæøå])|fisk|rejer|sild|makrel|ansjos|fishsauce|fish sauce|kalv|(?:^|[^a-zæøå])lam(?![a-zæøå])|flæsk|leverpostej/;
+function algOf(name){
+  var t=String(name||'').toLowerCase(),out=[];
+  ALG_KEYS.forEach(function(k){var a=ALG[k],x=a.no?t.replace(a.no,' '):t;if(a.re.test(x))out.push(k)});
+  return out;
+}
+function recAlg(r){var set={};((r&&r.ing)||[]).forEach(function(g){algOf(g.n).forEach(function(k){set[k]=1})});return ALG_KEYS.filter(function(k){return set[k]})}
+function recBad(r){var want=S.settings.allergens||[];if(!want.length||!r)return [];return recAlg(r).filter(function(k){return want.indexOf(k)>-1})}
+function isVeg(r){
+  if(!r)return false;
+  if(r.prot==='okse'||r.prot==='kylling'||r.prot==='svin'||r.prot==='fisk')return false;
+  return !(r.ing||[]).some(function(g){return MEATRE.test(String(g.n||'').toLowerCase())});
+}
+function recAllowed(r){if(!r)return false;if(S.settings.veg&&!isVeg(r))return false;return !recBad(r).length}
+var GEN_WHY='';
+
+/* ---------- budget ---------- */
+function weekBudget(){var b=Number(S.settings.budget)||0;return b>0?(S.settings.budgetPer==='month'?b/4.33:b):0}
+function minIdx(){return Math.min.apply(null,activeStores().map(pidx))||1}
+function daysIds(days){var o=[];(days||[]).forEach(function(d){if(!d||!d.r||d.lo||d.done)return;o.push(d.r);if(d.dbl)o.push(d.r)});return o}
+/* Rough cost of what has to be bought for these dishes (stock considered), at the cheapest chosen store, without offers. */
+function planEst(ids,mi){
+  var needs=aggNeeds(ids),tot=0;
+  Object.keys(needs).forEach(function(key){
+    var n=needs[key],p=pan(n.k),same=p&&p.unit===n.unit;
+    var b=buyCalc(same?curQty(p):0,same?reserve(p):0,same?(p.pack||0):0,n.need,n.unit);
+    if(b)tot+=lineCost({k:n.k,unit:n.unit,qty:b.qty});
+  });
+  return tot*(mi||minIdx());
+}
+
+/* From Thursday the app looks at next week; before that at the current week. */
+function targetMon(){var t=todayStr(),m=mondayOf(t);return wdIdx(t)>=3?addDays(m,7):m}
+
+/* ---------- state ---------- */
+var S={tab:'week',mon:targetMon(),recipes:{},pantry:{items:{}},settings:Object.assign({},DEF),plans:{},offers:{},lists:{},prefs:{},
+  ready:{},q:'',nodb:false,slow:false,ro:false,sample:null,imgOK:false,ctl:null,assets:null,sel:'',wz:null,skip:{},wzChecked:false,
+  ref:{stores:{},items:{}},starter:{},praw:{},brands:{},bnames:{},uid:'',hasSettings:null,hasPantry:null,onb:false};
+var db=null,raf=0,UB='';
+function udoc(p){return db.doc(UB+p)}
+function ucol(p){return db.collection(UB+p)}
+var isWeekend=function(i){return i>=5||(i===4&&S.settings.friWeekend)};
+var wid=function(){return weekId(S.mon)};
+var pan=function(k){return (S.pantry.items||{})[k]};
+
+/* ---------- writes ---------- */
+function up(ref,data){return ref.update(data).catch(function(e){if(e&&e.code==='invalid_argument')return ref.set(data);throw e})}
+function save(fn){return Promise.resolve().then(fn).catch(function(e){console.error(e);toast('Kunne ikke gemme. Prøv igen.')})}
+var tt=0;
+function toast(m){var t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(tt);tt=setTimeout(function(){t.hidden=true},2800)}
+
+/* ---------- stock model ---------- */
+function curQty(p){var q=Number(p.qty)||0;if(p.use>0&&p.at){var d=daysBetween(p.at,todayStr());if(d>0)q=Math.max(0,q-p.use*d/7)}return q}
+function reserve(p){var m=p.rule||'under';if(m==='under')return p.min||0;if(m==='days')return (p.use||0)*(p.days||0)/7;return 0}
+function isLow(p){if(p.leftover)return false;var m=p.rule||'under',c=curQty(p);if(m==='never')return false;if(m==='out')return c<=1e-6;var r=reserve(p);return r>0&&c<r-1e-9}
+function qpatch(q){return{qty:r1(Math.max(0,q)),at:todayStr()}}
+function ruleOf(p){p=p||{};return{rule:p.rule||'under',min:p.min||0,days:p.days||2,use:p.use||0,pack:p.pack||0}}
+function ruleSummary(r,u){
+  if(r.rule==='never')return 'Ingen automatisk køb';
+  if(r.rule==='out')return 'Køb når den er brugt op';
+  if(r.rule==='days')return r.use>0?'Køb når der er under '+nf(r.days,1)+' dage tilbage':'Angiv forbrug pr. uge';
+  return r.min>0?'Køb når under '+fq(r.min,u||'g'):'Ingen grænse sat';
+}
+
+/* ---------- kalorier (overslag) ---------- */
+function kcalOf(r){
+  var tot=0,miss=0;
+  ((r&&r.ing)||[]).forEach(function(g){
+    var p=pan(slug(g.n)),kc=p&&p.kc>=0&&p.kc!=null&&p.kc!==''?Number(p.kc):null;
+    if(kc==null){miss++;return}
+    tot+=g.u==='stk'?g.q*kc:g.q*kc/100;
+  });
+  return{k:Math.round(tot/2+KALLOW),miss:miss};
+}
+
+/* ---------- offers and store prices ---------- */
+function words(s){return String(s||'').toLowerCase().replace(/[^a-zæøå0-9 ]+/g,' ').split(/\s+/).filter(Boolean)}
+function nameMatch(itemName,offerName){
+  var iw=words(itemName),ow=words(offerName);if(!iw.length||!ow.length)return false;
+  return iw.every(function(w){return ow.some(function(o){return o.indexOf(w)===0||(o.length>=5&&w.indexOf(o)===0)})});
+}
+/* Kød, fisk og æg kan koebes oekologisk (kpo) eller som frilands / 3 hjerter (kpf). Brugeren vaelger hvilke der accepteres. */
+function accQ(){return{oko:!!S.settings.oko,god:!!S.settings.free}}
+function qprices(p){if(!p)return{oko:0,god:0};var o=p.kpo>0?p.kpo:0,f=p.kpf>0?p.kpf:0;if(!o&&!f&&p.kpg>0){o=p.kpg;f=p.kpg}return{oko:o,god:f}}
+function qbest(p){var a=accQ(),qp=qprices(p),b=null;if(a.oko&&qp.oko>0)b={q:'oko',price:qp.oko};if(a.god&&qp.god>0&&(!b||qp.god<b.price))b={q:'god',price:qp.god};return b}
+function qual(k){return !!qbest(pan(k))}
+function qname(q){return q==='oko'?'Økologi':'Frilands'}
+function qualOk(o,it){if(!qual(it.k))return true;var a=accQ();return (o.q==='oko'&&a.oko)||(o.q==='god'&&a.god)}
+function offerMatch(o,it){if(!qualOk(o,it))return false;if(o.match)return slug(o.match)===it.k;return nameMatch(it.name,o.name)}
+function rawMatch(o,it){if(o.match)return slug(o.match)===it.k;return nameMatch(it.name,o.name)}
+/* ---------- foretrukne mærker pr. vare ---------- */
+function bnorm(s){return String(s==null?'':s).toLowerCase().replace(/ä/g,'a').replace(/ö/g,'o').replace(/ü/g,'u').replace(/é/g,'e').replace(/\s+/g,' ').trim()}
+function brandsOf(k){var b=(S.brands||{})[k];return Array.isArray(b)?b.filter(function(x){return typeof x==='string'&&x.trim()}):[]}
+function brandLabel(k){var b=brandsOf(k);return b.length?b[0]+(b.length>1?' +'+(b.length-1):''):''}
+function parseBrands(t){var seen={},out=[];String(t==null?'':t).split(/\s*(?:,|;|\n|\s+eller\s+)\s*/i).forEach(function(x){x=x.replace(/\s+/g,' ').trim().slice(0,30);var n=bnorm(x);if(x&&!seen[n]&&out.length<4){seen[n]=1;out.push(x)}});return out}
+/* the brand must be a whole word (or words) in the offer name ("Rose" matches "Rose hakket kylling", not "Rosenkål") */
+function brandIn(name,b){var n=bnorm(name),t=bnorm(b),L=/[a-z0-9æøå]/;if(!t)return false;var i=n.indexOf(t);while(i>-1){if((i===0||!L.test(n.charAt(i-1)))&&!L.test(n.charAt(i+t.length)))return true;i=n.indexOf(t,i+1)}return false}
+function brandOk(o,it){var bs=brandsOf(it.k);if(!bs.length)return true;return bs.some(function(b){return brandIn(o.name,b)})}
+var BGEN=/^(dansk|danske|dansk-|oekologisk|økologisk|økologiske|oeko|øko|frilands|frilandsæg|hel|hele|hakket|fersk|friske?|spisemodne|grønne|røde|gule|nye|store|små|lille|stor|skiver|stykke|portioner?|pose|pakke|skummet|skummet-|eller|let|sød)$/;
+/* guess the brand from an offer name: the words before the product words ("Salling Princip kartofler" -> "Salling Princip") */
+function brandGuess(o,it){
+  var nm=String(o.name||'').split(',')[0].replace(/\s+/g,' ').trim(),w=nm.split(' ');
+  var st=bnorm(it.name).split(/[\s-]+/).filter(function(x){return x.length>=4}).map(function(x){return x.slice(0,4)});
+  var out=[];
+  for(var i=0;i<w.length&&i<3;i++){
+    var x=bnorm(w[i]);
+    if(!x||/\d/.test(x)||BGEN.test(x)||st.some(function(s){return x.indexOf(s)>-1}))break;
+    out.push(w[i]);
+  }
+  return out.join(' ');
+}
+function brandSuggest(k,name,w){
+  var it={k:k,name:name},m={};
+  activeOffers(w).forEach(function(o){
+    if(!rawMatch(o,it))return;var g=brandGuess(o,it);if(!g)return;
+    var key=bnorm(g),x=m[key]=m[key]||{n:g,s:[]};if(x.s.indexOf(o.store)<0)x.s.push(o.store)});
+  return Object.keys(m).map(function(q){return m[q]}).sort(function(a,b){return b.s.length-a.s.length||a.n.localeCompare(b.n,'da')});
+}
+function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
+/* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
+function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
+function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
+function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
+function activeOffers(w){var as=activeStores();return ((S.offers[w]||{}).items||[]).filter(function(o){return as.indexOf(o.store)>-1})}
+function ofactor(o,it){if(o.qty>0&&o.unit===it.unit)return Math.max(1,Math.ceil(it.qty/o.qty-1e-9));return it.packs||1}
+function bestOfferAt(it,w,store,loose){
+  var best=null;activeOffers(w).forEach(function(o){
+    if(store&&o.store!==store)return;
+    if(!brandOk(o,it))return;
+    if(!(loose?rawMatch(o,it):offerMatch(o,it)))return;
+    var f=ofactor(o,it),c=o.price*f;if(!best||c<best.cost)best={o:o,cost:c,f:f,sv:o.was>o.price?(o.was-o.price)*f:0};
+  });
+  return best;
+}
+function bestOffer(it,w){return bestOfferAt(it,w,null)}
+/* Price per store: the normal estimate, or the offer where it is cheaper. */
+function storeCosts(items,w){
+  var res={},unpriced=0,norm=0,skipped=0,looked=0,priced=0;
+  var AS=activeStores();
+  AS.forEach(function(s){res[s]={store:s,total:0,n:0,save:0,lines:{}}});
+  items.forEach(function(it){
+    var c0=lineCost(it),key=it.k+'_'+it.unit;
+    if(!(c0>0)){unpriced++;return}
+    norm+=c0;priced++;if(pan(it.k)&&pan(it.k).pv)looked++;
+    AS.forEach(function(s){
+      var n0=c0*pidx(s),bo=bestOfferAt(it,w,s),c=n0,via=null;
+      if(bo&&bo.cost<n0-.005){c=bo.cost;via=bo;res[s].n++;res[s].save+=n0-c}
+      res[s].total+=c;res[s].lines[key]={cost:c,norm:n0,via:via};
+      if(!via&&qual(it.k)){var lo=bestOfferAt(it,w,s,true);if(lo&&lo.cost<n0-.005)skipped++}
+    });
+  });
+  return{stores:res,norm:norm,unpriced:unpriced,skipped:skipped,looked:looked,priced:priced};
+}
+/* Best set of k stores: every line is bought where it is cheapest within the set. */
+function bestSet(sc,k){
+  var st=activeStores();if(k<1||st.length<k)return null;
+  var keys=Object.keys(sc.stores[st[0]].lines),best=null;
+  var cur=[];
+  (function rec(start){
+    if(cur.length===k){
+      var tot=0;
+      keys.forEach(function(key){var m=Infinity;cur.forEach(function(s){var c=sc.stores[s].lines[key].cost;if(c<m)m=c});tot+=m});
+      if(!best||tot<best.total-1e-9)best={stores:cur.slice(),total:tot};
+      return;
+    }
+    for(var i=start;i<st.length;i++){cur.push(st[i]);rec(i+1);cur.pop()}
+  })(0);
+  if(!best)return null;
+  var single=st.map(function(s){return sc.stores[s]}).sort(function(x,y){return x.total-y.total})[0];
+  best.base=single.store;best.baseTotal=single.total;best.save=Math.max(0,single.total-best.total);best.assign={};best.sub={};
+  best.stores.forEach(function(s){best.sub[s]=0});
+  keys.forEach(function(key){
+    var pick=best.stores[0],pc=sc.stores[pick].lines[key].cost;
+    best.stores.forEach(function(s){var c=sc.stores[s].lines[key].cost;if(c<pc-1e-9){pick=s;pc=c}});
+    best.assign[key]=pick;best.sub[pick]+=pc;
+  });
+  best.a=best.stores[0];best.b=best.stores[1];
+  return best;
+}
+function bestPair(sc){return activeStores().length<2?null:bestSet(sc,2)}
+/* One store or several? The options are the cheapest single store and the best 2 and 3 stores.
+   Each extra store has to save at least stopVal kr (the person's own price for the extra stop),
+   otherwise the recommendation stays with fewer stores. */
+function shopOptions(sc){
+  var act=activeStores(),sv=S.settings.stopVal;sv=sv>=0?sv:DEF.stopVal;
+  var tot=act.map(function(s){return sc.stores[s]}).sort(function(a,b){return a.total-b.total||b.n-a.n});
+  var opts=[{k:1,stores:[tot[0].store],total:tot[0].total,save:0,extra:0,sel:tot[0].store,assign:null,sub:null,net:0}];
+  if(act.length>=2){var p2=bestSet(sc,2);if(p2&&p2.save>=1){p2.k=2;p2.sel='pair';p2.extra=p2.save;opts.push(p2)}}
+  if(act.length>=3){var p3=bestSet(sc,3),prev=opts[opts.length-1];if(p3&&p3.total<prev.total-1){p3.k=3;p3.sel='trio';p3.extra=prev.total-p3.total;opts.push(p3)}}
+  var rec=0,bn=0;
+  opts.forEach(function(o,i){o.net=o.save-sv*(o.k-1);if(i>0&&o.net>bn+1e-9){bn=o.net;rec=i}});
+  return{opts:opts,rec:rec,recTotal:opts[rec].total,sv:sv,cheapest:opts[opts.length-1]};
+}
+/* Shared price reference (ref/items) is laid over the user's own stock items, unless the user set the price or kcal herself. */
+function applyRef(){
+  var raw=S.praw||{},ref=(S.ref&&S.ref.items)||{},o={};
+  Object.keys(raw).forEach(function(k){var p=raw[k],r=ref[k];
+    if(r&&(!r.unit||!p.unit||r.unit===p.unit)){p=Object.assign({},p);
+      if(!p.kpx){if(r.kp>=0)p.kp=r.kp;['kpg','kpo','kpf'].forEach(function(f){if(r[f]!=null)p[f]=r[f];else delete p[f]});if(r.pv)p.pv=r.pv;else delete p.pv}
+      if(!p.kcx&&r.kc!=null)p.kc=r.kc;
+      if(!p.cat&&r.cat)p.cat=r.cat}
+    o[k]=p});
+  S.pantry={items:o};
+}
+/* ---------- needs, shopping list, waste, coverage ---------- */
+function aggNeeds(ids){
+  var sc=(S.settings.persons||2)/2,m={};
+  ids.forEach(function(id){var r=S.recipes[id];if(!r)return;(r.ing||[]).forEach(function(g){var k=slug(g.n),key=k+'|'+g.u;m[key]=m[key]||{k:k,name:g.n,unit:g.u,need:0};m[key].need+=g.q*sc})});
+  return m;
+}
+/* A double-portion day counts twice; a leftover day counts nothing. */
+function planIds(w,includeDone){
+  var p=S.plans[w],out=[];
+  ((p&&p.days)||[]).forEach(function(d){if(!d||!d.r||d.lo||(!includeDone&&d.done))return;out.push(d.r);if(d.dbl)out.push(d.r)});
+  return out;
+}
+function buyCalc(stock,min,pack,need,unit){
+  var after=stock-need;if(after>=min-1e-9)return null;
+  var buy=min-after,packs,qty;
+  if(pack>0){packs=Math.ceil(buy/pack-1e-9);qty=packs*pack}
+  else{packs=1;qty=unit==='stk'?Math.ceil(buy-1e-9):Math.ceil(buy/50-1e-9)*50}
+  return{buy:buy,packs:packs,qty:qty,excess:qty-buy};
+}
+function computeList(w){
+  var needs=aggNeeds(planIds(w,false)),out=[],seen={};
+  Object.keys(needs).forEach(function(key){
+    var n=needs[key],p=pan(n.k),same=p&&p.unit===n.unit;
+    var stock=same?curQty(p):0,min=same?reserve(p):0,pack=same?(p.pack||0):0;
+    var b=buyCalc(stock,min,pack,n.need,n.unit);seen[n.k]=1;
+    if(b)out.push({k:n.k,name:n.name,unit:n.unit,need:n.need,stock:stock,pack:pack,packs:b.packs,qty:b.qty,reason:stock<n.need-1e-9?'need':'low',cat:(p&&p.cat)||'Andet'});
+  });
+  Object.keys(S.pantry.items||{}).forEach(function(k){
+    if(seen[k])return;var p=S.pantry.items[k];if(p.leftover||!isLow(p))return;
+    var mode=p.rule||'under',cq=curQty(p),pack=p.pack||0,b;
+    if(mode==='out'){b={packs:1,qty:pack>0?pack:(p.unit==='stk'?1:100)}}
+    else{b=buyCalc(cq,reserve(p),pack,0,p.unit)}
+    if(b)out.push({k:k,name:p.name,unit:p.unit,need:0,stock:cq,pack:pack,packs:b.packs,qty:b.qty,reason:mode==='out'?'out':'low',cat:p.cat||'Andet'});
+  });
+  return out;
+}
+function wasteOf(ids){
+  var needs=aggNeeds(ids),pen=0,rest=[];
+  Object.keys(needs).forEach(function(key){
+    var n=needs[key],p=pan(n.k);if(!p||p.unit!==n.unit||!(p.pack>0))return;
+    var b=buyCalc(curQty(p),reserve(p),p.pack,n.need,n.unit);if(!b)return;
+    var frac=b.excess/p.pack;pen+=(p.perish?1:.25)*frac;
+    if(p.perish&&frac>=.2)rest.push({name:p.name,qty:b.excess,unit:p.unit});
+  });
+  return{pen:pen,rest:rest};
+}
+function coverage(ids){
+  var needs=aggNeeds(ids),lines=0,cov=0,buy=0;
+  Object.keys(needs).forEach(function(key){
+    var n=needs[key],p=pan(n.k),st=p&&p.unit===n.unit?curQty(p):0;
+    lines++;cov+=n.need>0?Math.min(1,st/n.need):1;if(st<n.need-1e-9)buy++;
+  });
+  return{lines:lines,cov:cov,buy:buy};
+}
+function recCov(r){
+  var sc=(S.settings.persons||2)/2,ing=r.ing||[];if(!ing.length)return 0;var s=0;
+  ing.forEach(function(g){var p=pan(slug(g.n)),st=p&&p.unit===g.u?curQty(p):0;s+=Math.min(1,st/(g.q*sc))});
+  return s/ing.length;
+}
+
+/* ---------- ugens ønsker (prefs) ---------- */
+function defDays(mon){
+  var out=[];for(var i=0;i<7;i++)out.push({m:'cook',t:isWeekend(i)?999:(S.settings.quick?30:45)});return out;
+}
+function prevPrefs(w){
+  var keys=Object.keys(S.prefs).filter(function(k){return k<w&&S.prefs[k]}).sort();
+  return keys.length?S.prefs[keys[keys.length-1]]:null;
+}
+/* A double portion on Sunday means Monday next week is leftovers. */
+function carryIn(w){var pw=S.plans[weekId(addDays(monOfWeek(w),-7))],d=pw&&pw.days&&pw.days[6];return d&&d.r&&d.dbl&&!d.off&&!d.lo&&!d.f?d.r:''}
+function getPrefs(w){
+  var saved=S.prefs[w],pv=prevPrefs(w),d=defDays();
+  var days=d.map(function(x,i){var s=saved&&saved.days&&saved.days[i];return{m:(s&&s.m)||x.m,t:(s&&Number(s.t))||x.t}});
+  var prot={};ASK.forEach(function(a){var v=saved&&saved.prot?saved.prot[a[0]]:'auto';prot[a[0]]=(v===0||v===1||v===2||v===3)?v:'auto'});
+  return{days:days,prot:prot,low:saved?!!saved.low:!!(pv&&pv.low),done:!!(saved&&saved.done),carry:carryIn(w)};
+}
+/* effective kind per day: cook | dbl | off | lo (leftovers) */
+function effModes(P){
+  var out=[];
+  for(var i=0;i<7;i++){
+    if(i===0&&P.carry)out.push('lo');
+    else if(i>0&&out[i-1]==='dbl')out.push('lo');
+    else out.push(P.days[i].m);
+  }
+  return out;
+}
+function prefsSummary(P){
+  var eff=effModes(P),bits=[],dbl=eff.filter(function(m){return m==='dbl'}).length,off=eff.filter(function(m){return m==='off'}).length;
+  if(P.low)bits.push('Kaloriefattigt');
+  ASK.forEach(function(a){var v=P.prot[a[0]];if(v===0)bits.push(a[1]+': ingen');else if(v>0)bits.push(a[1]+' '+v+'×')});
+  if(dbl)bits.push(dbl===1?'1 dobbelt portion':dbl+' dobbelte');
+  if(off)bits.push(off===1?'1 dag uden mad':off+' dage uden mad');
+  var shortDays=P.days.filter(function(d,i){return eff[i]!=='off'&&eff[i]!=='lo'&&d.t===30}).length;
+  if(shortDays)bits.push(shortDays===1?'1 hurtig aften':shortDays+' hurtige aftener');
+  return bits;
+}
+
+/* ---------- smag: favoritter og vurderinger -> hvilke retter passer bedst ---------- */
+var STAPLE={salt:1,peber:1,olie:1,'løg':1,'hvidløg':1,'smør':1,mel:1,sukker:1,vand:1,bouillonterning:1,'mælk':1,'fløde':1,'madlavningsfløde':1,ris:1,pasta:1,kartofler:1};
+var TAGMAP=[['italiensk',/pasta|spaghetti|lasagne|risotto|pizza|bolognese|salsiccia|mozzarella|parmesan/],['asiatisk',/teriyaki|wok|soja|nudl|sesam|fishsauce|ingefær|kokosris|karrypasta|pak choi/],['mexicansk',/taco|tortilla|enchilada|burrito|fajita|quesadilla|salsa|chili con|jalapeno/],['indisk',/karry|dahl|naan|masala|linse/],['suppe',/suppe/],['gryde',/gryde|dahl|stuvning/],['ovn',/ovn|bagt|fad\b|pakker/],['salat',/salat/],['pasta',/pasta|spaghetti|lasagne|penne/],['ris',/\bris\b|kokosris/],['wrap',/taco|wrap|burger|tortilla|quesadilla/],['dansk',/frikadelle|boller|æggekage|pytt|flæsk|rugbrød/]];
+function tagsOf(r){
+  if(r.tags&&r.tags.length)return r.tags;
+  var s=(String(r.name||'')+' '+(r.ing||[]).map(function(g){return g.n}).join(' ')).toLowerCase(),t=[];
+  TAGMAP.forEach(function(x){if(x[1].test(s))t.push(x[0])});return t;
+}
+function featOf(r){
+  var m=r.minutes||40,f=['p:'+(r.prot==='aeg'?'vegetar':(r.prot||'andet')),'k:'+(r.kind||'hverdag'),'m:'+(m<=30?'quick':m<=50?'mid':'long')];
+  tagsOf(r).forEach(function(t){f.push('t:'+t)});
+  (r.ing||[]).forEach(function(g){var n=String(g.n).toLowerCase();if(!STAPLE[n])f.push('i:'+n)});
+  return f;
+}
+function likeW(r){var w=0;if(r.fav)w+=2;var rt=Number(r.rating)||0;if(rt)w+=(rt-3)*.9;if(r.again==='yes')w+=1;else if(r.again==='no')w-=2;return w}
+/* score per recipe in -1..1: how close it is to what the user likes (favourites, ratings, repeat flags). 0 for all if nothing is known yet. */
+function tasteModel(){
+  var ids=Object.keys(S.recipes),F={},df={},N=ids.length||1,out={},prof={},any=false;
+  ids.forEach(function(id){F[id]=featOf(S.recipes[id]);var seen={};F[id].forEach(function(f){if(!seen[f]){seen[f]=1;df[f]=(df[f]||0)+1}})});
+  var idf=function(f){return Math.log(1+N/(df[f]||1))};
+  ids.forEach(function(id){var w=likeW(S.recipes[id]);if(!w)return;any=true;var fs=F[id],n=Math.sqrt(fs.length);fs.forEach(function(f){prof[f]=(prof[f]||0)+w*idf(f)/n})});
+  if(!any){ids.forEach(function(id){out[id]=0});return{score:out,prof:prof,any:false}}
+  var raw={},lo=1e9,hi=-1e9;
+  ids.forEach(function(id){var fs=F[id],n=Math.sqrt(fs.length),v=0;fs.forEach(function(f){v+=(prof[f]||0)*idf(f)});v/=n;raw[id]=v;if(v<lo)lo=v;if(v>hi)hi=v});
+  var mid=(hi+lo)/2,half=(hi-lo)/2||1,nl=0;ids.forEach(function(id){if(likeW(S.recipes[id]))nl++});var conf=Math.min(1,nl/4);ids.forEach(function(id){out[id]=(raw[id]-mid)/half*conf});
+  return{score:out,prof:prof,any:true};
+}
+var FEATLAB={'p:okse':'oksekød','p:kylling':'kylling','p:svin':'svinekød','p:fisk':'fisk','p:vegetar':'vegetar','m:quick':'hurtige retter','m:long':'retter med tid','k:weekend':'weekendmad'};
+function tasteLabels(model){
+  var arr=Object.keys(model.prof).filter(function(f){return model.prof[f]>0&&(FEATLAB[f]||f.indexOf('t:')===0)}).sort(function(a,b){return model.prof[b]-model.prof[a]});
+  return arr.slice(0,4).map(function(f){return FEATLAB[f]||f.slice(2)});
+}
+
+/* ---------- plan generator (stock first, with the week's wishes) ---------- */
+function offerHits(r,w){var c=0;(r.ing||[]).forEach(function(g){var it={k:slug(g.n),name:g.n};if(activeOffers(w).some(function(o){return offerMatch(o,it)}))c++});return c}
+function ctxFor(w){
+  var t=todayStr(),exp={},P=getPrefs(w);
+  Object.keys(S.pantry.items||{}).forEach(function(k){var p=S.pantry.items[k];if(p.expires&&curQty(p)>0&&daysBetween(t,p.expires)<=5)exp[k]=1});
+  var hits={},cov={},kc={},ak={},last={},mon=monOfWeek(w);Object.keys(S.recipes).forEach(function(id){var r=S.recipes[id];hits[id]=offerHits(r,w);cov[id]=recCov(r);kc[id]=kcalOf(r).k;ak[id]=artKey(r).k});
+  /* last time each dish was planned or made (other weeks), so dishes and favourites do not come every week */
+  Object.keys(S.plans).forEach(function(pw){if(pw===w)return;var pl=S.plans[pw],m0=monOfWeek(pw);((pl&&pl.days)||[]).forEach(function(d,j){if(!d||!d.r||d.lo||d.off)return;var dt=addDays(m0,j);if(!last[d.r]||dt>last[d.r])last[d.r]=dt})});
+  Object.keys(S.recipes).forEach(function(id){var m=S.recipes[id].made;if(m&&m.last&&(!last[id]||m.last>last[id]))last[id]=m.last});
+  var tm=tasteModel();
+  return{exp:exp,hits:hits,cov:cov,kc:kc,ak:ak,P:P,last:last,mon:mon,taste:tm.score,tasteAny:tm.any,quick:!!S.settings.quick};
+}
+function fit(r,i,ctx,id){
+  var P=ctx.P,s=0,wk=isWeekend(i),dp=P.days[i]||{m:'cook',t:45};
+  if(wk)s+=r.kind==='weekend'?3:(P.low?-1:-6);
+  else s+=r.kind==='hverdag'?3:-4;
+  var m=r.minutes||40,tmax=dp.t||999;
+  if(m>tmax)s-=2+(m-tmax)/10;else s+=m<=30?1.5:m<=45?.5:0;
+  if(ctx.quick&&!wk&&m>30)s-=3;
+  if(dp.m==='dbl')s+=r.rest?3:-7;
+  if(P.low){var k=ctx.kc[id]||600;s+=k>LOW_MAX?-(6+(k-LOW_MAX)/40):(LOW_MAX-k)/220}
+  var rt=Number(r.rating)||0;if(rt)s+=(rt-3)*.9;
+  var lu=ctx.last[id]?Math.abs(daysBetween(ctx.last[id],addDays(ctx.mon,i))):null;
+  if(r.again==='no')s-=16;
+  else if(r.again==='yes')s+=lu==null?1.4:(lu<=14?0:Math.min(1.4,.6+(lu-14)/12));
+  var mw=(r.made&&r.made.wd&&r.made.wd[i])||0;s+=Math.min(2,mw*.7);
+  if(lu!=null){var fx=r.fav?1:0;s-=lu<=9?9+fx:lu<=14?4+fx:lu<=21?2+fx*.5:lu<=28?1:0}
+  s+=(ctx.taste[id]||0)*3+(r.fav?1:0);
+  var ex=0;(r.ing||[]).forEach(function(g){if(ctx.exp[slug(g.n)])ex++});
+  s+=Math.min(3,ex*1.5)*(1.3-i/10);
+  s+=Math.min(2.5,(ctx.hits[id]||0)*.6);
+  var c=ctx.cov[id]||0;s+=5*c+(c>=.99?1.5:0);
+  return s;
+}
+function generate(w){
+  var ids=Object.keys(S.recipes),old=((S.plans[w]||{}).days)||[],ctx=ctxFor(w),P=ctx.P;
+  var fixed=[0,1,2,3,4,5,6].map(function(i){var d=old[i];return d&&(d.r||d.f)&&!d.lo&&(d.lock||d.done)?d:null});
+  var kind=[],i;
+  var dblAt=function(j){return fixed[j]?!!fixed[j].dbl:(kind[j]==='slot'&&P.days[j].m==='dbl')};
+  for(i=0;i<7;i++){
+    if(fixed[i])kind[i]='fixed';
+    else if(i===0&&P.carry)kind[i]='lo';
+    else if(i>0&&dblAt(i-1))kind[i]='lo';
+    else if(P.days[i].m==='off')kind[i]='off';
+    else kind[i]='slot';
+  }
+  var free=[0,1,2,3,4,5,6].filter(function(j){return kind[j]==='slot'});
+  var used={};fixed.forEach(function(d){if(d&&d.r)used[d.r]=1});
+  var okR=function(id){return recAllowed(S.recipes[id])};
+  var pool=ids.filter(function(id){return !used[id]&&S.recipes[id].again!=='no'&&okR(id)});
+  if(pool.length<free.length)pool=ids.filter(function(id){return !used[id]&&okR(id)});
+  GEN_WHY=(!pool.length&&free.length&&ids.some(function(id){return !used[id]}))?'filter':(pool.length<free.length?'few':'');
+  if(!pool.length||!free.length)return null;
+  var VEG=!!S.settings.veg,BUD=weekBudget(),MI=minIdx();
+  function score(arr){
+    var s=0,live=[],cnt={},sty={},fc=0;
+    arr.forEach(function(id,j){
+      if(!id)return;var fx=kind[j]==='fixed'&&fixed[j];sty[ctx.ak[id]]=(sty[ctx.ak[id]]||0)+1;
+      s+=fit(S.recipes[id],j,ctx,id);
+      var p=S.recipes[id].prot;if(p)cnt[p]=(cnt[p]||0)+1;if(p==='aeg')cnt.vegetar=(cnt.vegetar||0)+1;if(S.recipes[id].fav)fc++;
+      if(!(fx&&fx.done)){live.push(id);if(kind[j]==='fixed'?(fx&&fx.dbl):(kind[j]==='slot'&&P.days[j].m==='dbl'))live.push(id)}
+    });
+    s-=wasteOf(live).pen*1.5;
+    var cv=coverage(live);if(cv.lines){s+=10*cv.cov/cv.lines;s-=.5*cv.buy}
+    if(BUD>0){var est=planEst(live,MI);s-=3*est/BUD;if(est>BUD)s-=(est-BUD)/BUD*60}
+    for(var j=1;j<7;j++){var a=(S.recipes[arr[j-1]]||{}).prot,b=(S.recipes[arr[j]]||{}).prot;if(a&&a===b)s-=2}
+    if(!VEG)ASK.forEach(function(pa){var p=pa[0],t=P.prot[p],c=cnt[p]||0;
+      if(t==='auto'){if(c>2)s-=(c-2)*4}
+      else{s-=7*Math.abs(c-t);if(t===0)s-=8*c}});
+    if(S.settings.welfare){var meat=(cnt.okse||0)+(cnt.kylling||0)+(cnt.svin||0);if(meat>4)s-=(meat-4)*4}
+    if(fc>2)s-=(fc-2)*5;
+    s+=Math.min(2,(cnt.vegetar||0))*.8;
+    Object.keys(sty).forEach(function(k){if(sty[k]>1)s-=(sty[k]-1)*2.5});
+    return s;
+  }
+  var best=null,bs=-1e9;
+  for(var rs=0;rs<8;rs++){
+    var sh=pool.slice().sort(function(){return Math.random()-.5});
+    var cur=['','','','','','',''];fixed.forEach(function(d,j){if(d)cur[j]=d.r||''});
+    free.forEach(function(j,n){cur[j]=sh[n]||''});
+    var cs=score(cur);if(cs>bs){bs=cs;best=cur.slice()}
+    for(var it=0;it<600;it++){
+      var a1=free[Math.floor(Math.random()*free.length)],nx=cur.slice();
+      if(Math.random()<.5&&free.length>1){var b1=free[Math.floor(Math.random()*free.length)];if(b1===a1)continue;var tmp=nx[a1];nx[a1]=nx[b1];nx[b1]=tmp}
+      else{var cand=pool[Math.floor(Math.random()*pool.length)];if(nx.indexOf(cand)>-1)continue;nx[a1]=cand}
+      var ns=score(nx),T=1.2*(1-it/600);
+      if(ns>=cs||Math.random()<Math.exp((ns-cs)/Math.max(T,.01))){cur=nx;cs=ns}
+      if(cs>bs){bs=cs;best=cur.slice()}
+    }
+  }
+  var out=[];
+  for(i=0;i<7;i++){
+    if(kind[i]==='fixed')out.push(fixed[i]);
+    else if(kind[i]==='off')out.push({r:'',off:true,done:false,lock:false});
+    else if(kind[i]==='lo'){
+      var pv=out[i-1];
+      if(i===0)out.push({r:P.carry,lo:true,from:-1,done:!!(old[0]&&old[0].lo&&old[0].done),lock:false});
+      else out.push(pv&&pv.r&&pv.dbl?{r:pv.r,lo:true,from:i-1,done:!!(old[i]&&old[i].lo&&old[i].done),lock:false}:{r:'',done:false,lock:false});
+    }else{
+      var d={r:best[i],done:false,lock:false};if(P.days[i].m==='dbl'&&best[i])d.dbl=true;
+      out.push(d);
+      /* a double day whose recipe is empty cannot have leftovers */
+    }
+  }
+  /* second pass: leftovers need a double day before them */
+  for(i=1;i<7;i++){if(out[i].lo&&!(out[i-1].r&&out[i-1].dbl))out[i]={r:'',done:false,lock:false}}
+  if(out[0]&&out[0].lo&&out[0].from===-1&&!P.carry)out[0]={r:'',done:false,lock:false};
+  return out;
+}
+
+/* ---------- tilbud: hvilken butik har flest af varerne ---------- */
+function routeLine(items,w){
+  var per={};
+  items.forEach(function(it){activeOffers(w).forEach(function(o){if(offerMatch(o,it)){(per[o.store]=per[o.store]||{})[it.k+'_'+it.unit]=1}})});
+  var arr=Object.keys(per).map(function(s){return{store:s,n:Object.keys(per[s]).length}}).sort(function(a,b){return b.n-a.n});
+  if(!arr.length)return null;
+  var first=arr[0],have=per[first.store],second=null;
+  arr.slice(1).forEach(function(x){var extra=Object.keys(per[x.store]).filter(function(k){return !have[k]}).length;if(extra>=3&&(!second||extra>second.extra))second={store:x.store,extra:extra}});
+  return{first:first,second:second,total:items.length};
+}
+
+/* ---------- dish art: drawn plates (no external images) ---------- */
+var _gid=0;
+function hashStr(s){var h=2166136261;s=String(s||'');for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0}
+function rng(seed){var a=seed>>>0||1;return function(){a=(a+0x6D2B79F5)>>>0;var t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
+var TABLES={linen:['#EADFCB','#D9C9AC'],sage:['#C9D6C6','#AFC1AC'],clay:['#E2C2A8','#CE9F80'],slate:['#46514C','#2F3835'],stone:['#DAD4C8','#C3BAA8'],wheat:['#ECD59C','#DDB96B'],plum:['#CBB7C4','#B297A9']};
+function artKey(r){
+  var n=String((r&&r.name)||'').toLowerCase(),prot=(r&&r.prot)||'',ing=((r&&r.ing)||[]).map(function(g){return String(g.n).toLowerCase()}).join(' ');
+  var has=function(s){return ing.indexOf(s)>-1};
+  if(/burger/.test(n))return{k:'burger',veg:/veget/.test(n)||prot==='vegetar'};
+  if(/enchilada/.test(n))return{k:'enchilada'};
+  if(/taco|wrap|fajita|quesadilla/.test(n))return{k:'taco'};
+  if(/lasagne/.test(n))return{k:'lasagne'};
+  if(/salat/.test(n))return{k:'salad'};
+  if(/suppe/.test(n))return{k:'soup',sauce:has('hakkede tomater')?'red':has('røde linser')?'gold':'cream',crout:/rugbrød/.test(ing)||/crouton/.test(n)};
+  if(/wok|nudl/.test(n))return{k:'wok'};
+  if(/boller|frikadelle|kødbolle/.test(n))return{k:'balls'};
+  if(/torsk|kuller|rødspætte/.test(n))return{k:'fish',cod:true};
+  if(/laks|fisk/.test(n)||prot==='fisk')return{k:'fish',cod:has('torskefilet')};
+  if(/pasta|spaghetti|penne|tagliatelle/.test(n))return{k:'pasta',sauce:(has('hakkede tomater')||has('tomatpuré'))&&!/svamp/.test(n)?'red':'cream',meat:has('hakket')||has('salsiccia')||has('bacon')};
+  if(/bagt kylling|hel kylling|helstegt|steg/.test(n)||has('hel kylling'))return{k:'chicken'};
+  if(/kål|gryde.*(okse|hakket)|hakket/.test(n)&&(prot==='okse'||prot==='svin'))return{k:'skillet'};
+  if(/dahl|gryde|linse|kikærte/.test(n))return{k:'bowl',naan:has('naanbrød')};
+  if(/karry|kokosris|ris\b/.test(n)||has('ris'))return{k:'rice',egg:/spejlæg/.test(n)||has('æg')&&/kokosris/.test(n),chick:prot==='kylling'};
+  if(/marry|kylling/.test(n))return{k:'pasta',sauce:'cream',meat:true};
+  if(prot==='okse'||prot==='svin')return{k:'skillet'};
+  if(prot==='vegetar'||prot==='aeg')return{k:'bowl'};
+  return{k:'plain'};
+}
+var TABLE_FOR={pasta:'wheat',rice:'clay',fish:'slate',burger:'linen',taco:'clay',lasagne:'stone',soup:'sage',salad:'sage',chicken:'wheat',skillet:'stone',bowl:'plum',enchilada:'linen',wok:'slate',balls:'clay',plain:'linen'};
+function dots(R,n,cx,cy,rad,fn){var o='';for(var i=0;i<n;i++){var a=R()*6.2832,d=Math.sqrt(R())*rad;o+=fn(cx+Math.cos(a)*d,cy+Math.sin(a)*d,R)}return o}
+function leaf(x,y,a,s,c){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="'+(3.2*s).toFixed(1)+'" ry="'+(1.6*s).toFixed(1)+'" transform="rotate('+a.toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="'+c+'"/>'}
+function sceneInner(a,R){
+  var k=a.k,o='';
+  if(k==='pasta'){
+    var cream=a.sauce!=='red';
+    for(var i=0;i<7;i++){var rx=10+i*3.8,ry=8+i*3.1;o+='<ellipse cx="60" cy="60" rx="'+rx.toFixed(1)+'" ry="'+ry.toFixed(1)+'" transform="rotate('+(i*37+R()*20).toFixed(0)+' 60 60)" fill="none" stroke="'+(i%2?'#E9C466':'#F0D07C')+'" stroke-width="3.1" stroke-linecap="round" stroke-dasharray="'+(18+R()*20).toFixed(0)+' '+(3+R()*5).toFixed(0)+'"/>'}
+    o+='<ellipse cx="60" cy="60" rx="14" ry="12" fill="'+(cream?'#F3E3B7':'#C23B25')+'"/><ellipse cx="57" cy="57" rx="8" ry="6" fill="'+(cream?'#FAF0D2':'#D9503A')+'"/>';
+    o+=dots(R,a.meat?9:5,60,60,12,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(a.meat?2.1:1.4)+'" fill="'+(cream?'#B9866A':'#7A3320')+'"/>'});
+    o+=dots(R,10,60,60,14,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r=".9" fill="#FFF6D6"/>'});
+    o+=leaf(66,53,-30,1.7,'#3F8A4B')+leaf(55,66,40,1.5,'#4C9A55')+leaf(63,66,200,1.2,'#2F7A40');
+  }else if(k==='rice'){
+    o+='<ellipse cx="46" cy="62" rx="19" ry="17" fill="#EFEBDD"/>';
+    o+=dots(R,70,46,62,17,function(x,y,R){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="2.1" ry="1" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#FFFEF8" stroke="#E5DFC9" stroke-width=".3"/>'});
+    o+='<path d="M64 44c10-5 24 0 25 13 1 13-9 22-21 20-12-2-18-14-12-24 2-4 5-7 8-9z" fill="#E08E2B"/><path d="M68 50c7-3 15 1 16 9 1 8-6 14-14 12-8-1-11-9-8-15 1-3 3-5 6-6z" fill="#EDA23F"/>';
+    o+=dots(R,a.chick?5:4,76,60,10,function(x,y,R){return a.chick?'<rect x="'+(x-2.6).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" width="5.4" height="4.2" rx="1.6" transform="rotate('+(R()*80).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#F6E4BE"/>':'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.3" fill="#F26B21"/>'});
+    o+=dots(R,5,76,60,11,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.5" fill="#6BAA4E"/>'});
+    if(a.egg)o+='<ellipse cx="58" cy="46" rx="9" ry="7" fill="#FFFDF5" stroke="#EDE6D2" stroke-width=".5"/><circle cx="58" cy="46" r="3.4" fill="#F5B72C"/><circle cx="57" cy="45" r="1" fill="#FFE08A"/>';
+    o+=leaf(70,50,-20,1.5,'#3F8A4B')+leaf(82,64,30,1.4,'#4C9A55')+leaf(74,70,100,1.3,'#2F7A40');
+  }else if(k==='fish'){
+    var cod=!!a.cod,c1=cod?'#F4F0E4':'#F27F58',c2=cod?'#E3DCC8':'#F9B196',c3=cod?'#D8CFB6':'#D95F3B';
+    o+='<g transform="rotate(-14 60 58)"><rect x="32" y="45" width="56" height="24" rx="10" fill="'+c3+'"/><rect x="32" y="44" width="56" height="21" rx="10" fill="'+c1+'"/>';
+    for(var j=0;j<6;j++)o+='<path d="M'+(40+j*8)+' 47q4 8 -2 16" fill="none" stroke="'+c2+'" stroke-width="1.8" stroke-linecap="round"/>';
+    o+='</g>';
+    o+='<g>'+dots(R,16,42,78,11,function(x,y,R){return leaf(x,y,R()*180,1.4+R(),R()<.5?'#5C9A48':'#7DB85A')})+'</g>';
+    o+='<ellipse cx="82" cy="77" rx="6" ry="4.3" fill="#E8C46F"/><ellipse cx="73" cy="82" rx="5.5" ry="4" fill="#EFCF80"/><ellipse cx="88" cy="70" rx="4" ry="3" fill="#E1B95C"/>';
+    o+='<path d="M76 38a9 9 0 0 1 18 0z" transform="rotate(20 85 40)" fill="#F4D547"/><path d="M78 38a7 7 0 0 1 14 0z" transform="rotate(20 85 40)" fill="#FBE98A"/>';
+    o+='<path d="M45 40l3-9M49 40l1-10M53 41l-2-9" stroke="#3F8A4B" stroke-width="1" stroke-linecap="round"/>';
+  }else if(k==='burger'){
+    o+='<rect x="32" y="71" width="56" height="9" rx="4.5" fill="#CF9446"/><rect x="32" y="64" width="56" height="9" rx="3" fill="'+(a.veg?'#8E2F46':'#5A3828')+'"/>';
+    o+='<path d="M31 64h58l-3 6-6-3-6 7-6-7-6 7-6-7-6 7-6-7z" fill="#F2C230"/>';
+    o+='<path d="M30 60q5-6 10 0t10 0t10 0t10 0t10 0t8 0v6H30z" fill="#6DB048"/><rect x="36" y="56" width="48" height="4" rx="2" fill="#D6402F"/>';
+    o+='<path d="M31 56c0-18 12-26 29-26s29 8 29 26z" fill="#DDA054"/><path d="M38 40c6-7 16-9 25-8" stroke="#F0C27E" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+    o+=dots(R,12,60,44,20,function(x,y,R){return y<54?'<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="1.6" ry=".8" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#FFF2D2"/>':''});
+    o+='<g stroke="#F0CC55" stroke-width="2.6" stroke-linecap="round"><path d="M92 86l6-10M97 87l4-10M87 88l7-9"/></g>';
+  }else if(k==='taco'){
+    o+='<g transform="translate(60 62) scale(.78) translate(-60 -60)">';
+    [[44,66,-8],[76,60,8]].forEach(function(t){
+      o+='<g transform="rotate('+t[2]+' '+t[0]+' '+t[1]+')"><path d="M'+(t[0]-24)+' '+t[1]+'a24 24 0 0 1 48 0z" fill="#E9C06B"/><path d="M'+(t[0]-21)+' '+t[1]+'a21 21 0 0 1 42 0z" fill="#F3D78E"/>';
+      o+='<path d="M'+(t[0]-20)+' '+(t[1]-2)+'q4-9 8-2t8-1t8 1t8-2t8 2v4h-40z" fill="#6DB048"/>';
+      o+=dots(R,5,t[0],t[1]-6,12,function(x,y){return '<rect x="'+(x-2.4).toFixed(1)+'" y="'+(y-1.8).toFixed(1)+'" width="5" height="3.6" rx="1.4" fill="#F1DDB5"/>'});
+      o+=dots(R,4,t[0],t[1]-6,11,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.9" fill="#D6402F"/>'});
+      o+=dots(R,5,t[0],t[1]-6,12,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.1" fill="#F6C437"/>'});
+      o+='<ellipse cx="'+(t[0]+6)+'" cy="'+(t[1]-7)+'" rx="5" ry="3" fill="#8DBB45"/></g>';
+    });
+    o+='<path d="M86 82a9 9 0 0 0 16 0z" transform="rotate(-10 94 84)" fill="#9BC53D"/></g>';
+  }else if(k==='lasagne'){
+    o+='<path d="M30 52l12-9h50l-12 9z" fill="#F1C14C"/><rect x="30" y="52" width="50" height="8" fill="#EFC24E"/><path d="M80 52l12-9v26l-12 9z" fill="#D9A23A"/>';
+    var bands=[['#F1C14C',8],['#B5412D',7],['#F2E0A8',4],['#FAF2DA',5],['#B5412D',7],['#F2E0A8',4],['#FAF2DA',3],['#E8D18F',4]],y=52;
+    bands.forEach(function(b){o+='<rect x="30" y="'+y+'" width="50" height="'+b[1]+'" fill="'+b[0]+'"/>';y+=b[1]});
+    o=o.replace('<rect x="30" y="52" width="50" height="8" fill="#EFC24E"/>','');
+    o+=dots(R,14,56,50,18,function(x,y,R){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+(y*0.2+42).toFixed(1)+'" rx="2.4" ry="1" fill="#C98322"/>'}).replace(/cy="(\d+\.\d)"/g,'cy="$1"');
+    o+=leaf(52,46,-10,2,'#3F8A4B')+leaf(58,48,40,1.6,'#4C9A55');
+    o+='<path d="M80 52l12-9v26l-12 9z" fill="rgba(0,0,0,.08)"/>';
+  }else if(k==='soup'||k==='bowl'){
+    var broth=k==='bowl'?'#D9702C':a.sauce==='red'?'#D2552B':a.sauce==='gold'?'#E3A83B':'#EDDFC0';
+    o+='<circle cx="60" cy="60" r="34" fill="#C9D1CB"/><circle cx="60" cy="60" r="31" fill="#EEF0EA"/><circle cx="60" cy="60" r="27.5" fill="'+broth+'"/><circle cx="52" cy="52" r="12" fill="rgba(255,255,255,.14)"/>';
+    if(k==='bowl'){
+      o+=dots(R,10,60,60,22,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.8" fill="#EDCB8A"/>'});
+      o+=dots(R,7,60,60,21,function(x,y,R){return '<rect x="'+(x-2).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" width="4" height="4" rx=".8" transform="rotate('+(R()*80).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#F28A2E"/>'});
+      o+='<path d="M52 66q8-8 18-2" stroke="#FAF7EC" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="62" cy="58" r="4.5" fill="#FAF7EC"/>';
+      if(a.naan)o+='<path d="M86 84l-4-16a20 20 0 0 1 14 12z" fill="#E7C98C" stroke="#CFA45E" stroke-width=".8"/>';
+    }else{
+      o+=dots(R,12,60,60,21,function(x,y,R){var t=R();return t<.4?'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.8" fill="#F28A2E"/>':t<.7?'<rect x="'+(x-2.4).toFixed(1)+'" y="'+(y-1.8).toFixed(1)+'" width="5" height="3.6" rx="1.4" fill="#F4E3BE"/>':'<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="1.8" fill="#6BAA4E"/>'});
+      o+='<path d="M46 62q10-10 24-2" stroke="#FFF9EA" stroke-width="3" fill="none" stroke-linecap="round"/>';
+      if(a.crout)o+=dots(R,5,60,60,19,function(x,y,R){return '<rect x="'+(x-3).toFixed(1)+'" y="'+(y-3).toFixed(1)+'" width="6" height="6" rx="1" transform="rotate('+(R()*80).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#5B3C27"/>'});
+    }
+    o+=leaf(66,56,-20,1.6,'#3F8A4B')+leaf(56,66,35,1.4,'#4C9A55')+leaf(70,66,160,1.2,'#2F7A40');
+  }else if(k==='salad'){
+    o+=dots(R,26,60,60,24,function(x,y,R){return leaf(x,y,R()*180,2+R()*1.6,['#6DB048','#8CC85E','#4F9440','#A7D273'][Math.floor(R()*4)])});
+    o+=dots(R,5,60,60,18,function(x,y,R){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="4" fill="none" stroke="#9E3F7C" stroke-width="1.2"/>'});
+    o+=dots(R,5,60,58,16,function(x,y,R){return '<rect x="'+(x-5).toFixed(1)+'" y="'+(y-2.4).toFixed(1)+'" width="10" height="4.8" rx="2.4" transform="rotate('+(R()*140-70).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#E6BE80"/>'});
+    o+=dots(R,16,60,60,22,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r=".9" fill="#FFF3D2"/>'});
+    o+='<path d="M82 78a8 8 0 0 0 14 0z" fill="#9BC53D"/>';
+  }else if(k==='chicken'){
+    o+='<ellipse cx="60" cy="58" rx="22" ry="16" transform="rotate(-12 60 58)" fill="#B96A22"/><ellipse cx="58" cy="54" rx="18" ry="11" transform="rotate(-12 58 54)" fill="#D58B33"/><ellipse cx="52" cy="50" rx="8" ry="4" transform="rotate(-20 52 50)" fill="rgba(255,236,190,.55)"/>';
+    o+='<ellipse cx="41" cy="72" rx="8" ry="4" transform="rotate(35 41 72)" fill="#C77A2E"/><ellipse cx="78" cy="70" rx="8" ry="4" transform="rotate(-30 78 70)" fill="#C77A2E"/>';
+    o+=dots(R,6,60,66,26,function(x,y,R){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="5.2" ry="4" fill="'+(R()<.5?'#E8B54B':'#EFC766')+'"/>'});
+    o+=dots(R,4,60,60,28,function(x,y,R){return '<rect x="'+(x-5).toFixed(1)+'" y="'+(y-1.6).toFixed(1)+'" width="10" height="3.2" rx="1.6" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#F28A2E"/>'});
+    o+=leaf(62,42,-30,1.6,'#3F8A4B')+leaf(48,64,30,1.6,'#4C9A55')+leaf(72,60,10,1.4,'#2F7A40');
+  }else if(k==='skillet'){
+    o+='<circle cx="60" cy="60" r="34" fill="#4A4F52"/><circle cx="60" cy="60" r="30.5" fill="#6A7074"/><circle cx="60" cy="60" r="28" fill="#8F8671"/>';
+    o+=dots(R,24,60,60,26,function(x,y,R){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="7" ry="2.4" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="'+(R()<.5?'#A9D07E':'#C4E09B')+'"/>'});
+    o+=dots(R,18,60,60,24,function(x,y,R){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+(2+R()*1.6).toFixed(1)+'" fill="'+(R()<.7?'#7B4A2D':'#9A6339')+'"/>'});
+    o+=dots(R,6,60,60,22,function(x,y){return '<rect x="'+(x-1.8).toFixed(1)+'" y="'+(y-1.8).toFixed(1)+'" width="3.6" height="3.6" rx=".8" fill="#F28A2E"/>'});
+    o+='<path d="M64 62q6-6 14 0t6 8q-8 4-16 0z" fill="rgba(246,204,80,.85)"/>';
+    o+='<rect x="92" y="56" width="22" height="8" rx="4" fill="#4A4F52"/>';
+  }else if(k==='enchilada'){
+    o+='<rect x="26" y="36" width="68" height="48" rx="9" fill="#E9E7DF" stroke="#D3CFC3" stroke-width="1"/><rect x="31" y="41" width="58" height="38" rx="6" fill="#B33A25"/>';
+    for(var e=0;e<3;e++)o+='<rect x="'+(35+e*18)+'" y="46" width="14" height="28" rx="7" fill="#EBC278"/><rect x="'+(36+e*18)+'" y="46" width="6" height="28" rx="3" fill="rgba(255,244,214,.45)"/>';
+    o+='<path d="M33 54q10-6 20 0t18 2t16-3v12q-10 6-20 0t-18-2t-16 3z" fill="rgba(246,201,70,.88)"/>';
+    o+=dots(R,5,60,60,22,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.2" fill="#5E9F2E" stroke="#3F7C1F" stroke-width=".6"/>'});
+    o+=leaf(50,52,-20,1.6,'#3F8A4B')+leaf(70,66,30,1.5,'#4C9A55');
+  }else if(k==='wok'){
+    for(var w=0;w<8;w++)o+='<path d="M'+(36+R()*10)+' '+(48+w*3.6)+'q'+(10+R()*6)+' '+(-9+R()*5)+' '+(22+R()*6)+' 0t'+(20+R()*6)+' 0" fill="none" stroke="#EBD08E" stroke-width="3" stroke-linecap="round"/>';
+    o+=dots(R,6,60,60,22,function(x,y,R){return '<rect x="'+(x-4).toFixed(1)+'" y="'+(y-1.4).toFixed(1)+'" width="8" height="2.8" rx="1.4" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#F28A2E"/>'});
+    o+=dots(R,5,60,60,22,function(x,y,R){return '<rect x="'+(x-3.6).toFixed(1)+'" y="'+(y-1.4).toFixed(1)+'" width="7.2" height="2.8" rx="1.4" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#D6402F"/>'});
+    o+=dots(R,6,60,60,22,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="2.4" fill="#4F9440"/>'});
+    o+=dots(R,5,60,60,20,function(x,y,R){return '<rect x="'+(x-2.6).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" width="5.2" height="4" rx="1.6" transform="rotate('+(R()*80).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#F6E4BE"/>'});
+  }else if(k==='balls'){
+    o+='<circle cx="54" cy="58" r="22" fill="#E3B13A"/><circle cx="54" cy="58" r="18" fill="#EDC155"/>';
+    o+=dots(R,6,54,58,13,function(x,y){return '<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5" fill="#8A5A3A"/><circle cx="'+(x-1.4).toFixed(1)+'" cy="'+(y-1.4).toFixed(1)+'" r="1.8" fill="#B07E58"/>'});
+    o+='<ellipse cx="84" cy="62" rx="10" ry="11" fill="#EFEBDD"/>'+dots(R,24,84,62,9,function(x,y,R){return '<ellipse cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" rx="2" ry=".9" transform="rotate('+(R()*180).toFixed(0)+' '+x.toFixed(1)+' '+y.toFixed(1)+')" fill="#FFFEF8"/>'});
+    o+=dots(R,4,54,58,18,function(x,y){return '<rect x="'+(x-2).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" width="4" height="4" rx=".8" fill="#F28A2E"/>'});
+    o+=leaf(50,48,-20,1.6,'#3F8A4B')+leaf(60,70,30,1.4,'#4C9A55');
+  }else{
+    o+='<circle cx="60" cy="60" r="20" fill="#E8E2D2"/><path d="M52 52h16M52 60h16M52 68h10" stroke="#BDB49C" stroke-width="2.4" stroke-linecap="round"/>';
+  }
+  return o;
+}
+function artSVG(r,wide){
+  var a=artKey(r),seed=hashStr((r&&(r.id||r.name))||'x'),R=rng(seed+a.k.length*7),id='pg'+(++_gid);
+  var tb=TABLES[TABLE_FOR[a.k]||'linen'],dark=TABLE_FOR[a.k]==='slate';
+  var vb=wide?'-30 3.75 180 112.5':'0 0 120 120',bg=wide?'<rect x="-120" y="-120" width="400" height="400" fill="url(#'+id+')"/>':'<rect width="120" height="120" fill="url(#'+id+')"/>';
+  var s='<svg viewBox="'+vb+'" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false"><defs><linearGradient id="'+id+'" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="'+tb[0]+'"/><stop offset="1" stop-color="'+tb[1]+'"/></linearGradient></defs>'+bg;
+  /* cloth + cutlery */
+  var cl=dark?'#566259':'#F6F1E6';
+  s+='<g transform="rotate('+(-14+(seed%9))+' 10 100)"><rect x="-30" y="84" width="70" height="40" rx="3" fill="'+cl+'" opacity=".8"/><rect x="-30" y="92" width="70" height="2" fill="'+(dark?'#6F7C72':'#C9BFA8')+'" opacity=".7"/></g>';
+  s+='<g transform="translate(106 28) rotate(8)" fill="'+(dark?'#B8C0BB':'#9AA09C')+'"><rect x="-1.6" y="14" width="3.2" height="52" rx="1.6"/><rect x="-5" y="-6" width="10" height="22" rx="4"/></g>';
+  /* plate */
+  s+='<circle cx="62" cy="64" r="46" fill="#000" opacity=".16"/><circle cx="60" cy="60" r="46" fill="#FBFAF6"/><circle cx="60" cy="60" r="41" fill="none" stroke="#E4DFD1" stroke-width="1.6"/><circle cx="60" cy="60" r="36" fill="#F3F0E6"/>';
+  s+=sceneInner(a,R);
+  return s+'</svg>';
+}
+function imgSrc(r){return r&&r.img&&r.img.id?'/_blob/'+encodeURIComponent(r.img.id):''}
+function artHtml(r,id,wide){
+  var src=imgSrc(r);
+  return src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async" data-fb="'+esc(id||'')+'">':artSVG(Object.assign({id:id},r||{}),wide);
+}
+
+
+/* ---------- rendering ---------- */
+function render(){if(raf)return;raf=requestAnimationFrame(function(){raf=0;draw()})}
+function banner(){
+  var b='';
+  if(S.nodb)b+='<div class="banner warn">'+(window.UGEKURV_WEB?'Ingen forbindelse til databasen. Tjek nettet og åbn appen igen.':'Appen kan ikke gemme data her. Åbn den i Claude og log ind.')+'</div>';
+  else if(S.slow&&!S.ready.pantry)b+='<div class="banner warn">Kan ikke nå databasen endnu. Data vises, når forbindelsen er tilbage.</div>';
+  if(S.ro)b+='<div class="banner warn">Du kan kun se data. Bed ejeren give dig adgang som Contributor, så du kan lave din egen ugeplan.</div>';
+  if(S.settings.example)b+='<div class="banner"><span>Eksempeldata. Ryd, når dine egne er lagt ind.</span><button class="btn ghost sm" data-act="clearex">Ryd</button></div>';
+  return b;
+}
+function draw(){
+  var f={week:viewWeek,stock:viewStock,shop:viewShop}[S.tab]||viewWeek;
+  var oc=$('#view').querySelector('.stores'),ol=oc?oc.scrollLeft:0;
+  $('#view').innerHTML=banner()+f();
+  var nc=$('#view').querySelector('.stores');
+  if(nc){var on=nc.querySelector('.sto[aria-pressed="true"]');
+    if(on&&S.shownSel!==S.sel){nc.scrollLeft=Math.max(0,on.offsetLeft-nc.offsetLeft-(nc.clientWidth-on.offsetWidth)/2)}else nc.scrollLeft=ol;
+    S.shownSel=S.sel}
+  document.querySelectorAll('.tab').forEach(function(t){t.setAttribute('aria-current',t.dataset.tab===S.tab?'page':'false')});
+}
+function weekNav(){
+  var w=isoWeek(S.mon),a=parseYmd(S.mon),b=parseYmd(addDays(S.mon,6));
+  var rng=a.getUTCMonth()===b.getUTCMonth()?a.getUTCDate()+'.–'+b.getUTCDate()+'. '+MON[b.getUTCMonth()]:a.getUTCDate()+'. '+MON[a.getUTCMonth()]+' – '+b.getUTCDate()+'. '+MON[b.getUTCMonth()];
+  var cur=mondayOf(todayStr()),tag=S.mon===cur?' · denne uge':S.mon===addDays(cur,7)?' · næste uge':'';
+  return '<div class="wnav"><button class="x" data-act="wk" data-d="-1" aria-label="Forrige uge">‹</button><div class="c"><div class="wt">Uge '+w[1]+'</div><div class="wr">'+rng+tag+'</div></div><button class="x" data-act="wk" data-d="1" aria-label="Næste uge">›</button></div>';
+}
+function safeUrl(u){u=String(u||'').trim();return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''}
+function srcHost(u){return safeUrl(u).replace(/^https?:\/\/(www\.)?/i,'').split('/')[0]}
+function kcTxt(r){var k=kcalOf(r);return k.k>KALLOW+5?'ca. '+k.k+' kcal':''}
+function recMeta(r,withKc){var m=[];if(r.minutes)m.push(r.minutes+' min');if(r.book)m.push(esc(r.book));if(withKc){var k=kcTxt(r);if(k)m.push(k)}return m.join(' · ')}
+function dayName(d){if(d.f){var fp=pan(d.f);return fp?fp.name:'Rest fra fryseren'}var r=d.r&&S.recipes[d.r];return r?r.name:''}
+function artBox(r,id,cls){return '<span class="art'+(cls?' '+cls:'')+'">'+artHtml(r,id,cls==='wide')+'</span>'}
+
+/* --- Ugeplan --- */
+function wishesHtml(w){
+  var sv=S.prefs[w];
+  if(!sv||!sv.done)return '<button class="ask" data-act="wizard"><span class="ask-t"><b>Fortæl om ugen</b><span>Dobbelt portion, kød, tid og kalorier</span></span><span class="ask-go" aria-hidden="true">›</span></button>';
+  var bits=prefsSummary(getPrefs(w));
+  return '<div class="wishes">'+(bits.length?bits.map(function(b){return '<span class="chip">'+esc(b)+'</span>'}).join(''):'<span class="muted sm">Ingen særlige ønsker</span>')+'<button class="edit-w" data-act="wizard">Ret ønsker</button></div>';
+}
+function fanHtml(){
+  var seen={},arts=[];
+  Object.keys(S.recipes).sort().forEach(function(id){var r=S.recipes[id],k=artKey(r).k;if(arts.length<3&&!seen[k]&&!imgSrc(r)){seen[k]=1;arts.push(artBox(r,id))}});
+  return arts.length?'<div class="fan">'+arts.join('')+'</div>':'';
+}
+function loFrom(d,i){var f=d.from!=null?d.from:i-1;return f<0?'søndag':DAYS[f].toLowerCase()}
+var BOOK='<svg viewBox="0 0 24 24"><path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/></svg>';
+function dietChip(r){
+  if(!r)return '';var b=recBad(r),o='';
+  if(b.length)o+='<span class="chip off">⚠ '+esc(b.map(function(k){return ALG[k].n}).join(', '))+'</span>';
+  if(S.settings.veg&&!isVeg(r))o+='<span class="chip off">Ikke vegetar</span>';
+  return o;
+}
+function dayRow(i,d,t,P){
+  d=d||{};var date=addDays(S.mon,i),dd=parseYmd(date).getUTCDate(),dl=DS[i]+' '+dd+'.';
+  var r=d.r&&S.recipes[d.r];
+  if(d.off)return '<div class="dc none'+(date===t?' today':'')+'"><button class="dc-main" data-act="pick" data-i="'+i+'"><span class="art">'+PLATE+'</span><span class="dc-t"><span class="dc-d">'+dl+'</span><span class="dc-n muted">Ude eller ingen mad</span><span class="dc-m">Tryk for at vælge en ret</span></span></button><div class="dc-a"></div></div>';
+  var cls='dc'+(isWeekend(i)?' wk':'')+(d.done?' done':'')+(date===t?' today':'')+(d.lo?' lo':'');
+  if(!(r||d.f))return '<div class="dc none'+(date===t?' today':'')+'"><button class="dc-main" data-act="pick" data-i="'+i+'"><span class="art">'+PLATE+'</span><span class="dc-t"><span class="dc-d">'+dl+'</span><span class="dc-n muted">Vælg ret</span></span></button><div class="dc-a"></div></div>';
+  var meta=d.lo?'Rester fra '+loFrom(d,i):d.f?'Fra fryseren':recMeta(r,P.low);
+  var chips=(d.dbl?'<span class="chip">Dobbelt</span>':'')+(d.lo?'<span class="chip ex">Rester</span>':'')+(r&&r.fav?'<span class="hrt" aria-label="Favorit">♥</span>':'')+(r&&!d.lo?dietChip(r):'');
+  var rate=d.done&&r&&!d.lo&&!d.f?'<span class="rt" role="button" tabindex="0" data-act="rateopen" data-i="'+i+'" aria-label="Bedøm retten">'+(d.rate?'★ '+d.rate+'/5':'★ Bedøm')+'</span>':'';
+  var art=d.f?artBox({name:'frost',ing:[]},'f'):artBox(r,d.r);
+  var sec='';
+  if(r&&!d.lo){
+    if(r.method)sec='<button class="ol" data-act="cook" data-id="'+esc(d.r)+'" aria-label="Se opskriften">'+BOOK+'</button>';
+    else if(safeUrl(r.url))sec='<a class="ol" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer" aria-label="Åbn opskriften på '+esc(srcHost(r.url))+'">'+LINK+'</a>';
+  }
+  return '<div class="'+cls+'"><button class="dc-main" data-act="pick" data-i="'+i+'">'+art+'<span class="dc-t"><span class="dc-d">'+dl+chips+'</span><span class="dc-n">'+esc(dayName(d))+'</span>'+(meta?'<span class="dc-m">'+meta+'</span>':'')+rate+'</span></button>'+
+    '<div class="dc-a">'+sec+
+    '<button class="ck'+(d.done?' on':'')+'" data-act="done" data-i="'+i+'" aria-label="Markér som lavet" aria-pressed="'+(!!d.done)+'">'+CHECK+'</button></div></div>';
+}
+function viewWeek(){
+  var w=wid(),plan=S.plans[w],days=(plan&&plan.days)||[],has=days.some(function(d){return d&&(d.r||d.f||d.off)}),t=todayStr(),h=weekNav();
+  var nrec=Object.keys(S.recipes).length,P=getPrefs(w);
+  if(!has){
+    h+='<section class="card hero">'+fanHtml()+'<h2>Klar til uge '+isoWeek(S.mon)[1]+'?</h2>'+
+      (nrec?'<p>Svar på to korte spørgsmål, så laver appen en madplan ud fra dit lager og ugens tilbud.</p><button class="btn block" data-act="wizard">Besvar og lav madplan</button><button class="alt" data-act="gen">Spring over og lav en plan nu</button>':(S.hasSettings===false&&!S.ro?'<p>Her får du din egen ugeplan, dit eget lager og dine egne retter. Ingen andre kan se dem.</p><button class="btn block" data-act="onboard">Kom i gang</button>':'<p>Tilføj et par retter, så kan appen lave en madplan.</p><button class="btn block" data-act="recs">Tilføj retter</button>'))+'</section>';
+  }else{
+    h+=wishesHtml(w);
+    h+='<div class="days">';for(var i=0;i<7;i++)h+=dayRow(i,days[i],t,P);h+='</div>';
+    h+='<div class="foot"><button class="btn" data-act="gen">Lav ny plan</button><button class="btn ghost" data-act="recs">Mine retter</button></div>';
+  }
+  return h;
+}
+
+/* --- Indkøb --- */
+function storeTiles(sc,sel,best,pair){
+  var act=activeStores(),mx=Math.max.apply(null,act.map(function(s){return sc.stores[s].total}))||1;
+  var h='<div class="stores" role="group" aria-label="Butikker">'+act.map(function(s){
+    var x=sc.stores[s],on=s===sel;
+    return '<button class="sto" data-act="pickstore" data-s="'+esc(s)+'" aria-pressed="'+on+'">'+(best===s&&act.length>1?'<span class="best">Billigst</span>':'')+
+      '<b>'+esc(s)+'</b><span class="tot">'+nf(Math.round(x.total),0)+'<small>kr</small></span>'+
+      '<span class="sv">'+(x.n?x.n+' tilbud · −'+nf(Math.round(x.save),0)+' kr':'Ingen tilbud')+'</span>'+
+      '<span class="bar"><i style="width:'+Math.max(8,Math.round(x.total/mx*100))+'%"></i></span></button>'}).join('');
+  if(pair)h+='<button class="sto pair" data-act="pickstore" data-s="'+pair.sel+'" aria-pressed="'+(sel===pair.sel)+'"><span class="best">Anbefalet</span><b>'+esc(pair.stores.join(' + '))+'</b><span class="tot">'+nf(Math.round(pair.total),0)+'<small>kr</small></span><span class="sv">−'+nf(Math.round(pair.save),0)+' kr mod én butik</span><span class="bar"><i style="width:'+Math.max(8,Math.round(pair.total/mx*100))+'%"></i></span></button>';
+  return h+'</div>';
+}
+function nameList(a){a=a.map(function(x){return '<em>'+esc(x)+'</em>'});return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' og '+a[a.length-1]}
+function optsHtml(sc,w,op){
+  var sv=op.sv,rec=op.opts[op.rec],act=activeStores(),h='<div class="opts"><div class="lbl">Én butik eller flere?</div><div class="optl" role="group" aria-label="Sammenlign butikker">';
+  op.opts.forEach(function(o,i){
+    var on=S.sel===o.sel,nm=o.k===1?'Kun '+esc(o.stores[0]):esc(o.stores.join(' + '));
+    var d=o.k+(o.k===1?' butik':' butikker')+(o.k>1?' · sparer ca. '+kr(Math.round(o.save))+(o.k>2?' ('+kr(Math.round(o.extra))+' mere end '+(o.k-1)+')':''):'');
+    var split=o.k>1?'<span class="o-s">'+o.stores.map(function(s){return esc(s)+' ca. '+kr(Math.round(o.sub[s]))}).join(' · ')+'</span>':'';
+    h+='<button class="opt'+(i===op.rec?' rec':'')+'" data-act="pickstore" data-s="'+esc(o.sel)+'" aria-pressed="'+on+'"><span class="o-n">'+(i===op.rec?'<span class="best">Anbefalet</span>':'')+nm+'</span><span class="o-t">'+nf(Math.round(o.total),0)+'<small> kr</small></span><span class="o-d">'+d+'</span>'+split+'</button>';
+  });
+  h+='</div>';
+  var top=op.cheapest,msg;
+  if(sv===0)msg='Du har sat grænsen til 0 kr pr. ekstra butik, så appen anbefaler den billigste kombination.';
+  else if(rec.k===1)msg='Flere butikker kan højst spare ca. '+kr(Math.round(top.save))+', men det kræver '+top.k+' butikker. Med dine '+sv+' kr pr. ekstra butik er én butik bedre.';
+  else msg='Du sparer ca. '+kr(Math.round(rec.save))+' mod kun '+esc(op.opts[0].stores[0])+' og tager '+(rec.k-1)+(rec.k===2?' butik':' butikker')+' mere med. Regnet med dine '+sv+' kr pr. ekstra butik er gevinsten stadig ca. '+kr(Math.round(rec.net))+'.';
+  h+='<p class="fine">'+msg+(top!==rec&&top.k>1?' Hvis kun prisen tæller: '+esc(top.stores.join(' + '))+', ca. '+kr(Math.round(top.total))+'.':'')+' Grænsen ændrer du under Indstillinger.</p>';
+  var offSt=act.filter(function(s){return activeOffers(w).some(function(o){return o.store===s})}),noOff=act.filter(function(s){return offSt.indexOf(s)<0});
+  h+='<p class="fine">'+(offSt.length?'Ugens tilbud er læst for '+esc(offSt.join(', '))+'.':'Der er ikke fundet tilbud for de valgte butikker.')+(noOff.length&&offSt.length?' For '+esc(noOff.join(', '))+' er der kun regnet med prisniveau.':'')+'</p>';
+  return h+'</div>';
+}
+function recoHtml(sc,best,w,op){
+  var bs=best?sc.stores[best]:null,act=activeStores(),rec=op&&op.opts[op.rec],h='<div class="card reco"><div class="lbl">Ugens indkøb</div>';
+  if(rec&&rec.k>1){
+    h+='<div class="big">Handl i '+nameList(rec.stores)+'</div><p>ca. '+kr(Math.round(rec.total))+' · du sparer ca. '+kr(Math.round(rec.save))+' mod kun '+esc(rec.base)+'.</p>';
+  }else if(best){
+    h+='<div class="big">Kør til <em>'+esc(best)+'</em></div><p>ca. '+kr(Math.round(bs.total))+(bs.save>=1?' · du sparer ca. '+kr(Math.round(bs.save))+' på tilbud':'')+'</p>';
+  }else{
+    h+='<div class="big">Samme pris i alle butikker</div><p>ca. '+kr(Math.round(sc.norm))+'. Vælg den butik, der ligger lettest.</p>';
+  }
+  if(op&&act.length>1&&op.opts.length>1)h+=optsHtml(sc,w,op);
+  else if(act.length>1)h+='<p class="fine">Én butik er nok. Flere butikker sparer ikke noget mærkbart.</p>';
+  return h+'</div>';
+}
+function budgetHtml(total){
+  var B=weekBudget();if(!(B>0)||!(total>0))return '';
+  var left=B-total,pct=Math.min(100,Math.round(total/B*100)),mo=S.settings.budgetPer==='month';
+  return '<div class="card bud"><div class="lbl">Madbudget</div><div class="bud-r"><b>ca. '+kr(Math.round(total))+'</b> af '+kr(Math.round(B))+(mo?' (en uge af '+kr(S.settings.budget)+' om måneden)':'')+'</div>'+
+    '<div class="bbar'+(left<0?' over':'')+'" role="img" aria-label="'+pct+' procent af budgettet"><i style="width:'+Math.max(4,pct)+'%"></i></div>'+
+    '<p class="fine">'+(left>=0?'Du holder budgettet med ca. '+kr(Math.round(left))+' til overs.':'Ca. '+kr(Math.round(-left))+' over budgettet. Prøv »Lav ny plan«, eller vælg billigere retter.')+'</p></div>';
+}
+function brandBtn(it){
+  var b=brandsOf(it.k),nm=esc(it.name);
+  return '<button type="button" class="chip bk'+(b.length?' on':'')+'" data-act="brand" data-k="'+esc(it.k)+'" data-n="'+nm+'" aria-label="'+(b.length?'Ret foretrukket mærke for ':'Vælg foretrukket mærke for ')+nm+'">'+(b.length?'★ '+esc(brandLabel(it.k)):'+ Mærke')+'</button>';
+}
+function viewShop(){
+  var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
+  if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan under Ugeplan, så regner appen ud, hvad du mangler, og hvad det koster i de butikker, du har valgt.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
+  var sc=storeCosts(items,w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
+  items.forEach(function(it){if(qual(it.k))hasQ=true});
+  if(sc.norm>0){
+    var tot=act.map(function(s){return sc.stores[s]}).sort(function(a,b){return a.total-b.total||b.n-a.n});
+    if(tot.length===1||tot[0].total<tot[tot.length-1].total-.5)best=tot[0].store;
+    op=shopOptions(sc);recO=op.opts[op.rec];
+    if((S.sel==='pair'||S.sel==='trio')&&!op.opts.some(function(o){return o.sel===S.sel}))S.sel='';
+    if(!S.sel||(S.sel!=='pair'&&S.sel!=='trio'&&act.indexOf(S.sel)<0)||!S.selSet)S.sel=recO.sel;
+    h+=storeTiles(sc,S.sel,best,recO.k>1?recO:null)+recoHtml(sc,best,w,op)+budgetHtml(op.recTotal);
+  }
+  var sel=sc.norm>0?S.sel:'',combo=(op&&(sel==='pair'||sel==='trio'))?op.opts.filter(function(o){return o.sel===sel})[0]:null;
+  var storeOf=function(it){return !sel?'':(combo?(combo.assign[it.k+'_'+it.unit]||combo.stores[0]):sel)};
+  var nchk=0;
+  var groupsHtml=function(list){
+    var groups={},g='';list.forEach(function(it){(groups[it.cat]=groups[it.cat]||[]).push(it)});
+    CATS.forEach(function(c){
+      if(!groups[c])return;
+      g+='<div class="sec"><div class="lbl">'+esc(c)+'</div><div class="group">'+groups[c].sort(function(a,b){return a.name.localeCompare(b.name,'da')}).map(function(it){
+        var key=it.k+'_'+it.unit,on=!!chk[key];if(on)nchk++;
+        var so=storeOf(it),ln=so&&sc.stores[so]?sc.stores[so].lines[key]:null,via=ln&&ln.via,qt=it.pack>0?it.packs+' pk. · '+fq(it.qty,it.unit):fq(it.qty,it.unit);
+        var price=ln?'<span class="pr'+(via?' off':'')+'">ca. '+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':''):'';
+        var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>':'';
+        return '<label class="it'+(on?' on':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span><span class="it-p">'+price+'</span></label>'}).join('')+'</div></div>';
+    });
+    return g;
+  };
+  if(combo){
+    combo.stores.forEach(function(s){
+      var part=items.filter(function(it){return storeOf(it)===s});
+      if(!part.length)return;
+      h+='<div class="storehead"><b>Køb i '+esc(s)+'</b><span>'+part.length+(part.length===1?' vare':' varer')+' · ca. '+kr(Math.round(combo.sub[s]))+'</span></div>'+groupsHtml(part);
+    });
+    var rest=items.filter(function(it){return !storeOf(it)});if(rest.length)h+=groupsHtml(rest);
+  }else h+=groupsHtml(items);
+  h+='<div class="sec"><div class="lbl">Ekstra</div><div class="group">'+extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
+    return '<label class="it'+(on?' on':'')+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span><span></span></label>'}).join('')+'</div>'+
+    '<div class="add-row"><input id="xin" type="text" placeholder="Tilføj vare, fx slik eller brød" aria-label="Ny ekstra vare"><button class="btn" data-act="addx">Tilføj</button></div></div>';
+  if(nchk)h+='<button class="btn block" data-act="tostock">Læg afkrydsede på lageret</button>';
+  if(sc.norm>0){
+    var od=S.offers[w],lv=act.filter(function(s){return s!=='Rema 1000'}).map(function(s){var p=Math.round((pidx(s)-1)*100);return s+' ca. '+(p>0?'+':p<0?'−':'')+Math.abs(p)+' %'}).join(', ');
+    var rd=S.ref.stores&&S.ref.stores.pvdate;
+    var fine='Priserne er overslag. Normalpriser er slået op hos Rema 1000'+(rd?' ('+fmtDate(rd)+')':'')+' for '+sc.looked+' af '+sc.priced+' varer, resten er skøn. De andre butikker er regnet i forhold til Rema ud fra Madprisluppens pristjek af hyldepriser ('+lv+')'+(od&&(od.items||[]).length?', og ugens tilbud'+(od.updated?' (lagt ind '+fmtDate(ymd(new Date(od.updated)))+')':'')+' trækker prisen ned, hvor de passer. Kun tilbud, jeg har kunnet finde, er med.':'.');
+    if(!od||!(od.items||[]).length)fine+=' Der er ikke lagt tilbud ind for uge '+isoWeek(S.mon)[1]+' endnu.';
+    if(sc.unpriced)fine+=' '+sc.unpriced+(sc.unpriced===1?' vare':' varer')+' uden pris er ikke med.';
+    if(items.some(function(it){return brandsOf(it.k).length}))fine+=' Varer med valgt mærke får kun tilbud på det mærke. Normalprisen er et overslag, der ikke tager højde for mærket.';
+    if(act.indexOf('Løvbjerg')>-1)fine+=' Løvbjergs prisniveau er et skøn, fordi jeg ikke har fundet en måling af det.';
+    if(hasQ){var ac=accQ();fine+=' Kød, fisk og æg: '+(ac.oko&&ac.god?'økologi eller frilands (3 hjerter) tæller, og den billigste bruges.':ac.oko?'kun økologi tæller.':'kun frilands (3 hjerter) tæller.')+(sc.skipped?' '+sc.skipped+(sc.skipped===1?' billigere tilbud er':' billigere tilbud er')+' ikke med, fordi de ikke opfylder dit valg.':'')}
+    h+='<p class="fine">'+esc(fine)+'</p>';
+  }
+  return h;
+}
+
+/* --- Lager --- */
+function stockItems(){return Object.keys(S.pantry.items||{}).map(function(k){var p=S.pantry.items[k];return Object.assign({k:k},p)})}
+function grp(p){return (p.leftover||p.loc==='fryser')?'Frost':(p.cat||'Andet')}
+function stockListHtml(){
+  var q=S.q.trim().toLowerCase(),t=todayStr();
+  var items=stockItems().filter(function(p){return !q||String(p.name).toLowerCase().indexOf(q)>-1}),h='';
+  CATS.forEach(function(c){
+    var g=items.filter(function(p){return grp(p)===c}).sort(function(a,b){return a.name.localeCompare(b.name,'da')});
+    if(!g.length)return;
+    h+='<div class="sec"><div class="lbl">'+esc(c)+'</div><div class="list">'+g.map(function(p){
+      var cq=curQty(p),low=isLow(p),soon=p.expires&&cq>0&&daysBetween(t,p.expires)<=4;
+      var sub=(low?'<span class="chip off">'+((p.rule||'under')==='out'?'Brugt op':'Snart tom')+'</span>':'')+(soon?'<span class="chip warn">Udløber snart</span>':'')+(p.leftover&&p.frozen?'<span>frosset '+fmtDate(p.frozen)+'</span>':'');
+      return '<button class="li" data-act="editstock" data-k="'+esc(p.k)+'"><span><span class="nm">'+esc(p.name)+'</span>'+(sub?'<span class="sub">'+sub+'</span>':'')+'</span><span class="qt">'+pq(p,cq)+'</span></button>'}).join('')+'</div></div>';
+  });
+  return h||'<p class="muted">Ingen varer fundet.</p>';
+}
+function viewStock(){
+  var items=stockItems();
+  return '<div class="add-row"><input id="sq" type="text" placeholder="Søg i lageret" value="'+esc(S.q)+'" aria-label="Søg i lageret"><button class="btn" data-act="newstock">Ny vare</button></div>'+
+    '<div id="stockList" style="display:flex;flex-direction:column;gap:18px">'+(items.length?stockListHtml():'<section class="card hero"><h2>Lageret er tomt</h2><p>Tilføj det, du har hjemme. Når du markerer en ret som lavet, trækker appen forbruget fra.</p></section>')+'</div>';
+}
+
+/* ---------- sheets ---------- */
+function openSheet(title,body){
+  $('#sheet').innerHTML='<div class="scrim" data-act="close"></div><div class="sheet" role="dialog" aria-modal="true" aria-label="'+esc(title)+'"><div class="sh-grab"></div><div class="sh-head"><h2>'+esc(title)+'</h2><button class="x" data-act="close" aria-label="Luk">×</button></div><div class="sh-body">'+body+'</div></div>';
+  document.body.classList.add('lock');
+}
+function closeSheet(){if(S.ctl){try{S.ctl.abort()}catch(e){}S.ctl=null}$('#sheet').innerHTML='';document.body.classList.remove('lock');S.wz=null}
+var opt=function(list,sel){return list.map(function(o){var v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;return '<option value="'+esc(v)+'"'+(v===sel?' selected':'')+'>'+esc(l)+'</option>'}).join('')};
+
+/* pick a recipe (or a freezer meal) for a day */
+function openPick(i){
+  var w=wid(),d=((S.plans[w]||{}).days||[])[i]||{},P=getPrefs(w);
+  var ctx=ctxFor(w),list=Object.keys(S.recipes).map(function(id){return{id:id,s:fit(S.recipes[id],i,ctx,id)}}).sort(function(a,b){return b.s-a.s});
+  var frz=stockItems().filter(function(p){return p.leftover&&curQty(p)>=1});
+  var h='<p class="muted sm">'+DAYS[i]+' den '+parseYmd(addDays(S.mon,i)).getUTCDate()+'.</p>';
+  if(d.r&&!d.lo)h+='<button class="lowcard" role="switch" aria-checked="'+(!!d.dbl)+'" data-act="togdbl" data-i="'+i+'"><span class="lc"><b>Dobbelt portion</b><span>Så er der rester til '+(i<6?DAYS[i+1].toLowerCase():'mandag i næste uge')+'.</span></span><span class="sw"></span></button>';
+  h+='<div class="sec"><div class="list"><button class="li rec" data-act="setoff" data-i="'+i+'"><span class="art plate">'+PLATE+'</span><span><span class="nm">Ude eller ingen mad</span><span class="sub">Ingen indkøb til denne dag</span></span><span></span></button></div></div>';
+  if(frz.length)h+='<div class="sec"><div class="lbl">Fra fryseren</div><div class="list">'+frz.map(function(p){return '<button class="li" data-act="setfrz" data-i="'+i+'" data-k="'+esc(p.k)+'"><span><span class="nm">'+esc(p.name)+'</span></span><span class="qt">'+pq(p,curQty(p))+'</span></button>'}).join('')+'</div></div>';
+  h+='<div class="sec"><div class="lbl">Retter</div><div class="list">'+list.map(function(x){var r=S.recipes[x.id],m=recMeta(r,P.low);
+    var ch=(r.fav?'<span class="hrt">♥</span>':'')+(ctx.tasteAny&&!r.fav&&ctx.taste[x.id]>.5?'<span class="chip">Passer din smag</span>':'')+(r.again==='no'?'<span class="chip off">Ikke igen</span>':'')+(r.again==='yes'?'<span class="chip ex">Gentag</span>':'')+dietChip(r);
+    return '<button class="li rec" data-act="setday" data-i="'+i+'" data-id="'+x.id+'">'+artBox(r,x.id)+'<span><span class="nm">'+esc(r.name)+'</span>'+((m||ch)?'<span class="sub">'+m+ch+'</span>':'')+'</span><span></span></button>'}).join('')+'</div></div>';
+  if(d.r||d.f)h+='<button class="btn danger" data-act="setday" data-i="'+i+'" data-id="">Fjern fra dagen</button>';
+  openSheet('Vælg ret',h);
+}
+
+/* recipes */
+function openRecipes(){
+  var ids=Object.keys(S.recipes),h='<div class="btnrow"><button class="btn" data-act="newrec">Ny ret</button>'+(ids.length?'<button class="btn ghost" data-act="favs">♥ Favoritter</button>':''),ns=Object.keys(S.starter).filter(function(id){return !S.recipes[id]}).length;
+  if(ns)h+='<button class="btn ghost" data-act="getstarter">Hent '+ns+(ns===1?' startret':' startretter')+'</button>';
+  h+='</div>';
+  if(ids.length){var tm=tasteModel(),tl=tm.any?tasteLabels(tm):[];
+    h+='<p class="hint">'+(tl.length?'Din smag lige nu: '+esc(tl.join(', '))+'. Appen vælger helst retter, der ligner dine favoritter og bedste vurderinger, men ikke de samme hver uge.':'Markér nogle favoritter eller bedøm retter, så lærer appen din smag og foreslår retter, du vil kunne lide.')+'</p>'}
+  if(!ids.length)h+='<p class="muted">Ingen retter endnu. Tag et billede af en opskrift i kogebogen, så udfylder appen ingredienserne.</p>';
+  var books={};ids.forEach(function(id){var r=S.recipes[id],b=r.book||'Egne retter';(books[b]=books[b]||[]).push(id)});
+  Object.keys(books).sort(function(a,b){return a==='Egne retter'?1:b==='Egne retter'?-1:a.localeCompare(b,'da')}).forEach(function(b){
+    h+='<div class="sec"><div class="lbl">'+esc(b)+'</div><div class="list">'+books[b].sort(function(a,c){return (S.recipes[a].page||0)-(S.recipes[c].page||0)||S.recipes[a].name.localeCompare(S.recipes[c].name,'da')}).map(function(id){
+      var r=S.recipes[id],kt=kcTxt(r);
+      return '<button class="li rec" data-act="editrec" data-id="'+id+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.fav?'<span class="hrt">♥</span>':'')+(r.rating?'<span>★ '+nf(r.rating,1)+'</span>':'')+(r.page?'<span class="mono">s. '+r.page+'</span>':'')+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(kt?'<span>'+kt+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.prot==='vegetar'||r.prot==='aeg'?'<span class="chip">Vegetar</span>':'')+'</span></span><span></span></button>'}).join('')+'</div></div>';
+  });
+  openSheet('Mine retter',h);
+}
+
+function ruleHtml(p){
+  var r=ruleOf(p);
+  return '<div class="rule"><div class="field"><label>Hvornår kommer den på indkøbslisten?</label><select class="r-mode">'+opt([['under','Når lageret er under en grænse'],['days','Når der er få dage tilbage'],['out','Når den er brugt op'],['never','Aldrig automatisk']],r.rule)+'</select></div>'+
+    '<div class="grid2"><div class="field r-f-under"'+(r.rule==='under'?'':' hidden')+'><label>Grænse</label><input class="r-min" inputmode="decimal" value="'+esc(dec(r.min))+'"></div>'+
+    '<div class="field r-f-days"'+(r.rule==='days'?'':' hidden')+'><label>Dage tilbage</label><input class="r-days" inputmode="decimal" value="'+esc(dec(r.days))+'"></div>'+
+    '<div class="field r-f-use"'+(r.rule==='never'?' hidden':'')+'><label>Forbrug pr. uge (valgfri)</label><input class="r-use" inputmode="decimal" value="'+(r.use?esc(dec(r.use)):'')+'"></div>'+
+    '<div class="field"><label>Pakkestørrelse</label><input class="r-pack" inputmode="decimal" value="'+(r.pack?esc(dec(r.pack)):'')+'"></div></div></div>';
+}
+function readRule(el){var g=function(c){return el.querySelector(c)};return{rule:g('.r-mode').value,min:Math.max(0,num(g('.r-min').value)),days:Math.max(0,num(g('.r-days').value)),use:Math.max(0,num(g('.r-use').value)),pack:Math.max(0,num(g('.r-pack').value))}}
+function syncRule(el){var m=el.querySelector('.r-mode').value;el.querySelector('.r-f-under').hidden=m!=='under';el.querySelector('.r-f-days').hidden=m!=='days';el.querySelector('.r-f-use').hidden=m==='never'}
+function refreshSummary(row){
+  if(!row)return;var s=row.querySelector('summary'),rule=row.querySelector('.rule'),u=row.querySelector('.i-u');
+  if(s&&rule)s.textContent=ruleSummary(readRule(rule),u?u.value:'g');
+}
+function ingRow(g){
+  g=g||{};var p=g.n?pan(slug(g.n)):null,u=g.u||(p&&p.unit)||'g',rp=p||{unit:u};
+  return '<div class="ingw"><div class="ing"><input class="i-n" list="pl" placeholder="Ingrediens" aria-label="Ingrediens" value="'+esc(g.n||'')+'"><input class="i-q" inputmode="decimal" placeholder="Mængde" aria-label="Mængde" value="'+(g.q?esc(nf(g.q,2)):'')+'"><select class="i-u" aria-label="Enhed">'+opt(UNITS,u)+'</select><button class="x" data-act="ingdel" aria-label="Fjern ingrediens">×</button></div>'+
+    '<details class="rl"><summary>'+esc(ruleSummary(ruleOf(rp),u))+'</summary>'+ruleHtml(rp)+'</details></div>';
+}
+function heroHtml(id,r){
+  var canUp=!!S.assets;
+  return '<div class="hero-img"><span class="art wide">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(r.img&&r.img.id?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>'+
+    (canUp?'<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">':'')+
+    (canUp&&r.img&&r.img.id?'<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>':'')+
+    (canUp&&!(r.img&&r.img.id)?'<p class="hint">Tegningen er en pladsholder. Tag et billede af retten, når du har lavet den, så bruger appen dit foto.</p>':'');
+}
+function openRecipe(id){
+  var r=id?S.recipes[id]:null,books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});
+  var ing=(r&&r.ing&&r.ing.length?r.ing:[{},{}]);
+  var h='<datalist id="pl">'+stockItems().filter(function(p){return !p.leftover}).map(function(p){return '<option value="'+esc(p.name)+'">'}).join('')+'</datalist><datalist id="bl">'+Object.keys(books).map(function(b){return '<option value="'+esc(b)+'">'}).join('')+'</datalist>';
+  if(r){
+    var k=kalc(r);
+    h+='<button class="btn ghost sm" data-act="cook" data-id="'+esc(id)+'">Se opskrift</button>';
+    h+='<div id="hero-box">'+heroHtml(id,r)+'</div><div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.rest?'<span class="chip ex">Holder sig godt</span>':'')+'</div>';
+    if(k)h+='<p class="hint">Kalorierne er et overslag pr. portion ud fra ingredienserne og ca. '+KALLOW+' kcal til olie og krydderier.</p>';
+  }
+  if(!r)h+='<div class="photo"><b>Læs fra billede</b><p class="muted sm">'+(window.UGEKURV_WEB?'Tag et billede af opskriften i kogebogen. Appen læser teksten på din egen telefon (gratis) og henter titel, tid og ingredienser. Læsningen er ikke perfekt, så tjek mængderne bagefter.':'Tag et billede af opskriften i kogebogen. Appen henter titel, tid og ingredienser. Du kan rette alt bagefter.')+'</p><input id="rf-file" type="file" accept="image/*" multiple aria-label="Billeder af opskrift"><div class="foot"><button class="btn ghost sm" data-act="readrec" id="rf-read">Læs ingredienser</button></div><div id="rf-st" class="sm muted"></div></div>';
+  h+='<div class="field"><label for="rf-name">Navn</label><input id="rf-name" type="text" value="'+esc(r?r.name:'')+'"></div>'+
+    (r&&safeUrl(r.url)?'<a class="srcl" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+LINK+'<span>Åbn opskriften på '+esc(srcHost(r.url))+'</span></a>':'')+
+    '<div class="grid2"><div class="field"><label for="rf-book">Kogebog</label><input id="rf-book" list="bl" type="text" value="'+esc(r?r.book||'':'')+'" placeholder="Fx titel på bogen"></div><div class="field"><label for="rf-page">Side</label><input id="rf-page" inputmode="numeric" value="'+(r&&r.page?r.page:'')+'"></div></div>'+
+    '<div class="grid3"><div class="field"><label for="rf-kind">Type</label><select id="rf-kind">'+opt([['hverdag','Hverdag'],['weekend','Weekend']],r?r.kind:'hverdag')+'</select></div><div class="field"><label for="rf-min">Minutter</label><input id="rf-min" inputmode="numeric" value="'+(r&&r.minutes?r.minutes:'')+'"></div><div class="field"><label for="rf-rate">Vurdering</label><select id="rf-rate">'+opt([['0','Ingen'],['1','1/5'],['2','2/5'],['3','3/5'],['4','4/5'],['5','5/5']],String(r?Math.round(r.rating||0):0))+'</select></div></div>'+
+    '<div class="field"><label for="rf-url">Link til opskrift (valgfri)</label><input id="rf-url" type="text" inputmode="url" autocomplete="off" value="'+esc(r?safeUrl(r.url):'')+'" placeholder="https://"></div>'+
+    '<div class="field"><label for="rf-prot">Hovedingrediens</label><select id="rf-prot">'+opt(PROTS,r?r.prot||'':'')+'</select></div>'+
+    '<div class="grid2"><div class="field"><label for="rf-again">Skal den gentages?</label><select id="rf-again">'+opt([['','Ikke valgt'],['yes','Ja, gerne'],['maybe','Måske'],['no','Nej, ikke igen']],r?r.again||'':'')+'</select></div><div class="field"><label>&nbsp;</label><label class="chk"><input id="rf-fav" type="checkbox"'+(r&&r.fav?' checked':'')+'> Favorit ♥</label></div></div>'+
+    '<label class="chk"><input id="rf-rest" type="checkbox"'+(r&&r.rest?' checked':'')+'> Holder sig godt og kan laves i dobbelt portion</label>'+
+    '<div class="field"><label>Ingredienser til 2 personer</label><p class="hint">Skriv mængderne til 2 personer. Appen regner selv om til '+hhLabel()+' ('+nf(S.settings.persons||2,1)+' portioner). Åbn en ingrediens for at vælge, hvornår den kommer på indkøbslisten.</p><div id="rf-ings" style="display:flex;flex-direction:column;gap:8px">'+ing.map(ingRow).join('')+'</div><div><button class="btn ghost sm" data-act="ingadd">Tilføj ingrediens</button></div></div>'+
+    '<div class="field"><label for="rf-method">Fremgangsmåde (valgfri)</label><textarea id="rf-method" rows="7" placeholder="Skriv ét trin pr. linje, så vises opskriften i ugeplanen">'+esc(r?r.method||'':'')+'</textarea></div>'+
+    '<div class="foot"><button class="btn" data-act="saverec" data-id="'+esc(id||'')+'">Gem ret</button>'+(r?'<button class="btn danger" data-act="delrec" data-id="'+esc(id)+'">Slet</button>':'')+'</div>';
+  openSheet(r?'Ret':'Ny ret',h);
+}
+function kalc(r){var k=kcalOf(r);return k.k>KALLOW+5?'ca. '+k.k+' kcal pr. portion':''}
+function collectIng(){
+  return Array.prototype.map.call(document.querySelectorAll('#rf-ings .ingw'),function(row){return{n:row.querySelector('.i-n').value.trim().toLowerCase(),q:num(row.querySelector('.i-q').value),u:row.querySelector('.i-u').value,rule:readRule(row.querySelector('.rule'))}}).filter(function(g){return g.n&&g.q>0});
+}
+function saveRecipe(id){
+  var name=$('#rf-name').value.trim(),rows=collectIng();
+  if(!name){toast('Giv retten et navn');return}
+  if(!rows.length){toast('Tilføj mindst én ingrediens med mængde');return}
+  var old=id?S.recipes[id]:null,rid=id||uid(),t=todayStr();
+  var doc=Object.assign({},old||{},{name:name,book:$('#rf-book').value.trim(),page:Math.round(num($('#rf-page').value))||0,kind:$('#rf-kind').value,minutes:Math.round(num($('#rf-min').value))||0,rating:Number($('#rf-rate').value)||0,prot:$('#rf-prot').value,rest:$('#rf-rest').checked,fav:$('#rf-fav').checked,again:$('#rf-again').value,method:$('#rf-method').value.replace(/\r/g,'').trim(),ing:rows.map(function(g){return{n:g.n,q:g.q,u:g.u}}),example:false,url:safeUrl($('#rf-url').value),made:(old&&old.made)||{count:0,last:'',wd:[0,0,0,0,0,0,0]}});
+  save(function(){
+    var patch={},items=S.praw||{};
+    rows.forEach(function(g){var k=slug(g.n),o=items[k],r=g.rule;
+      if(!o){var rf=(S.ref.items||{})[k];patch[k]=Object.assign({name:g.n,unit:g.u,qty:0,price:0,perish:!!(rf&&rf.perish&&rf.unit===g.u),cat:(rf&&rf.cat)||'Andet',expires:'',at:t},r)}
+      else patch[k]=Object.assign({},r,(r.use>0&&!o.at)?{at:t}:{});
+    });
+    return up(udoc('store/pantry'),{items:patch}).then(function(){return udoc('recipes/'+rid).set(doc)}).then(function(){openRecipes();toast('Ret gemt')});
+  });
+}
+function readRecipe(){
+  var files=$('#rf-file').files,st=$('#rf-st');
+  if(!files||!files.length){st.textContent='Vælg et billede først.';return}
+  if(!S.sample||!S.imgOK){st.textContent='Fotolæsning er ikke tilgængelig her. Skriv ingredienserne ind selv.';return}
+  S.ctl=new AbortController();$('#rf-read').disabled=true;
+  st.innerHTML='Læser billedet…'+(window.UGEKURV_WEB&&!window.UgekurvOCR?' Første gang hentes tekstlæseren, det kan tage lidt.':'')+' <button class="btn ghost sm" data-act="stopread">Stop</button>';
+  var prompt='Billederne viser en opskrift fra en kogebog, som tilhører brugeren, til privat brug. Udtræk KUN retnavn, ca. tilberedningstid i minutter, antal portioner opskriften er skrevet til og ingredienslisten. Kopiér ikke fremgangsmåden. Omregn alle mængder til g, ml eller stk (1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 kg = 1000 g, 1 l = 1000 ml). Udelad salt, peber og vand. Skriv ingrediensnavne med små bogstaver i ubestemt form, fx "hakket oksekød" eller "løg". Svar kun med JSON: {"name":string,"minutes":number|null,"servings":number,"ingredients":[{"n":string,"q":number,"u":"g"|"ml"|"stk"}]}';
+  S.sample.json(prompt,{images:files,signal:S.ctl.signal}).then(function(res){
+    var f=2/(num(res.servings)>0?num(res.servings):2);
+    var rows=(res.ingredients||[]).filter(function(g){return g&&g.n&&num(g.q)>0}).map(function(g){var u=UNITS.indexOf(g.u)>-1?g.u:'stk',q=num(g.q)*f;q=u==='stk'?Math.round(q*2)/2:q>=20?Math.round(q/5)*5:r1(q);return{n:String(g.n).toLowerCase(),q:q||1,u:u}});
+    if(!rows.length){st.textContent='Kunne ikke finde en ingrediensliste. Prøv et skarpere billede.';return}
+    if(!$('#rf-name').value&&res.name)$('#rf-name').value=res.name;
+    if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
+    $('#rf-ings').innerHTML=rows.map(ingRow).join('');
+    st.textContent='Ingredienserne er indsat. Tjek mængderne og tryk Gem ret.';
+  }).catch(function(e){
+    var c=e&&e.code;st.textContent=c==='cancelled'?'Stoppet.':c==='not_granted'?'Du har ikke givet appen lov til at bruge Claude.':c==='rate_limited'?'For mange forsøg. Vent lidt og prøv igen.':c==='invalid_json'||c==='refused'||c==='image_rejected'?'Kunne ikke læse billedet. Prøv et skarpere billede.':c==='unavailable'&&window.UGEKURV_WEB?'Tekstlæseren kunne ikke hentes. Tjek nettet og prøv igen. Første gang skal der hentes en sprogfil.':'Noget gik galt. Prøv igen.';
+  }).then(function(){S.ctl=null;var b=$('#rf-read');if(b)b.disabled=false});
+}
+/* own photo of a dish */
+function resizeImage(file,max){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){var s=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(function(b){b?res(b):rej(new Error('blob'))},'image/jpeg',.82)};
+    im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('img'))};im.src=url;
+  });
+}
+function handlePhoto(file,id){
+  if(!file||!S.assets||!id||!S.recipes[id])return;
+  toast('Gemmer foto…');
+  resizeImage(file,1400).then(function(b){return S.assets.upload(b)}).then(function(res){
+    var old=S.recipes[id].img;
+    return up(udoc('recipes/'+id),{img:{id:res.id}}).then(function(){
+      S.recipes[id]=Object.assign({},S.recipes[id],{img:{id:res.id}});
+      var el=$('#hero-box');if(el)el.innerHTML=heroHtml(id,S.recipes[id]);
+      if(old&&old.id&&S.assets.delete)S.assets.delete(old.id).catch(function(){});
+      toast('Foto gemt');draw();
+    });
+  }).catch(function(e){console.error(e);toast('Kunne ikke gemme fotoet')});
+}
+
+/* stock sheet */
+function openStock(k){
+  var p=k?pan(k):null,h;
+  if(p&&p.leftover){
+    h='<div class="grid2"><div class="field"><label for="sf-qty">Portioner tilbage</label><input id="sf-qty" inputmode="decimal" value="'+esc(dec(r1(curQty(p))))+'"></div><div class="field"><label for="sf-frz">Frosset den</label><input id="sf-frz" type="date" value="'+esc(p.frozen||'')+'"></div></div>'+
+      '<div class="foot"><button class="btn" data-act="savefrz" data-k="'+esc(k)+'">Gem</button><button class="btn danger" data-act="delstock" data-k="'+esc(k)+'">Slet</button></div>';
+    openSheet(p.name,h);return;
+  }
+  var more='<details class="rl"><summary>Flere indstillinger</summary><div class="rule">'+
+    '<div class="grid2"><div class="field"><label for="sf-cat">Afdeling</label><select id="sf-cat">'+opt(CATS,p?p.cat||'Andet':'Andet')+'</select></div><div class="field"><label for="sf-loc">Opbevaring</label><select id="sf-loc">'+opt([['','Skab og køl'],['fryser','Fryser']],p?p.loc||'':'')+'</select></div></div>'+
+    '<div class="field"><label for="sf-kp">Normalpris (kr pr. kg, l eller stk)</label><input id="sf-kp" inputmode="decimal" value="'+(p&&p.kp?esc(dec(p.kp)):'')+'"></div><div class="grid2"><div class="field"><label for="sf-kpo">Pris for økologi</label><input id="sf-kpo" inputmode="decimal" value="'+(p&&qprices(p).oko?esc(dec(qprices(p).oko)):'')+'"></div><div class="field"><label for="sf-kpf">Pris for frilands</label><input id="sf-kpf" inputmode="decimal" value="'+(p&&qprices(p).god?esc(dec(qprices(p).god)):'')+'"></div></div>'+
+    '<div class="field"><label for="sf-kc">Kalorier pr. 100 g eller ml (pr. stk., hvis enheden er stk)</label><input id="sf-kc" inputmode="decimal" value="'+(p&&p.kc!=null&&p.kc!==''?esc(dec(p.kc)):'')+'"></div>'+
+    '<div class="field"><label for="sf-exp">Holdbar til</label><input id="sf-exp" type="date" value="'+esc(p?p.expires||'':'')+'"></div>'+
+    '<label class="chk"><input id="sf-per" type="checkbox"'+(p&&p.perish?' checked':'')+'> Frisk vare, der hurtigt bliver dårlig</label></div></details>';
+  var vare='<div class="field"><label for="sf-name">Navn</label><input id="sf-name" type="text" value="'+esc(p?p.name:'')+'"'+(p?' disabled':'')+'></div>'+
+    '<div class="grid2"><div class="field"><label for="sf-qty">På lager nu</label><input id="sf-qty" inputmode="decimal" value="'+(p?esc(dec(r1(curQty(p)))):'0')+'"></div><div class="field"><label for="sf-unit">Enhed</label><select id="sf-unit">'+opt(UNITS,p?p.unit:'g')+'</select></div></div>'+
+    '<div class="field"><label for="sf-br">Foretrukne mærker</label><input id="sf-br" type="text" autocomplete="off" placeholder="fx Barilla, De Cecco" value="'+esc(p?brandsOf(k).join(', '):'')+'"><p class="hint">Valgfrit. Mærket vises på indkøbslisten, og kun tilbud på det mærke tæller med.</p></div>'+
+    ruleHtml(p||{})+more;
+  if(p){
+    h=vare+'<div class="foot"><button class="btn" data-act="savestock" data-k="'+esc(k)+'">Gem</button><button class="btn danger" data-act="delstock" data-k="'+esc(k)+'">Slet vare</button></div>';
+    openSheet(p.name,h);return;
+  }
+  h='<div class="seg" role="group"><button class="on" data-act="kind" data-k="vare" aria-pressed="true">Vare</button><button data-act="kind" data-k="rest" aria-pressed="false">Rest i fryseren</button></div>'+
+    '<div id="f-vare">'+vare+'</div>'+
+    '<div id="f-rest" hidden><div class="field"><label for="fz-n">Hvad er det?</label><input id="fz-n" type="text" placeholder="Fx lasagne"></div><div class="grid2"><div class="field"><label for="fz-q">Portioner</label><input id="fz-q" inputmode="decimal" value="2"></div><div class="field"><label for="fz-d">Frosset den</label><input id="fz-d" type="date" value="'+todayStr()+'"></div></div></div>'+
+    '<div class="foot"><button class="btn" data-act="savestock" data-k="">Gem</button></div>';
+  openSheet('Ny vare',h);
+}
+function saveStock(k){
+  if(!k&&$('#f-rest')&&!$('#f-rest').hidden){addFreezer();return}
+  var name=k?pan(k).name:$('#sf-name').value.trim().toLowerCase();
+  if(!name){toast('Giv varen et navn');return}
+  var old=k?pan(k):null,key=k||slug(name),rule=readRule($('#sheet .rule'));
+  var kcv=$('#sf-kc').value.trim();
+  var nkp=Math.max(0,num($('#sf-kp').value)),nko=Math.max(0,num($('#sf-kpo').value)),nkf=Math.max(0,num($('#sf-kpf').value)),oq=qprices(old);
+  var o=Object.assign({},old||{},{name:name,unit:$('#sf-unit').value,price:old?old.price||0:0,kp:nkp,kpo:nko,kpf:nkf,kpg:nko||nkf,pv:(old&&Math.abs((old.kp||0)-nkp)<1e-9&&Math.abs(oq.oko-nko)<1e-9&&Math.abs(oq.god-nkf)<1e-9)?(old.pv||''):'',perish:$('#sf-per').checked,cat:$('#sf-cat').value,loc:$('#sf-loc').value,expires:$('#sf-exp').value||'',ex:false},rule,qpatch(num($('#sf-qty').value)));
+  if(kcv!=='')o.kc=Math.max(0,num(kcv));
+  var kpC=!old?(o.kp>0||o.kpo>0||o.kpf>0):(Math.abs((old.kp||0)-o.kp)>1e-9||Math.abs(oq.oko-o.kpo)>1e-9||Math.abs(oq.god-o.kpf)>1e-9);if(kpC)o.kpx=true;
+  var kcC=kcv!==''&&(!old||old.kc==null||Math.abs(Number(old.kc)-o.kc)>1e-9);if(kcC)o.kcx=true;
+  var patch={};patch[key]=o;
+  var nb=parseBrands($('#sf-br').value),bch=JSON.stringify(nb)!==JSON.stringify(brandsOf(key));
+  save(function(){var ps=[up(udoc('store/pantry'),{items:patch})];if(bch)ps.push(setBrands(key,nb,name));return Promise.all(ps).then(function(){closeSheet();toast('Gemt')})});
+}
+/* preferred brands: one doc, store/brands = {b:{key:[brands]},n:{key:name}} */
+function setBrands(k,list,name){
+  var m=Object.assign({},S.brands),n=Object.assign({},S.bnames);
+  if(list.length){m[k]=list;n[k]=name||n[k]||(pan(k)&&pan(k).name)||k}else{delete m[k];delete n[k]}
+  S.brands=m;S.bnames=n;draw();
+  return udoc('store/brands').set({b:m,n:n});
+}
+function brandName(k,nm){return nm||(pan(k)&&pan(k).name)||(S.bnames||{})[k]||k}
+function openBrand(k,nm){
+  nm=brandName(k,nm);
+  var cur=brandsOf(k),sg=brandSuggest(k,nm,wid()),seen={},oth=[];
+  sg.forEach(function(x){seen[bnorm(x.n)]=1});
+  Object.keys(S.brands||{}).forEach(function(q){if(q===k)return;brandsOf(q).forEach(function(b){var n=bnorm(b);if(!seen[n]){seen[n]=1;oth.push(b)}})});
+  oth=oth.slice(0,8);
+  var chip=function(b,sub){var on=cur.some(function(x){return bnorm(x)===bnorm(b)});return '<button type="button" class="chip'+(on?' on':'')+'" data-act="brpick" data-b="'+esc(b)+'">'+esc(b)+(sub?' · '+esc(sub):'')+'</button>'};
+  var h='<p class="muted">Hvilket mærke vil du helst have af <b>'+esc(nm)+'</b>? Det huskes fra uge til uge, vises på indkøbslisten, og kun tilbud på dette mærke tæller med i prisregnestykket.</p>'+
+    '<div class="field"><label for="br-in">Foretrukne mærker</label><input id="br-in" type="text" autocomplete="off" placeholder="fx Barilla, De Cecco" value="'+esc(cur.join(', '))+'"><p class="hint">Skriv gerne flere, adskilt af komma. Står der ingen, er alle mærker fine.</p></div>';
+  if(sg.length)h+='<div class="field"><label>Mærker i ugens tilbud</label><div class="brs">'+sg.map(function(x){return chip(x.n,x.s.join(', '))}).join('')+'</div><p class="hint">Gættet ud fra navnene i tilbudsaviserne. Ret selv, hvis det ikke passer.</p></div>';
+  else h+='<p class="hint">Jeg har ikke fundet tilbud på '+esc(nm)+' i dine butikker i denne uge, så der er ingen forslag.</p>';
+  if(oth.length)h+='<div class="field"><label>Mærker, du har valgt andre steder</label><div class="brs">'+oth.map(function(b){return chip(b)}).join('')+'</div></div>';
+  h+='<div class="foot"><button class="btn" data-act="brsave" data-k="'+esc(k)+'" data-n="'+esc(nm)+'">Gem</button>'+(cur.length?'<button class="btn danger" data-act="brdel" data-k="'+esc(k)+'">Fjern mærke</button>':'')+'</div>';
+  openSheet(nm,h);
+}
+function openBrands(){
+  var ks=Object.keys(S.brands||{}).filter(function(k){return brandsOf(k).length}).sort(function(a,b){return brandName(a).localeCompare(brandName(b),'da')});
+  var h=ks.length?'<div class="list">'+ks.map(function(k){return '<button class="li" data-act="brand" data-k="'+esc(k)+'" data-n="'+esc(brandName(k))+'"><span><span class="nm">'+esc(brandName(k))+'</span><span class="sub">'+esc(brandsOf(k).join(', '))+'</span></span><span class="qt">Ret</span></button>'}).join('')+'</div>':'<p class="muted">Du har ikke valgt nogen mærker endnu. Tryk på &quot;+ Mærke&quot; ved en vare på indkøbslisten, eller skriv det i varens indstillinger under Lager.</p>';
+  openSheet('Mine foretrukne mærker',h);
+}
+function addFreezer(){
+  var n=$('#fz-n').value.trim(),q=num($('#fz-q').value);if(!n||!(q>0)){toast('Skriv hvad det er, og antal portioner');return}
+  var k='fr-'+uid(),o={name:n,unit:'stk',qty:r1(q),at:todayStr(),min:0,pack:0,price:0,perish:false,cat:'Frost',loc:'fryser',frozen:$('#fz-d').value||todayStr(),rule:'never',leftover:true,expires:'',ex:false},patch={};patch[k]=o;
+  save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Lagt i fryseren')})});
+}
+
+/* rate a dish after it was made */
+function rateBody(){
+  var rt=S.rt,r=S.recipes[rt.id]||{};
+  return '<p class="muted">Hvordan var <b>'+esc(r.name||'retten')+'</b>?</p>'+
+    '<div class="stars" role="group" aria-label="Stjerner">'+[1,2,3,4,5].map(function(n){return '<button class="'+(rt.s>=n?'on':'')+'" data-act="rate" data-s="'+n+'" aria-label="'+n+' af 5" aria-pressed="'+(rt.s===n)+'">'+(rt.s>=n?'★':'☆')+'</button>'}).join('')+'</div>'+
+    '<div class="field"><label>Skal den med i en senere ugemenu?</label><div class="seg3" role="group" aria-label="Gentag">'+[['yes','Ja, gerne'],['maybe','Måske'],['no','Nej']].map(function(o){return '<button class="'+(rt.again===o[0]?'on':'')+(o[0]==='no'?' no':'')+'" data-act="again" data-v="'+o[0]+'" aria-pressed="'+(rt.again===o[0])+'">'+o[1]+'</button>'}).join('')+'</div></div>'+
+    '<div class="foot"><button class="btn" data-act="ratesave">Gem</button><button class="btn ghost" data-act="close">Spring over</button></div>';
+}
+function rateDraw(){var b=document.querySelector('#sheet .sh-body');if(b)b.innerHTML=rateBody()}
+function openRate(id,i){
+  var r=S.recipes[id];if(!r)return;
+  var w=wid(),d=((S.plans[w]||{}).days||[])[i]||{};
+  S.rt={id:id,i:i,w:w,s:Number(d.rate)||0,again:r.again||'',touched:!!r.again};
+  openSheet('Hvordan var den?',rateBody());
+}
+/* read-only recipe: ingredients for the user's number of persons, and the method */
+function openCook(id){
+  var r=S.recipes[id];if(!r)return;
+  var pn=S.settings.persons||2,f=pn/2,k=kalc(r),al=recAlg(r);
+  var h='<div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.rating?'<span class="chip">★ '+nf(r.rating,1)+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.fav?'<span class="hrt">♥</span>':'')+dietChip(r)+'</div>';
+  h+='<div class="sec"><div class="lbl">Ingredienser til '+esc(hhLabel())+'</div><div class="list cookl">'+(r.ing||[]).map(function(g){return '<div class="ci"><span>'+esc(g.n)+'</span><span class="mono">'+esc(fq(g.q*f,g.u))+'</span></div>'}).join('')+'</div></div>';
+  var st=String(r.method||'').split(/\n+/).map(function(x){return x.trim().replace(/^\d+[.)]\s*/,'')}).filter(Boolean);
+  if(st.length)h+='<div class="sec"><div class="lbl">Fremgangsmåde</div><ol class="steps">'+st.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol><p class="hint">Salt, peber, olie og krydderier står ikke på indkøbslisten.</p></div>';
+  if(al.length)h+='<p class="hint">Kan indeholde (gæt ud fra ingredienserne): '+esc(al.map(function(k){return ALG[k].n.toLowerCase()}).join(', '))+'. Tjek altid varedeklarationen.</p>';
+  if(safeUrl(r.url))h+='<a class="srcl" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+LINK+'<span>Åbn opskriften på '+esc(srcHost(r.url))+'</span></a>';
+  if(r.book&&r.page)h+='<p class="hint">Står i '+esc(r.book)+', side '+r.page+'.</p>';
+  h+='<div class="foot"><button class="btn ghost" data-act="editrec" data-id="'+esc(id)+'">Ret opskrift</button></div>';
+  openSheet(r.name,h);
+}
+
+/* the form shared by Indstillinger (prefix st) and the welcome sheet (prefix ob) */
+function hhNote(x){return 'Børn regnes som '+dec(KID_W)+' voksen i mængderne. Det giver '+nf(r1(x.adults+KID_W*x.kids),1)+' portioner.'}
+function prefsForm(p,x){
+  var stOn=function(n){return (x.stores||STORES).indexOf(n)>-1};
+  return ''+
+    '<div class="field"><label>Hvem spiser med?</label><div class="grid2"><div class="field"><label for="'+p+'-a">Voksne</label><input id="'+p+'-a" inputmode="numeric" value="'+esc(x.adults)+'"></div><div class="field"><label for="'+p+'-k">Børn</label><input id="'+p+'-k" inputmode="numeric" value="'+esc(x.kids)+'"></div></div><p class="hint" id="'+p+'-hh">'+esc(hhNote(x))+'</p></div>'+
+    '<div class="field"><label>Butikker, du vil handle i</label><div class="algs">'+STORES.map(function(n){return '<label class="chk"><input type="checkbox" class="'+p+'-s" value="'+esc(n)+'"'+(stOn(n)?' checked':'')+'> '+esc(n)+'</label>'}).join('')+'</div><p class="hint">Fjern kryds ved butikker, du ikke har i nærheden. Lidl, Coop 365, Føtex, Kvickly og Meny ligger mest i de større byer.</p><p class="hint">Appen sammenligner priser og tilbud i de valgte butikker og regner ud, om det kan betale sig at handle i flere.</p></div>'+
+    '<div class="field"><label for="'+p+'-sv">Hvad er en ekstra butik værd?</label><select id="'+p+'-sv">'+[0,25,50,100,150].map(function(v){return '<option value="'+v+'"'+((x.stopVal==null?50:x.stopVal)===v?' selected':'')+'>'+(v===0?'Spar altid mest muligt':'Mindst '+v+' kr pr. ekstra butik')+'</option>'}).join('')+'</select><p class="hint">Appen anbefaler kun en ekstra butik, hvis den sparer mere end dette. Så handler du ét sted, når gevinsten er lille.</p></div>'+
+    '<div class="field"><label for="'+p+'-bud">Madbudget</label><div class="grid2"><input id="'+p+'-bud" inputmode="numeric" placeholder="fx 900" value="'+(x.budget>0?esc(x.budget):'')+'" aria-label="Madbudget i kroner"><select id="'+p+'-bper" aria-label="Periode"><option value="week"'+(x.budgetPer==='month'?'':' selected')+'>kr pr. uge</option><option value="month"'+(x.budgetPer==='month'?' selected':'')+'>kr pr. måned</option></select></div><p class="hint">Valgfrit. Er madplanen ellers for dyr, vælger appen billigere retter, og indkøbslisten viser, om du holder budgettet.</p></div>'+
+    '<div class="field"><label>Kost</label><label class="chk"><input id="'+p+'-veg" type="checkbox"'+(x.veg?' checked':'')+'> Kun vegetarretter</label><label class="chk"><input id="'+p+'-quick" type="checkbox"'+(x.quick?' checked':'')+'> Hurtige hverdagsretter (højst 30 min.)</label></div>'+
+    '<div class="field"><label>Allergener, der skal undgås</label><div class="algs">'+ALG_KEYS.map(function(k){return '<label class="chk"><input type="checkbox" class="'+p+'-al" value="'+k+'"'+((x.allergens||[]).indexOf(k)>-1?' checked':'')+'> '+esc(ALG[k].n)+'</label>'}).join('')+'</div><p class="hint">Retter, hvor en ingrediens ser ud til at indeholde det, kommer ikke på madplanen. Appen gætter ud fra ingrediensernes navne, så tjek altid varedeklarationen i butikken.</p></div>'+
+    '<div class="field"><label>Kød, fisk og æg</label><label class="chk"><input id="'+p+'-o" type="checkbox"'+(x.oko?' checked':'')+'> Økologi</label><label class="chk"><input id="'+p+'-fr" type="checkbox"'+(x.free?' checked':'')+'> Frilands (3 hjerter, frilandsæg)</label><p class="hint">Sæt kryds ved en eller begge. Priser og tilbud følger valget. Er begge valgt, bruges den billigste af de to. Madplanen vælger helst højst 4 kødretter om ugen.</p></div>';
+}
+function readForm(p){
+  var g=function(id){return document.getElementById(p+'-'+id)};
+  var st=[].map.call(document.querySelectorAll('.'+p+'-s:checked'),function(x){return x.value});
+  return{
+    adults:Math.max(1,Math.round(num(g('a').value))||1),kids:Math.max(0,Math.round(num(g('k').value))||0),
+    budget:Math.max(0,Math.round(num(g('bud').value))),budgetPer:g('bper').value==='month'?'month':'week',
+    veg:g('veg').checked,quick:g('quick').checked,
+    allergens:[].map.call(document.querySelectorAll('.'+p+'-al:checked'),function(x){return x.value}),
+    stores:st.length?st:STORES.slice(),stopVal:Math.max(0,Math.round(num(g('sv').value))),oko:g('o').checked,free:g('fr').checked
+  };
+}
+function hhUpdate(p){
+  var a=$('#'+p+'-a'),k=$('#'+p+'-k'),n=$('#'+p+'-hh');if(!a||!k||!n)return;
+  n.textContent=hhNote({adults:Math.max(1,Math.round(num(a.value))||1),kids:Math.max(0,Math.round(num(k.value))||0)});
+}
+/* settings */
+function openSettings(){
+  var s=S.settings;
+  var h=prefsForm('st',s)+
+    '<label class="chk"><input id="st-f" type="checkbox"'+(s.friWeekend?' checked':'')+'> Fredag tæller som weekend</label>'+
+    '<label class="chk"><input id="st-c" type="checkbox"'+(s.candy?' checked':'')+'> Sæt weekendslik på indkøbslisten</label>'+
+    '<div class="field"><label>Foretrukne mærker</label><p class="hint">Vælg mærker pr. vare på indkøbslisten eller i Lager. De huskes fra uge til uge.</p><button class="btn ghost sm" data-act="brands">Se mine mærker ('+Object.keys(S.brands||{}).filter(function(k){return brandsOf(k).length}).length+')</button></div>'+
+    '<p class="hint">Dine retter, dit lager og din ugeplan er private. Tilbud og priser deles af alle brugere.</p>'+
+    webBlock()+
+    '<div class="foot"><button class="btn" data-act="savesettings">Gem</button></div>';
+  openSheet('Indstillinger',h);webRefresh();
+}
+/* only in the web app: notifications and log out */
+function webBlock(){
+  var W=window.UGEKURV_WEB;if(!W)return '';
+  return '<div class="field"><label>Notifikationer</label><p class="hint" id="pn-t">Tjekker…</p><div id="pn-b" class="btnrow"></div></div>'+
+    '<div class="field"><label>Bruger</label><p class="hint">Logget ind som <b>'+esc(W.name||'')+'</b>. Koden kan ikke nulstilles, så husk den.</p><button class="btn ghost sm" data-act="logout">Log ud</button></div>';
+}
+function webRefresh(){
+  var W=window.UGEKURV_WEB;if(!W||!$('#pn-t'))return;
+  W.push.status().then(function(s){
+    var t=$('#pn-t'),b=$('#pn-b');if(!t||!b)return;
+    if(s.state==='unsupported'){t.textContent=s.msg||'Notifikationer virker ikke i denne browser.';b.innerHTML='';return}
+    if(s.state==='needhome'){t.textContent='På iPhone skal appen først lægges på hjemmeskærmen: tryk på Del og vælg Føj til hjemmeskærm. Åbn den derfra, og slå så notifikationer til her.';b.innerHTML='';return}
+    if(s.state==='denied'){t.textContent='Du har blokeret notifikationer for denne side. Slå dem til i telefonens indstillinger.';b.innerHTML='';return}
+    if(s.state==='off'){t.textContent='Få en påmindelse torsdag aften om at lave ugens madplan og tjekke indkøbslisten.';b.innerHTML='<button class="btn sm" data-act="pushon">Slå notifikationer til</button>';return}
+    t.textContent='Slået til. Du får en påmindelse torsdag aften, når ugens tilbud er klar.';b.innerHTML='<button class="btn ghost sm" data-act="pushoff">Slå fra</button><button class="btn ghost sm" data-act="pushtest">Send en test</button>';
+  }).catch(function(){var t=$('#pn-t');if(t)t.textContent='Kunne ikke tjekke notifikationer.'});
+}
+
+/* ---------- velkommen og startpakke ---------- */
+function maybeOnboard(){
+  if(S.onb||S.ro)return;
+  if(S.hasSettings!==false||S.hasPantry!==false)return;
+  if(!(S.ready.settings&&S.ready.pantry&&S.ready.ref&&S.ready.starter))return;
+  if($('#sheet').firstChild)return;
+  S.onb=true;openOnboard();
+}
+var OB0={adults:2,kids:0,budget:0,budgetPer:'week',stopVal:50,veg:false,quick:false,allergens:[],stores:null,oko:true,free:true};
+function openOnboard(){
+  var n=Object.keys(S.starter).length,ni=Object.keys((S.ref&&S.ref.items)||{}).length,o=Object.assign({},OB0,S.ob||{});
+  var h='<p class="muted">Her får du din egen ugeplan, dit eget lager og dine egne retter. Ingen andre kan se dem. Svar på det, du har lyst til. Alt kan ændres senere under Indstillinger.</p>'+prefsForm('ob',o);
+  var st=!(n||ni)||o.mode!=='empty';
+  if(n||ni)h+='<div class="field"><label>Start</label><label class="chk"><input type="radio" name="ob-m" value="starter"'+(o.mode==='empty'?'':' checked')+'> Med standardvarer og '+n+' startretter</label><p class="hint">Startretterne er forslag med link til bl.a. Valdemarsro og Mummum, og nogle med fuld opskrift. Du kan slette dem og tilføje dine egne kogebøger med sidetal, links fra nettet eller egne opskrifter.</p><label class="chk"><input type="radio" name="ob-m" value="empty"'+(o.mode==='empty'?' checked':'')+'> Helt tomt</label></div>';
+  h+='<div class="foot"><button class="btn" id="ob-go" data-act="obnext">'+(n&&st?'Næste: vælg favoritter':'Kom i gang')+'</button></div>';
+  openSheet('Velkommen til FastWeek',h);
+}
+/* favourite dishes: chosen at start (from the starter dishes) or later (from my dishes) */
+function favSource(){return S.fv.mode==='onboard'?S.starter:S.recipes}
+function favRows(){
+  var src=favSource(),ids=Object.keys(src),groups={},order=[['okse','Oksekød'],['kylling','Kylling'],['svin','Svinekød'],['fisk','Fisk'],['vegetar','Vegetar og æg'],['','Andet']];
+  ids.forEach(function(id){var r=src[id],g=r.prot==='aeg'?'vegetar':(r.prot||'');(groups[g]=groups[g]||[]).push(id)});
+  return order.map(function(o){var g=groups[o[0]];if(!g)return '';
+    return '<div class="sec"><div class="lbl">'+esc(o[1])+'</div><div class="list">'+g.sort(function(a,b){return src[a].name.localeCompare(src[b].name,'da')}).map(function(id){
+      var r=src[id],on=!!S.fv.sel[id];
+      return '<button class="li rec fvrow" data-act="fvtog" data-id="'+esc(id)+'" aria-pressed="'+on+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+'</span></span><span class="hb" aria-hidden="true">'+(on?'♥':'♡')+'</span></button>'}).join('')+'</div></div>'}).join('');
+}
+function favCount(){return Object.keys(S.fv.sel).filter(function(k){return S.fv.sel[k]}).length}
+function openFavs(mode){
+  var sel={};
+  if(mode==='edit')Object.keys(S.recipes).forEach(function(id){if(S.recipes[id].fav)sel[id]=true});
+  S.fv={mode:mode,sel:sel,orig:JSON.parse(JSON.stringify(sel))};
+  var intro=mode==='onboard'?'Tryk på hjertet ved de retter, I holder mest af. Appen lærer jeres smag af dem og vælger lignende retter. Favoritterne kommer ikke hver uge.':'Tryk på hjertet ved de retter, I holder mest af. Appen lærer din smag og vælger retter, der ligner. Favoritterne kommer ikke hver uge.';
+  var h='<p class="muted">'+intro+'</p><p class="hint" id="fv-n"></p>'+favRows()+
+    '<div class="foot">'+(mode==='onboard'?'<button class="btn" data-act="obfinish">Kom i gang</button><button class="btn ghost" data-act="obback">Tilbage</button>':'<button class="btn" data-act="fvsave">Gem favoritter</button>')+'</div>';
+  openSheet(mode==='onboard'?'Dine favoritretter':'Favoritter',h);favNote();
+}
+function favNote(){var n=favCount(),e=$('#fv-n');if(e)e.textContent=n?n+(n===1?' valgt':' valgt')+(n<3?'. Vælg gerne 3 til 8.':'.'):'Vælg gerne 3 til 8 retter. Du kan springe over.'}
+function missingItems(recs){
+  var patch={},t=todayStr();
+  recs.forEach(function(r){(r.ing||[]).forEach(function(g){var k=slug(g.n);if((S.praw&&S.praw[k])||patch[k])return;var rf=(S.ref.items||{})[k];
+    patch[k]=rf?Object.assign({},rf,{qty:0,at:t,rule:'never',min:0,use:0,days:2,expires:'',ex:false,price:0}):{name:g.n,unit:g.u,qty:0,price:0,perish:false,cat:'Andet',expires:'',at:t,rule:'never',min:0}})});
+  return patch;
+}
+function freshRecipe(r){var o=Object.assign({},r);delete o.img;o.example=false;o.rating=0;o.made={count:0,last:'',wd:[0,0,0,0,0,0,0]};return o}
+
+/* ---------- ugens spørgsmål ---------- */
+var TIMES=[[30,'30'],[45,'45'],[999,'60+']];
+var CHOICES=[['0','Ingen'],['auto','Valgfri'],['1','1×'],['2','2×'],['3','3×']];
+function wzSlots(P){var eff=effModes(P);return eff.filter(function(m){return m==='cook'||m==='dbl'}).length}
+function wzRows(){
+  var P=S.wz.P,eff=effModes(P),h='';
+  for(var i=0;i<7;i++){
+    var dd=parseYmd(addDays(S.wz.mon,i)).getUTCDate(),m=eff[i],lab='<div class="wd-l"><b>'+DS[i]+'</b><span>'+dd+'.</span></div>';
+    if(m==='lo'){var cr=i===0&&P.carry&&S.recipes[P.carry];h+='<div class="wd lo">'+lab+'<div class="wd-lo">Rester fra '+(i===0?'søndag'+(cr?' ('+esc(cr.name)+')':''):DAYS[i-1].toLowerCase())+'</div></div>';continue}
+    var off=m==='off',dp=P.days[i];
+    h+='<div class="wd'+(isWeekend(i)?' wk':'')+(off?' off':'')+'">'+lab+
+      '<div class="seg3" role="group" aria-label="Tid '+DAYS[i].toLowerCase()+'">'+TIMES.map(function(t){return '<button class="'+(dp.t===t[0]?'on':'')+'" data-act="wzt" data-i="'+i+'" data-t="'+t[0]+'"'+(off?' disabled':'')+' aria-pressed="'+(dp.t===t[0])+'">'+t[1]+'</button>'}).join('')+'</div>'+
+      '<button class="tg'+(m==='dbl'?' on':'')+'" data-act="wzm" data-i="'+i+'" data-m="dbl" aria-pressed="'+(m==='dbl')+'" aria-label="Dobbelt portion '+DAYS[i].toLowerCase()+'"'+(off?' disabled':'')+'>2×</button>'+
+      '<button class="tg'+(off?' on':'')+'" data-act="wzm" data-i="'+i+'" data-m="off" aria-pressed="'+off+'" aria-label="Ude eller ingen mad '+DAYS[i].toLowerCase()+'">Ude</button></div>';
+  }
+  return h;
+}
+function wzCtx(){
+  var s=S.settings,b=[hhLabel(s)];
+  if(s.budget>0)b.push('budget '+kr(s.budget)+(s.budgetPer==='month'?' om måneden':' om ugen'));
+  if(s.veg)b.push('kun vegetarretter');
+  if(s.quick)b.push('hurtige hverdagsretter');
+  if((s.allergens||[]).length)b.push('uden '+s.allergens.map(function(k){return ALG[k].n.toLowerCase()}).join(', '));
+  return 'Planen tager højde for: '+b.join(' · ')+'. Ret det under Indstillinger.';
+}
+function wzBody(){
+  var P=S.wz.P,w=weekId(S.wz.mon);
+  if(S.wz.step===1)
+    return '<h2 class="wz-q">Hvordan ser uge '+isoWeek(S.wz.mon)[1]+' ud?</h2><p class="wz-s">Hvor lang tid vil du bruge på maden hver dag? Tryk 2× for dobbelt portion, så er der rester dagen efter. Gør du det om søndagen, bliver mandag i næste uge til rester.</p>'+
+      '<div class="wz-all"><span class="lbl">Alle dage · minutter</span><div class="seg3" role="group" aria-label="Tid på alle dage">'+TIMES.map(function(t){return '<button data-act="wzall" data-t="'+t[0]+'">'+t[1]+'</button>'}).join('')+'</div></div>'+wzRows();
+  return '<h2 class="wz-q">Hvad har I lyst til?</h2><p class="wz-s">Hvor mange gange vil du have hver slags i løbet af ugen? Vælg »Valgfri«, hvis appen selv må bestemme.</p>'+
+    ASK.map(function(a){var v=String(P.prot[a[0]]);return '<div class="pr-row"><b>'+a[1]+'</b><div class="seg5" role="group" aria-label="'+a[1]+' pr. uge">'+CHOICES.map(function(c){return '<button class="'+(v===c[0]?'on':'')+(c[0]==='0'?' no':'')+'" data-act="wzp" data-p="'+a[0]+'" data-v="'+c[0]+'" aria-pressed="'+(v===c[0])+'">'+c[1]+'</button>'}).join('')+'</div></div>'}).join('')+
+    '<p class="hint">'+esc(wzCtx())+'</p>'+'<button class="lowcard" role="switch" aria-checked="'+(!!P.low)+'" data-act="wzlow"><span class="lc"><b>Kaloriefattigt</b><span>Kun retter under ca. '+LOW_MAX+' kcal pr. portion. Ingen weekendslik på listen.</span></span><span class="sw"></span></button>';
+}
+function wzFoot(){
+  var P=S.wz.P,eff=effModes(P),slots=wzSlots(P),dbl=eff.filter(function(m){return m==='dbl'}).length,off=eff.filter(function(m){return m==='off'}).length;
+  if(S.wz.step===1)
+    return '<div class="wz-sum">'+slots+(slots===1?' aften med madlavning':' aftener med madlavning')+(dbl?' · '+dbl+' dobbelt':'')+(off?' · '+off+' uden mad':'')+'</div><button class="btn block" data-act="wznext">Næste</button>'+(S.wz.auto?'<button class="lnk" data-act="wzclose">Spørg mig senere</button>':'');
+  var want=0;ASK.forEach(function(a){if(P.prot[a[0]]>0)want+=P.prot[a[0]]});
+  var bits=prefsSummary(P).filter(function(b){return !/dobbelt|uden mad|hurtige/.test(b)});
+  var sum=want>slots?'Du har bedt om '+want+' retter, men der er kun '+slots+' aftener. Appen gør sit bedste.':(bits.length?bits.join(' · '):'Appen vælger frit mellem alle retter');
+  return '<div class="wz-sum">'+esc(sum)+'</div><button class="btn block" data-act="wzdone">Lav madplan</button><button class="btn ghost block" data-act="wzback">Tilbage</button>';
+}
+function wzDraw(fresh){
+  var b=$('#wz-body');if(!b)return;var top=b.scrollTop;
+  b.className='wz-body'+(fresh?' fresh':'');b.innerHTML=wzBody();b.scrollTop=fresh?0:top;
+  $('#wz-foot').innerHTML=wzFoot();
+  $('#wz-step').textContent='Spørgsmål '+S.wz.step+' af 2';
+  var bars=document.querySelectorAll('.wz-bar i');bars[0].className='on';bars[1].className=S.wz.step===2?'on':'';
+}
+function openWizard(mon,auto){
+  var w=weekId(mon),P=getPrefs(w);
+  S.wz={mon:mon,w:w,step:1,auto:!!auto,P:JSON.parse(JSON.stringify({days:P.days,prot:P.prot,low:P.low,carry:P.carry}))};
+  $('#sheet').innerHTML='<div class="scrim" data-act="wzclose"></div><div class="sheet wiz" role="dialog" aria-modal="true" aria-label="Ugens ønsker"><div class="sh-grab"></div><div class="wz-head"><div class="wz-top"><span class="wz-step" id="wz-step"></span><button class="x" data-act="wzclose" aria-label="Luk">×</button></div><div class="wz-bar"><i class="on"></i><i></i></div></div><div class="wz-body fresh" id="wz-body"></div><div class="wz-foot" id="wz-foot"></div></div>';
+  document.body.classList.add('lock');
+  wzDraw(true);
+}
+function skipKey(w){return 'ugk-skip-'+w}
+function wasSkipped(w){if(S.skip[w])return true;try{return localStorage.getItem(skipKey(w))==='1'}catch(e){return false}}
+function markSkipped(w){S.skip[w]=1;try{localStorage.setItem(skipKey(w),'1')}catch(e){}}
+function maybeWizard(){
+  if(S.wzChecked)return;
+  if(!(S.ready.pantry&&S.ready.settings&&S.ready.recipes&&S.ready.plans&&S.ready.prefs))return;
+  if(!Object.keys(S.recipes).length||$('#sheet').firstChild)return;
+  S.wzChecked=true;
+  var tm=targetMon(),w=weekId(tm),cur=weekId(mondayOf(todayStr()));
+  if(S.prefs[w]&&S.prefs[w].done)return;
+  var curPlan=((S.plans[cur]||{}).days||[]).some(function(d){return d&&(d.r||d.f||d.off)});
+  if(wdIdx(todayStr())<3&&curPlan)return;
+  if(wasSkipped(w))return;
+  S.mon=tm;S.tab='week';draw();openWizard(tm,true);
+}
+
+/* ---------- actions ---------- */
+function savePlanDays(w,days){return udoc('plans/'+w).set({week:w,start:monOfWeek(w),days:days,gen:Date.now()}).then(function(){return syncCarry(w,days)})}
+/* Sunday double portion -> Monday next week is leftovers (and the other way round) */
+function syncCarry(w,days){
+  var nw=weekId(addDays(monOfWeek(w),7)),np=S.plans[nw];if(!np||!np.days)return;
+  var sun=days[6],want=sun&&sun.r&&sun.dbl&&!sun.off&&!sun.lo&&!sun.f?sun.r:'',nd=fillDays(np.days.map(function(x){return Object.assign({},x)})),cur=nd[0]||{},isCarry=!!(cur.lo&&cur.from===-1);
+  if(want){
+    if(cur.r&&!isCarry&&(cur.lock||cur.done||cur.f))return;
+    if(isCarry&&cur.r===want)return;
+    nd[0]={r:want,lo:true,from:-1,done:!!(isCarry&&cur.done),lock:false};
+  }else if(isCarry){nd[0]={r:'',done:false,lock:false}}
+  else return;
+  return udoc('plans/'+nw).set({week:nw,start:monOfWeek(nw),days:nd,gen:np.gen||Date.now()});
+}
+function daysOf(w){return (((S.plans[w]||{}).days)||[]).map(function(x){return Object.assign({},x)})}
+function fillDays(days){while(days.length<7)days.push({r:'',done:false,lock:false});return days}
+function makePlan(w,quiet){
+  S.planNote='';
+  var days=generate(w);if(!days){toast(GEN_WHY==='filter'?'Ingen af dine retter passer til dine valg (kost og allergener)':'Der er ingen retter at vælge imellem');return Promise.resolve(false)}
+  var ids=daysIds(days),B=weekBudget(),nfree=days.filter(function(d){return d&&!d.r&&!d.off&&!d.f&&!d.lo}).length;
+  if(GEN_WHY==='few'&&nfree)S.planNote='Kun '+(7-nfree)+' retter passer til dine valg. Tilføj flere retter.';
+  else if(B>0){var est=planEst(ids);if(est>B*1.05)S.planNote='Ca. '+kr(Math.round(est-B))+' over dit budget.'}
+  var P=getPrefs(w);
+  return save(function(){
+    return savePlanDays(w,days).then(function(){
+      var L=S.lists[w]||{};
+      if(S.settings.candy&&!P.low&&!L.slik)return up(udoc('lists/'+w),{extra:(L.extra||[]).concat([{id:'slik',name:'Weekendslik'}]),slik:true});
+    }).then(function(){if(!quiet)toast('Madplan lavet ud fra dit lager'+(S.planNote?'. '+S.planNote:''));return true});
+  });
+}
+var ACT={
+  tab:function(d){S.tab=d.tab;draw();window.scrollTo(0,0)},
+  wk:function(d){S.mon=addDays(S.mon,7*Number(d.d));draw()},
+  gear:openSettings,
+  close:closeSheet,
+  stopread:function(){if(S.ctl)S.ctl.abort()},
+  gen:function(){makePlan(wid())},
+  pickstore:function(d){S.sel=d.s;S.selSet=true;draw()},
+  wizard:function(){openWizard(S.mon,false)},
+  wzclose:function(){if(S.wz&&S.wz.auto)markSkipped(S.wz.w);closeSheet()},
+  wzt:function(d){S.wz.P.days[Number(d.i)].t=Number(d.t);wzDraw()},
+  wzall:function(d){S.wz.P.days.forEach(function(x){x.t=Number(d.t)});wzDraw()},
+  wzm:function(d){
+    var i=Number(d.i),day=S.wz.P.days[i];day.m=day.m===d.m?'cook':d.m;wzDraw();
+  },
+  wzp:function(d){S.wz.P.prot[d.p]=d.v==='auto'?'auto':Number(d.v);wzDraw()},
+  wzlow:function(){S.wz.P.low=!S.wz.P.low;wzDraw()},
+  wznext:function(){S.wz.step=2;wzDraw(true)},
+  wzback:function(){S.wz.step=1;wzDraw(true)},
+  wzdone:function(){
+    var z=S.wz,w=z.w,P=z.P;
+    S.prefs[w]={week:w,days:P.days,prot:P.prot,low:P.low,done:true,at:Date.now()};
+    save(function(){
+      return udoc('prefs/'+w).set(S.prefs[w]).then(function(){return makePlan(w,true)}).then(function(ok){
+        closeSheet();S.mon=z.mon;S.tab='week';draw();window.scrollTo(0,0);
+        toast((ok?'Madplanen for uge '+isoWeek(z.mon)[1]+' er klar':'Ønskerne er gemt')+(ok&&S.planNote?'. '+S.planNote:''));
+      });
+    });
+  },
+  pick:function(d){openPick(Number(d.i))},
+  setday:function(d){
+    var w=wid(),days=fillDays(daysOf(w)),i=Number(d.i),old=days[i]||{};
+    days[i]=d.id?{r:d.id,done:false,lock:true}:{r:'',done:false,lock:false};
+    if(d.id&&old.dbl&&!old.lo)days[i].dbl=true;
+    if(days[i+1]&&days[i+1].lo&&days[i+1].from===i){days[i+1]=d.id?Object.assign({},days[i+1],{r:d.id}):{r:'',done:false,lock:false};if(!d.id)delete days[i].dbl}
+    closeSheet();save(function(){return savePlanDays(w,days)});
+  },
+  setoff:function(d){
+    var w=wid(),days=fillDays(daysOf(w)),i=Number(d.i);
+    if(days[i+1]&&days[i+1].lo&&days[i+1].from===i)days[i+1]={r:'',done:false,lock:false};
+    days[i]={r:'',off:true,done:false,lock:true};
+    closeSheet();save(function(){return savePlanDays(w,days)});
+  },
+  togdbl:function(d){
+    var w=wid(),days=fillDays(daysOf(w)),i=Number(d.i),day=days[i];if(!day||!day.r||day.lo)return;
+    if(!day.dbl){
+      if(i<6&&days[i+1]&&days[i+1].done){toast(DAYS[i+1]+' er allerede markeret som lavet');return}
+      day.dbl=true;day.lock=true;if(i<6)days[i+1]={r:day.r,lo:true,from:i,done:false,lock:false};
+    }else{
+      delete day.dbl;if(i<6&&days[i+1]&&days[i+1].lo&&days[i+1].from===i)days[i+1]={r:'',done:false,lock:false};
+    }
+    closeSheet();save(function(){return savePlanDays(w,days)});
+  },
+  setfrz:function(d){
+    var w=wid(),days=fillDays(daysOf(w));
+    days[Number(d.i)]={r:'',f:d.k,done:false,lock:true};
+    closeSheet();save(function(){return savePlanDays(w,days)});
+  },
+  done:function(d){
+    var w=wid(),days=daysOf(w),i=Number(d.i),day=days[i];if(!day||!(day.r||day.f))return;
+    var sc=(S.settings.persons||2)/2,patch={},r=day.r&&S.recipes[day.r],mult=day.dbl?2:1;
+    save(function(){
+      var ps=[];
+      if(day.lo){
+        days[i]=Object.assign({},day,{done:!day.done});
+        return savePlanDays(w,days).then(function(){toast(days[i].done?'Rester spist':'Fortrudt')});
+      }
+      if(!day.done){
+        var used=[];
+        if(day.f){var fp=pan(day.f);if(fp){var cq=curQty(fp);used.push({k:day.f,q:Math.min(1,cq)});patch[day.f]=qpatch(cq-1)}}
+        else{
+          if(!r)return;
+          (r.ing||[]).forEach(function(g){var k=slug(g.n),p=pan(k);if(p&&p.unit===g.u){var cq=curQty(p),amt=Math.min(cq,g.q*sc*mult);used.push({k:k,q:r1(amt)});patch[k]=qpatch(cq-amt)}});
+          var m=Object.assign({count:0,last:'',wd:[0,0,0,0,0,0,0]},r.made||{});m.wd=(m.wd||[0,0,0,0,0,0,0]).slice();m.wd[i]=(m.wd[i]||0)+1;m.count=(m.count||0)+1;m.last=addDays(S.mon,i);
+          ps.push(udoc('recipes/'+day.r).set(Object.assign({},r,{made:m})));
+        }
+        days[i]=Object.assign({},day,{done:true,used:used});
+      }else{
+        (day.used||[]).forEach(function(u){var uk=Array.isArray(u)?u[0]:u.k,uq=Array.isArray(u)?u[1]:u.q,p=pan(uk);if(p)patch[uk]=qpatch(curQty(p)+(Number(uq)||0))});
+        days[i]=Object.assign({},day,{done:false,used:[]});
+      }
+      if(Object.keys(patch).length)ps.push(up(udoc('store/pantry'),{items:patch}));
+      return Promise.all(ps).then(function(){return savePlanDays(w,days)}).then(function(){toast(days[i].done?'Lavet. Lageret er opdateret':'Fortrudt. Lageret er rettet');if(days[i].done&&day.r&&!day.f)openRate(day.r,i)});
+    });
+  },
+  addx:function(){
+    var v=($('#xin')||{}).value;v=(v||'').trim();if(!v)return;var w=wid(),L=S.lists[w]||{};
+    save(function(){return up(udoc('lists/'+w),{extra:(L.extra||[]).concat([{id:uid(),name:v}])})});
+  },
+  delx:function(d,el,e){e.preventDefault();var w=wid(),L=S.lists[w]||{};save(function(){return up(udoc('lists/'+w),{extra:(L.extra||[]).filter(function(x){return x.id!==d.id})})})},
+  tostock:function(){
+    var w=wid(),items=computeList(w),chk=(S.lists[w]||{}).checked||{},patch={},cl={},n=0;
+    items.forEach(function(it){var key=it.k+'_'+it.unit;if(!chk[key])return;var p=pan(it.k);n++;cl[key]=false;
+      if(p&&p.unit===it.unit)patch[it.k]=qpatch(curQty(p)+it.qty);
+      else if(!p)patch[it.k]=Object.assign({name:it.name,unit:it.unit,min:0,pack:0,price:0,perish:false,cat:'Andet',expires:'',rule:'under'},qpatch(it.qty))});
+    if(!n){toast('Afkryds de varer, du har købt');return}
+    save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){return up(udoc('lists/'+w),{checked:cl})}).then(function(){toast(n+' varer lagt på lageret')})});
+  },
+  newstock:function(){openStock('')},
+  editstock:function(d){openStock(d.k)},
+  brand:function(d){openBrand(d.k,d.n)},
+  brands:function(){openBrands()},
+  brpick:function(d){
+    var inp=$('#br-in');if(!inp)return;
+    var cur=parseBrands(inp.value),n=bnorm(d.b),has=cur.some(function(x){return bnorm(x)===n});
+    cur=has?cur.filter(function(x){return bnorm(x)!==n}):cur.concat([d.b]);inp.value=cur.join(', ');
+    [].forEach.call(document.querySelectorAll('[data-act="brpick"]'),function(b){b.classList.toggle('on',cur.some(function(x){return bnorm(x)===bnorm(b.dataset.b)}))});
+  },
+  brsave:function(d){var list=parseBrands($('#br-in').value);save(function(){return setBrands(d.k,list,d.n).then(function(){closeSheet();toast(list.length?'Mærke gemt':'Mærke fjernet')})})},
+  brdel:function(d){save(function(){return setBrands(d.k,[]).then(function(){closeSheet();toast('Mærke fjernet')})})},
+  savestock:function(d){saveStock(d.k)},
+  kind:function(d){
+    var rest=d.k==='rest';$('#f-vare').hidden=rest;$('#f-rest').hidden=!rest;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-act="kind"]'),function(b){var on=b.dataset.k===d.k;b.className=on?'on':'';b.setAttribute('aria-pressed',String(on))});
+  },
+  delstock:function(d){var items=Object.assign({},S.praw);delete items[d.k];save(function(){return udoc('store/pantry').set({items:items}).then(function(){closeSheet();toast('Varen er slettet')})})},
+  savefrz:function(d){
+    var patch={};patch[d.k]=Object.assign(qpatch(num($('#sf-qty').value)),{frozen:$('#sf-frz').value||''});
+    save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Gemt')})});
+  },
+  recs:openRecipes,
+  newrec:function(){openRecipe('')},
+  editrec:function(d){openRecipe(d.id)},
+  saverec:function(d){saveRecipe(d.id)},
+  delrec:function(d){save(function(){return udoc('recipes/'+d.id).delete().then(function(){openRecipes();toast('Retten er slettet')})})},
+  photo:function(){var f=$('#rf-photo');if(f)f.click()},
+  rmphoto:function(d){
+    var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
+    save(function(){return udoc('recipes/'+d.id).set(o).then(function(){S.recipes[d.id]=o;if(old.id&&S.assets&&S.assets.delete)S.assets.delete(old.id).catch(function(){});openRecipe(d.id);draw();toast('Fotoet er fjernet')})});
+  },
+  ingadd:function(){$('#rf-ings').insertAdjacentHTML('beforeend',ingRow())},
+  ingdel:function(d,el){var row=el.closest('.ingw');if(row)row.remove()},
+  readrec:readRecipe,
+  savesettings:function(){
+    var f=readForm('st');
+    var st=normSettings(Object.assign({drive:S.settings.drive||40,friWeekend:$('#st-f').checked,candy:$('#st-c').checked,example:!!S.settings.example},f));
+    save(function(){return udoc('store/settings').set(st).then(function(){closeSheet();toast('Indstillinger gemt')})});
+  },
+  onboard:function(){openOnboard()},
+  pushon:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.enable().then(function(){toast('Notifikationer er slået til');webRefresh()}).catch(function(e){toast(e&&e.message?e.message:'Kunne ikke slå notifikationer til');webRefresh()})},
+  pushoff:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.disable().then(function(){toast('Notifikationer er slået fra');webRefresh()}).catch(function(){toast('Kunne ikke slå dem fra')})},
+  pushtest:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.test().then(function(){toast('Testbesked sendt')}).catch(function(){toast('Kunne ikke sende testbesked')})},
+  logout:function(){var W=window.UGEKURV_WEB;if(W)W.signOut()},
+  obnext:function(){
+    var f=readForm('ob'),m=document.querySelector('input[name="ob-m"]:checked'),mode=m?m.value:'empty';
+    S.ob=Object.assign(f,{mode:mode});
+    if(mode==='starter'&&Object.keys(S.starter).length)openFavs('onboard');else ACT.obfinish();
+  },
+  obback:function(){openOnboard()},
+  obfinish:function(){
+    var o=Object.assign({},OB0,{stores:STORES.slice(),mode:'empty'},S.ob||{}),fav=(S.fv&&S.fv.mode==='onboard')?S.fv.sel:{};
+    save(function(){
+      var t=todayStr(),ps=[];
+      if(o.mode==='starter'){
+        var items={};Object.keys(S.ref.items||{}).forEach(function(k){items[k]=Object.assign({},S.ref.items[k],{qty:0,at:t,rule:'never',min:0,use:0,days:2,expires:'',ex:false,price:0})});
+        if(Object.keys(items).length)ps.push(udoc('store/pantry').set({items:items}));
+        Object.keys(S.starter).forEach(function(id){ps.push(udoc('recipes/'+id).set(Object.assign(freshRecipe(S.starter[id]),{fav:!!fav[id]})))});
+      }
+      var st=normSettings({adults:o.adults,kids:o.kids,budget:o.budget,budgetPer:o.budgetPer,stopVal:o.stopVal,veg:o.veg,quick:o.quick,allergens:o.allergens,oko:!!o.oko,free:!!o.free,friWeekend:true,candy:true,drive:40,stores:o.stores,example:false});
+      return Promise.all(ps).then(function(){return udoc('store/settings').set(st)}).then(function(){S.ob=null;S.fv=null;closeSheet();S.wzChecked=false;maybeWizard();if(!$('#sheet').firstChild)toast('Klar. Du kan nu lave din første madplan.')});
+    });
+  },
+  favs:function(){openFavs('edit')},
+  fvtog:function(d,el){
+    if(!S.fv)return;var on=!S.fv.sel[d.id];S.fv.sel[d.id]=on;
+    el.setAttribute('aria-pressed',String(on));var hb=el.querySelector('.hb');if(hb)hb.textContent=on?'♥':'♡';favNote();
+  },
+  fvsave:function(){
+    var sel=S.fv.sel,orig=S.fv.orig,ps=[];
+    Object.keys(S.recipes).forEach(function(id){var now=!!sel[id],was=!!orig[id];if(now!==was)ps.push(up(udoc('recipes/'+id),{fav:now}))});
+    save(function(){return Promise.all(ps).then(function(){S.fv=null;openRecipes();toast(ps.length?'Favoritter gemt':'Ingen ændringer')})});
+  },
+  cook:function(d){openCook(d.id)},
+  rateopen:function(d,el,e){var w=wid(),day=((S.plans[w]||{}).days||[])[Number(d.i)];if(day&&day.r)openRate(day.r,Number(d.i))},
+  rate:function(d){
+    if(!S.rt)return;S.rt.s=Number(d.s);
+    if(!S.rt.touched)S.rt.again=S.rt.s>=4?'yes':S.rt.s<=2?'no':'maybe';
+    rateDraw();
+  },
+  again:function(d){if(!S.rt)return;S.rt.again=d.v;S.rt.touched=true;rateDraw()},
+  ratesave:function(){
+    var rt=S.rt;if(!rt)return;if(!(rt.s>0)){toast('Vælg antal stjerner');return}
+    var r=S.recipes[rt.id];if(!r)return;
+    var hist=(r.hist||[]).concat([{d:addDays(monOfWeek(rt.w),rt.i),s:rt.s}]).slice(-5),l3=hist.slice(-3),avg=Math.round(l3.reduce(function(a,x){return a+x.s},0)/l3.length*10)/10,ag=rt.again||'maybe';
+    save(function(){
+      return up(udoc('recipes/'+rt.id),{hist:hist,rating:avg,again:ag}).then(function(){
+        var days=fillDays(daysOf(rt.w));if(days[rt.i]&&days[rt.i].r===rt.id){days[rt.i]=Object.assign({},days[rt.i],{rate:rt.s});return savePlanDays(rt.w,days)}
+      }).then(function(){S.rt=null;closeSheet();toast(ag==='yes'?'Gemt. Retten kommer igen senere':ag==='no'?'Gemt. Retten vælges ikke igen':'Tak for din vurdering')});
+    });
+  },
+  getstarter:function(){
+    var ids=Object.keys(S.starter).filter(function(id){return !S.recipes[id]});if(!ids.length)return;
+    save(function(){
+      var recs=ids.map(function(id){return freshRecipe(S.starter[id])}),patch=missingItems(recs),ps=[];
+      if(Object.keys(patch).length)ps.push(up(udoc('store/pantry'),{items:patch}));
+      ids.forEach(function(id,i){ps.push(udoc('recipes/'+id).set(recs[i]))});
+      return Promise.all(ps).then(function(){openRecipes();toast(ids.length+' startretter hentet')});
+    });
+  },
+  clearex:function(){
+    save(function(){
+      var keep={},del=[];
+      Object.keys(S.recipes).forEach(function(id){var r=S.recipes[id];if(r.example)del.push(id);else(r.ing||[]).forEach(function(g){keep[slug(g.n)]=1})});
+      var items=Object.assign({},S.praw);Object.keys(items).forEach(function(k){if(!items[k].ex)return;if(keep[k])items[k]=Object.assign({},items[k],{qty:0,at:todayStr(),ex:false});else delete items[k]});
+      return Promise.all(del.map(function(id){return udoc('recipes/'+id).delete()})).then(function(){return udoc('store/pantry').set({items:items})}).then(function(){return up(udoc('store/settings'),{example:false})}).then(function(){toast('Eksempeldata er ryddet')});
+    });
+  }
+};
+document.addEventListener('click',function(e){var el=e.target.closest('[data-act]');if(!el)return;var f=ACT[el.dataset.act];if(f)f(el.dataset,el,e)});
+document.addEventListener('change',function(e){
+  var t=e.target;if(!t.matches)return;
+  if(t.matches('[data-chk]')){
+    var w=wid(),key=t.dataset.chk,v=t.checked,L=S.lists[w]||{},c=Object.assign({},L.checked||{});c[key]=v;
+    S.lists[w]=Object.assign({},L,{checked:c});draw();
+    var p={};p[key]=v;save(function(){return up(udoc('lists/'+w),{checked:p})});
+  }else if(t.id==='rf-photo'){handlePhoto(t.files&&t.files[0],t.dataset.id);t.value=''}
+  else if(t.matches('.r-mode')){syncRule(t.closest('.rule'));refreshSummary(t.closest('.ingw'))}
+  else if(t.name==='ob-m'){var g=$('#ob-go');if(g)g.textContent=t.value==='starter'&&Object.keys(S.starter).length?'Næste: vælg favoritter':'Kom i gang'}
+  else if(t.matches('.i-u')){refreshSummary(t.closest('.ingw'))}
+  else if(t.matches('.i-n')){
+    var row=t.closest('.ingw'),p2=pan(slug(t.value));
+    if(row&&p2){row.querySelector('.i-u').value=p2.unit;row.querySelector('.rl').innerHTML='<summary>'+esc(ruleSummary(ruleOf(p2),p2.unit))+'</summary>'+ruleHtml(p2)}
+  }
+});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='sq'){S.q=t.value;var l=$('#stockList');if(l)l.innerHTML=stockListHtml()}
+  else if(t.matches&&t.matches('.r-min,.r-days,.r-use,.r-pack')){refreshSummary(t.closest('.ingw'))}
+  else if(/^(st|ob)-(a|k)$/.test(t.id||'')){hhUpdate(t.id.slice(0,2))}
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&$('#sheet').firstChild){if(S.wz)ACT.wzclose();else closeSheet()}
+  if(e.key==='Enter'&&e.target.id==='xin'){e.preventDefault();ACT.addx()}
+});
+/* a photo that cannot load falls back to the drawn plate */
+document.addEventListener('error',function(e){
+  var t=e.target;if(!t||t.tagName!=='IMG'||t.dataset.fb===undefined)return;
+  var id=t.dataset.fb,r=Object.assign({},S.recipes[id]||{});delete r.img;var p=t.parentNode;if(p)p.innerHTML=artSVG(Object.assign({id:id},r),p.classList&&p.classList.contains('wide'));
+},true);
+
+/* ---------- data ---------- */
+function ready(k){S.ready[k]=1;render();maybeOnboard();maybeWizard()}
+function fromCol(snap,key){var o={};snap.docs.forEach(function(d){o[d.id]=d.data()});S[key]=o;ready(key)}
+function sub(q,fn){q.onSnapshot(fn,function(e){console.error(e);if(e&&e.code==='revoked'){S.ro=true}render()})}
+function boot(){
+  draw();
+  var c=window.claude;
+  if(!c||!c.use){S.nodb=true;draw();return}
+  c.use('db').then(function(d){
+    db=d;if(!db){S.nodb=true;draw();return}
+    setTimeout(function(){if(!S.ready.pantry){S.slow=true;render()}},10000);
+    return c.use('user').then(function(us){return us&&us.id?us.id():null}).catch(function(){return null}).then(function(id){
+      if(!id){S.nodb=true;draw();return}
+      S.uid=id;UB='data/users/'+id+'/u/';
+      sub(udoc('store/pantry'),function(s){S.hasPantry=!!s.exists;var d=s.exists?s.data():{};S.praw=d.items||{};applyRef();ready('pantry')});
+      sub(udoc('store/brands'),function(s){var d=s.exists?s.data():{};S.brands=d.b||{};S.bnames=d.n||{};render()});
+      sub(udoc('store/settings'),function(s){S.hasSettings=!!s.exists;S.settings=normSettings(s.exists?s.data():{});ready('settings')});
+      sub(ucol('recipes'),function(s){fromCol(s,'recipes')});
+      sub(ucol('plans'),function(s){fromCol(s,'plans')});
+      sub(ucol('prefs'),function(s){fromCol(s,'prefs')});
+      sub(ucol('lists'),function(s){fromCol(s,'lists')});
+      sub(db.collection('offers'),function(s){fromCol(s,'offers')});
+      sub(db.collection('ref'),function(s){var o={};s.docs.forEach(function(x){o[x.id]=x.data()});S.ref={stores:o.stores||{},items:(o.items&&o.items.items)||{}};applyRef();ready('ref')});
+      sub(db.collection('starter'),function(s){fromCol(s,'starter')});
+    });
+  }).catch(function(){S.nodb=true;draw()});
+  c.use('user').then(function(u){if(u&&u.can&&u.can('data.write')===false){S.ro=true;render()}}).catch(function(){});
+  c.use('assets').then(function(a){S.assets=a||null;render()}).catch(function(){});
+  c.use('sample').then(function(sm){
+    S.sample=sm;if(sm&&sm.limits)return sm.limits().then(function(l){S.imgOK=!!(l&&l.images)}).catch(function(){})
+  }).catch(function(){});
+}
+if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){return Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name}).filter(Boolean)};
+if(window.__TEST__)window.__TEST__.api={S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(!window.__TEST__||window.__TEST__.boot)boot();
+})();
+
+</script>
+</body></html>

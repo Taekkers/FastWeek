@@ -1,0 +1,9 @@
+{
+  "name": "fastweek-push",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Ugentlig påmindelse til FastWeek (køres af GitHub Actions)",
+  "scripts": { "push": "node scripts/send-push.js", "dry": "DRY_RUN=1 node scripts/send-push.js" },
+  "dependencies": { "firebase-admin": "^12.7.0", "web-push": "^3.6.7" },
+  "engines": { "node": ">=18" }
+}

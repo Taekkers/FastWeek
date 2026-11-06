@@ -1,0 +1,27 @@
+# Sender en påmindelse hver torsdag til alle, der har slået notifikationer til i FastWeek.
+# Gem denne fil i dit GitHub-repo som: .github/workflows/weekly-push.yml
+name: Ugentlig påmindelse
+on:
+  schedule:
+    - cron: '0 17 * * 4'   # torsdag 17:00 UTC = 18:00 vinter / 19:00 sommer i Danmark
+  workflow_dispatch:        # giver en knap, så du kan sende en test med det samme
+    inputs:
+      dry_run:
+        description: 'Tørkørsel (send ikke, tæl kun)'
+        type: boolean
+        default: false
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --omit=dev --no-audit --no-fund
+      - run: node scripts/send-push.js
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '' }}
