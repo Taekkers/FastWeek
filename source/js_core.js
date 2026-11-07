@@ -15,7 +15,7 @@ var LOW_MAX=660,KALLOW=70;
 var PIDX0={'Bilka':1.11,'Netto':1.054,'Rema 1000':1,'Coop 365':1.09,'Lidl':0.989,'Føtex':1.14,'SuperBrugsen':1.184,'Kvickly':1.172,'Meny':1.252,'Spar':1.196,'Løvbjerg':1.15};
 var KID_W=.6;
 var PAIR_MIN=25;
-var DEF={persons:2,adults:2,kids:0,budget:0,budgetPer:'week',veg:false,quick:false,allergens:[],friWeekend:false,candy:true,oko:true,free:true,welfare:true,drive:40,stores:STORES.slice(),example:false};
+var DEF={persons:2,adults:2,kids:0,budget:0,budgetPer:'week',veg:false,quick:false,allergens:[],friWeekend:false,candy:true,oko:true,free:true,okoVeg:false,welfare:true,drive:40,stores:STORES.slice(),example:false};
 var LINK='<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>';
 var CHECK='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 var CAM='<svg viewBox="0 0 24 24"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.6"/></svg>';
@@ -46,7 +46,7 @@ function monOfWeek(w){var m=String(w).match(/^(\d{4})-W(\d{2})$/);if(!m)return m
 function normSettings(d){
   var s=Object.assign({},DEF,d||{});
   if(d&&d.oko===undefined&&d.free===undefined&&d.welfare!==undefined){s.oko=!!d.welfare;s.free=!!d.welfare}
-  s.oko=!!s.oko;s.free=!!s.free;s.welfare=s.oko||s.free;
+  s.oko=!!s.oko;s.free=!!s.free;s.okoVeg=!!s.okoVeg;s.welfare=s.oko||s.free;
   var ad=(d&&d.adults!=null)?d.adults:((d&&d.persons>0)?Math.round(d.persons):DEF.adults);
   s.adults=Math.min(12,Math.max(1,Math.round(num(ad))||1));
   s.kids=Math.min(10,Math.max(0,Math.round(num(s.kids))||0));
@@ -157,10 +157,14 @@ function nameMatch(itemName,offerName){
 /* Kød, fisk og æg kan koebes oekologisk (kpo) eller som frilands / 3 hjerter (kpf). Brugeren vaelger hvilke der accepteres. */
 function accQ(){return{oko:!!S.settings.oko,god:!!S.settings.free}}
 function qprices(p){if(!p)return{oko:0,god:0};var o=p.kpo>0?p.kpo:0,f=p.kpf>0?p.kpf:0;if(!o&&!f&&p.kpg>0){o=p.kpg;f=p.kpg}return{oko:o,god:f}}
-function qbest(p){var a=accQ(),qp=qprices(p),b=null;if(a.oko&&qp.oko>0)b={q:'oko',price:qp.oko};if(a.god&&qp.god>0&&(!b||qp.god<b.price))b={q:'god',price:qp.god};return b}
+/* Fruit and vegetables have their own organic choice. Without an organic shelf price the estimate is the normal price + 40 %. */
+var OKOV=1.4,OKO_RE=/(^|[^a-zæøå])(øko|økologisk|økologiske|øgo|änglamark|oekologisk)/i;
+function isVegP(p){return !!p&&p.cat==='Frugt & grønt'}
+function offQ(o){return o.q||(OKO_RE.test(o.name||'')?'oko':'')}
+function qbest(p){if(isVegP(p)){if(!S.settings.okoVeg)return null;var vp=p.kpo>0?p.kpo:(p.kp||0)*OKOV;return vp>0?{q:'oko',price:vp}:null}var a=accQ(),qp=qprices(p),b=null;if(a.oko&&qp.oko>0)b={q:'oko',price:qp.oko};if(a.god&&qp.god>0&&(!b||qp.god<b.price))b={q:'god',price:qp.god};return b}
 function qual(k){return !!qbest(pan(k))}
 function qname(q){return q==='oko'?'Økologi':'Frilands'}
-function qualOk(o,it){if(!qual(it.k))return true;var a=accQ();return (o.q==='oko'&&a.oko)||(o.q==='god'&&a.god)}
+function qualOk(o,it){if(!qual(it.k))return true;var q=offQ(o);if(isVegP(pan(it.k)))return q==='oko';var a=accQ();return (q==='oko'&&a.oko)||(q==='god'&&a.god)}
 function offerMatch(o,it){if(!qualOk(o,it))return false;if(o.match)return slug(o.match)===it.k;return nameMatch(it.name,o.name)}
 function rawMatch(o,it){if(o.match)return slug(o.match)===it.k;return nameMatch(it.name,o.name)}
 /* ---------- foretrukne mærker pr. vare ---------- */
@@ -226,6 +230,8 @@ function storeCosts(items,w){
   });
   return{stores:res,norm:norm,unpriced:unpriced,skipped:skipped,looked:looked,priced:priced};
 }
+/* Stores ordered by what the whole list costs there: cheapest first. */
+function byCost(sc,arr){return arr.slice().sort(function(a,b){var x=sc.stores[a],y=sc.stores[b];return x.total-y.total||y.n-x.n||String(a).localeCompare(String(b),'da')})}
 /* Best set of k stores: every line is bought where it is cheapest within the set. */
 function bestSet(sc,k){
   var st=activeStores();if(k<1||st.length<k)return null;
@@ -241,6 +247,7 @@ function bestSet(sc,k){
     for(var i=start;i<st.length;i++){cur.push(st[i]);rec(i+1);cur.pop()}
   })(0);
   if(!best)return null;
+  best.stores=byCost(sc,best.stores);
   var single=st.map(function(s){return sc.stores[s]}).sort(function(x,y){return x.total-y.total})[0];
   best.base=single.store;best.baseTotal=single.total;best.save=Math.max(0,single.total-best.total);best.assign={};best.sub={};
   best.stores.forEach(function(s){best.sub[s]=0});
@@ -405,7 +412,7 @@ function featOf(r){
   (r.ing||[]).forEach(function(g){var n=String(g.n).toLowerCase();if(!STAPLE[n])f.push('i:'+n)});
   return f;
 }
-function likeW(r){var w=0;if(r.fav)w+=2;var rt=Number(r.rating)||0;if(rt)w+=(rt-3)*.9;if(r.again==='yes')w+=1;else if(r.again==='no')w-=2;return w}
+function likeW(r){var w=0;if(r.fav)w+=2;if(r.again==='yes')w+=1;else if(r.again==='no')w-=2;return w}
 /* score per recipe in -1..1: how close it is to what the user likes (favourites, ratings, repeat flags). 0 for all if nothing is known yet. */
 function tasteModel(){
   var ids=Object.keys(S.recipes),F={},df={},N=ids.length||1,out={},prof={},any=false;
@@ -445,7 +452,6 @@ function fit(r,i,ctx,id){
   if(ctx.quick&&!wk&&m>30)s-=3;
   if(dp.m==='dbl')s+=r.rest?3:-7;
   if(P.low){var k=ctx.kc[id]||600;s+=k>LOW_MAX?-(6+(k-LOW_MAX)/40):(LOW_MAX-k)/220}
-  var rt=Number(r.rating)||0;if(rt)s+=(rt-3)*.9;
   var lu=ctx.last[id]?Math.abs(daysBetween(ctx.last[id],addDays(ctx.mon,i))):null;
   if(r.again==='no')s-=16;
   else if(r.again==='yes')s+=lu==null?1.4:(lu<=14?0:Math.min(1.4,.6+(lu-14)/12));

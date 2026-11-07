@@ -279,8 +279,9 @@ function artSVG(r,wide){
   s+='<g transform="'+(flip?'translate(120 0) scale(-1 1) ':'')+(turn?'rotate('+turn+' 60 60)':'')+'">'+recolor(sceneInner(a,R),f,a)+'</g>'+extras(a,f,rng(seed^0x2c1b));
   return s+'</svg>';
 }
-function imgSrc(r){return r&&r.img&&r.img.id?'/_blob/'+encodeURIComponent(r.img.id):''}
+function ownImg(r){return !!(r&&r.img&&(r.img.id||r.img.data))}
+function imgSrc(r){if(!r)return '';if(r.img&&r.img.data&&/^data:image\/(jpeg|png|webp);base64,/.test(r.img.data))return r.img.data;if(r.img&&r.img.id)return '/_blob/'+encodeURIComponent(r.img.id);if(r.wimg&&r.wimg.u&&!r.noweb&&/^https:\/\/upload\.wikimedia\.org\//.test(r.wimg.u))return r.wimg.u;return ''}
 function artHtml(r,id,wide){
   var src=imgSrc(r);
-  return src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async" data-fb="'+esc(id||'')+'">':artSVG(Object.assign({id:id},r||{}),wide);
+  return src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-fb="'+esc(id||'')+'">':artSVG(Object.assign({id:id},r||{}),wide);
 }

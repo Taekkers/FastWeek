@@ -476,3 +476,10 @@ input[aria-invalid="true"]{border-color:var(--offer)}
 .oc-r b{color:var(--offer)}
 .oc-r span{color:var(--ink2);overflow-wrap:anywhere}
 .offcard .lnk{align-self:flex-start}
+.lowcard.pn[disabled]{opacity:.55;cursor:not-allowed}
+/* photo credit */
+.credit{font-size:12px;color:var(--ink2);line-height:1.45;margin:6px 0 0}
+.credit a{color:var(--ink2)}
+.credit .lnk,.hint .lnk{font-size:12px;display:inline;padding:0;margin-left:4px}
+#ph-st:empty{display:none}
+#ph-st{margin-top:8px}

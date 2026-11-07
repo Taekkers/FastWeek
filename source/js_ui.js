@@ -17,6 +17,7 @@ function draw(){
   if(nc){var on=nc.querySelector('.sto[aria-pressed="true"]');
     if(on&&S.shownSel!==S.sel){nc.scrollLeft=Math.max(0,on.offsetLeft-nc.offsetLeft-(nc.clientWidth-on.offsetWidth)/2)}else nc.scrollLeft=ol;
     S.shownSel=S.sel}
+  if(window.UGEKURV_WEB)setTimeout(wikiKick,1500);
   var cu=$('#cur');if(cu)cu.textContent={week:'Ugeplan',stock:'Lager',shop:'Indkøb'}[S.tab]||'Ugeplan';
 }
 function weekNav(){
@@ -86,7 +87,7 @@ function dayRow(i,d,t,P){
   if(!(r||d.f))return '<div class="dc none'+(date===t?' today':'')+'"><button class="dc-main" data-act="pick" data-i="'+i+'"><span class="art">'+PLATE+'</span><span class="dc-t"><span class="dc-d">'+dl+'</span><span class="dc-n muted">Vælg ret</span></span></button><div class="dc-a"></div></div>';
   var meta=d.lo?'Rester fra '+loFrom(d,i):d.f?'Fra fryseren':recMeta(r,P.low);
   var chips=(d.dbl?'<span class="chip">Dobbelt</span>':'')+(d.lo?'<span class="chip ex">Rester</span>':'')+(r&&r.fav?'<span class="hrt" aria-label="Favorit">♥</span>':'')+(r&&!d.lo?dietChip(r):'');
-  var rate=d.done&&r&&!d.lo&&!d.f?'<span class="rt" role="button" tabindex="0" data-act="rateopen" data-i="'+i+'" aria-label="Bedøm retten">'+(d.rate?'★ '+d.rate+'/5':'★ Bedøm')+'</span>':'';
+  var rate='';
   var art=d.f?artBox({name:'frost',ing:[]},'f'):artBox(r,d.r);
   var sec='';
   if(r&&!d.lo){
@@ -114,26 +115,26 @@ function viewWeek(){
 
 /* --- Indkøb --- */
 function storeTiles(sc,sel,best,pair){
-  var act=activeStores(),mx=Math.max.apply(null,act.map(function(s){return sc.stores[s].total}))||1;
+  var act=byCost(sc,activeStores()),mx=Math.max.apply(null,act.map(function(s){return sc.stores[s].total}))||1;
   var h='<div class="stores" role="group" aria-label="Butikker">'+act.map(function(s){
     var x=sc.stores[s],on=s===sel;
     return '<button class="sto" data-act="pickstore" data-s="'+esc(s)+'" aria-pressed="'+on+'">'+(best===s&&act.length>1?'<span class="best">Billigst</span>':'')+
       '<b>'+esc(s)+'</b><span class="tot">'+nf(Math.round(x.total),0)+'<small>kr</small></span>'+
       '<span class="sv">'+(x.n?x.n+' tilbud · −'+nf(Math.round(x.save),0)+' kr':'Ingen tilbud')+'</span>'+
       '<span class="bar"><i style="width:'+Math.max(8,Math.round(x.total/mx*100))+'%"></i></span></button>'}).join('');
-  if(pair)h+='<button class="sto pair" data-act="pickstore" data-s="'+pair.sel+'" aria-pressed="'+(sel===pair.sel)+'"><span class="best">Anbefalet</span><b>'+esc(pair.stores.join(' + '))+'</b><span class="tot">'+nf(Math.round(pair.total),0)+'<small>kr</small></span><span class="sv">−'+nf(Math.round(pair.save),0)+' kr mod én butik</span><span class="bar"><i style="width:'+Math.max(8,Math.round(pair.total/mx*100))+'%"></i></span></button>';
+  if(pair)h+='<button class="sto pair" data-act="pickstore" data-s="'+pair.sel+'" aria-pressed="'+(sel===pair.sel)+'"><span class="best">Nemmest</span><b>'+esc(pair.stores.join(' + '))+'</b><span class="tot">'+nf(Math.round(pair.total),0)+'<small>kr</small></span><span class="sv">−'+nf(Math.round(pair.save),0)+' kr mod én butik</span><span class="bar"><i style="width:'+Math.max(8,Math.round(pair.total/mx*100))+'%"></i></span></button>';
   return h+'</div>';
 }
 var STSHORT={'Rema 1000':'Rema','Coop 365':'365','SuperBrugsen':'SuperB.','Løvbjerg':'Løvbj.'};
 function stShort(s){return STSHORT[s]||s}
 function nameList(a){a=a.map(function(x){return '<em>'+esc(x)+'</em>'});return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' og '+a[a.length-1]}
 function optsHtml(sc,w,op){
-  var sv=op.sv,rec=op.opts[op.rec],act=activeStores(),h='<div class="opts"><div class="lbl">Én butik eller flere?</div><div class="optl" role="group" aria-label="Sammenlign butikker">';
+  var sv=op.sv,rec=op.opts[op.rec],act=byCost(sc,activeStores()),h='<div class="opts"><div class="lbl">Én butik eller flere?</div><div class="optl" role="group" aria-label="Sammenlign butikker">';
   op.opts.forEach(function(o,i){
     var on=S.sel===o.sel,nm=o.k===1?'Kun '+esc(o.stores[0]):esc(o.stores.join(' + '));
     var d=o.k+(o.k===1?' butik':' butikker')+(o.k>1?(o.save>=1?' · spar ca. '+kr(Math.round(o.save)):' · ingen besparelse')+(o.k>2&&o.extra>=1?' ('+kr(Math.round(o.extra))+' mere end '+(o.k-1)+')':''):'');
     var split=o.k>1?'<span class="o-s">'+o.stores.map(function(s){return esc(s)+' ca. '+kr(Math.round(o.sub[s]))}).join(' · ')+'</span>':'';
-    h+='<button class="opt'+(i===op.rec?' rec':'')+'" data-act="pickstore" data-s="'+esc(o.sel)+'" aria-pressed="'+on+'"><span class="o-n">'+(i===op.rec?'<span class="best">Anbefalet</span>':'')+nm+'</span><span class="o-t">'+nf(Math.round(o.total),0)+'<small> kr</small></span><span class="o-d">'+d+'</span>'+split+'</button>';
+    h+='<button class="opt'+(i===op.rec?' rec':'')+'" data-act="pickstore" data-s="'+esc(o.sel)+'" aria-pressed="'+on+'"><span class="o-n">'+(i===op.rec?'<span class="best">Nemmest</span>':'')+nm+'</span><span class="o-t">'+nf(Math.round(o.total),0)+'<small> kr</small></span><span class="o-d">'+d+'</span>'+split+'</button>';
   });
   h+='</div>';
   var top=op.cheapest,msg;
@@ -324,14 +325,14 @@ function openRecipes(){
   if(ns)h+='<button class="btn ghost" data-act="getstarter">Hent '+ns+(ns===1?' startret':' startretter')+'</button>';
   h+='</div>';
   if(ids.length){var tm=tasteModel(),tl=tm.any?tasteLabels(tm):[];
-    h+='<p class="hint">'+(tl.length?'Din smag lige nu: '+esc(tl.join(', '))+'. Retterne varieres fra uge til uge.':'Markér favoritter og bedøm retter, så lærer appen din smag.')+'</p>'}
+    h+='<p class="hint">'+(tl.length?'Din smag lige nu: '+esc(tl.join(', '))+'. Retterne varieres fra uge til uge.':'Markér favoritter, så lærer appen din smag.')+'</p>'}
   if(!ids.length)h+='<p class="muted">Ingen retter endnu. Scan en kogebog, eller tryk Ny ret.</p>';
   h+=draftsHtml();
   var books={};ids.forEach(function(id){var r=S.recipes[id],b=r.book||'Egne retter';(books[b]=books[b]||[]).push(id)});
   Object.keys(books).sort(function(a,b){return a==='Egne retter'?1:b==='Egne retter'?-1:a.localeCompare(b,'da')}).forEach(function(b){
     h+='<div class="sec"><div class="lbl">'+esc(b)+'</div><div class="list">'+books[b].sort(function(a,c){return (S.recipes[a].page||0)-(S.recipes[c].page||0)||S.recipes[a].name.localeCompare(S.recipes[c].name,'da')}).map(function(id){
       var r=S.recipes[id],kt=kcTxt(r);
-      return '<button class="li rec" data-act="editrec" data-id="'+id+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.fav?'<span class="hrt">♥</span>':'')+(r.rating?'<span>★ '+nf(r.rating,1)+'</span>':'')+(r.page?'<span class="mono">s. '+r.page+'</span>':'')+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(kt?'<span>'+kt+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.prot==='vegetar'||r.prot==='aeg'?'<span class="chip">Vegetar</span>':'')+'</span></span><span></span></button>'}).join('')+'</div></div>';
+      return '<button class="li rec" data-act="editrec" data-id="'+id+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.fav?'<span class="hrt">♥</span>':'')+(r.page?'<span class="mono">s. '+r.page+'</span>':'')+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(kt?'<span>'+kt+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.prot==='vegetar'||r.prot==='aeg'?'<span class="chip">Vegetar</span>':'')+'</span></span><span></span></button>'}).join('')+'</div></div>';
   });
   openSheet('Mine retter',h);
 }
@@ -356,11 +357,15 @@ function ingRow(g){
     '<details class="rl"><summary>'+esc(ruleSummary(ruleOf(rp),u))+'</summary>'+ruleHtml(rp)+'</details></div>';
 }
 function heroHtml(id,r){
-  var canUp=!!S.assets;
-  return '<div class="hero-img"><span class="art wide">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(r.img&&r.img.id?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>'+
-    (canUp?'<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">':'')+
-    (canUp&&r.img&&r.img.id?'<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>':'')+
-    (canUp&&!(r.img&&r.img.id)?'<p class="hint">Tegningen er en pladsholder. Tilføj dit eget foto af retten.</p>':'');
+  var canUp=!!S.assets||!!window.UGEKURV_WEB,own=ownImg(r),wi=!own&&!r.noweb&&r.wimg&&r.wimg.u?r.wimg:null,h='';
+  h+='<div class="hero-img"><span class="art wide">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(own?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>';
+  if(canUp)h+='<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">';
+  h+='<div id="ph-st" aria-live="polite"></div>';
+  if(own)h+='<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>';
+  else if(wi)h+='<p class="credit">Foto: <a href="'+esc(safeUrl(wi.p))+'" target="_blank" rel="noopener noreferrer">'+esc((wi.a?wi.a+', ':'')+(wi.l||'fri licens'))+'</a> · Wikimedia Commons. Ikke nødvendigvis præcis denne opskrift. <button class="lnk" data-act="noweb" data-id="'+esc(id)+'">Brug tegning</button></p>';
+  else if(r.noweb&&window.UGEKURV_WEB)h+='<p class="hint">Tegningen er en pladsholder. <button class="lnk" data-act="findimg" data-id="'+esc(id)+'">Find et billede</button></p>';
+  else if(canUp)h+='<p class="hint">Der er ikke fundet et billede af retten. Tilføj dit eget foto.</p>';
+  return h;
 }
 function openRecipe(id,did){
   var dr=(!id&&did&&S.scans&&S.scans[did])||null,r=id?S.recipes[id]:null,v=r||dr,books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});Object.keys(S.scans||{}).forEach(function(k){if(S.scans[k].book)books[S.scans[k].book]=1});
@@ -379,8 +384,7 @@ function openRecipe(id,did){
     '<div class="grid2"><div class="field"><label for="rf-book">Kogebog</label><input id="rf-book" list="bl" type="text" value="'+esc(v?v.book||'':'')+'" placeholder="Fx titel på bogen"></div><div class="field"><label for="rf-page">Side</label><input id="rf-page" inputmode="numeric" value="'+(v&&v.page?v.page:'')+'"></div></div>'+
     '<div class="grid2"><div class="field"><label for="rf-kind">Type</label><select id="rf-kind">'+opt([['hverdag','Hverdag'],['weekend','Weekend']],v?v.kind:'hverdag')+'</select></div><div class="field"><label for="rf-min">Minutter</label><input id="rf-min" inputmode="numeric" value="'+(v&&v.minutes?v.minutes:'')+'"></div></div>'+
     '<div class="field"><label>Ingredienser til 2 personer</label><p class="hint">Mængder for 2 personer. Omregnes til '+hhLabel()+'.</p><div id="rf-ings" style="display:flex;flex-direction:column;gap:8px">'+ing.map(ingRow).join('')+'</div><div><button class="btn ghost sm" data-act="ingadd">Tilføj ingrediens</button></div></div>'+
-    '<details class="more" id="rf-more"><summary><span class="lbl">Flere valg</span><span class="sub">Vurdering, link, hovedingrediens, fremgangsmåde m.m.</span></summary><div class="more-in">'+
-    '<div class="field"><label for="rf-rate">Vurdering</label><select id="rf-rate">'+opt([['0','Ingen'],['1','1/5'],['2','2/5'],['3','3/5'],['4','4/5'],['5','5/5']],String(r?Math.round(r.rating||0):0))+'</select></div>'+
+    '<details class="more" id="rf-more"><summary><span class="lbl">Flere valg</span><span class="sub">Link, hovedingrediens, fremgangsmåde m.m.</span></summary><div class="more-in">'+
     '<div class="field"><label for="rf-url">Link til opskrift (valgfri)</label><input id="rf-url" type="text" inputmode="url" autocomplete="off" value="'+esc(r?safeUrl(r.url):'')+'" placeholder="https://"></div>'+
     '<div class="field"><label for="rf-prot">Hovedingrediens</label><select id="rf-prot">'+opt(PROTS,v?v.prot||'':'')+'</select></div>'+
     '<div class="grid2"><div class="field"><label for="rf-again">Skal den gentages?</label><select id="rf-again">'+opt([['','Ikke valgt'],['yes','Ja, gerne'],['maybe','Måske'],['no','Nej, ikke igen']],r?r.again||'':'')+'</select></div><div class="field"><label>&nbsp;</label><label class="chk"><input id="rf-fav" type="checkbox"'+(r&&r.fav?' checked':'')+'> Favorit ♥</label></div></div>'+
@@ -399,7 +403,7 @@ function saveRecipe(id,did){
   if(!name){toast('Giv retten et navn');return}
   if(!rows.length){toast('Tilføj mindst én ingrediens med mængde');return}
   var old=id?S.recipes[id]:null,rid=id||uid(),t=todayStr();
-  var doc=Object.assign({},old||{},{name:name,book:$('#rf-book').value.trim(),page:Math.round(num($('#rf-page').value))||0,kind:$('#rf-kind').value,minutes:Math.round(num($('#rf-min').value))||0,rating:Number($('#rf-rate').value)||0,prot:$('#rf-prot').value,rest:$('#rf-rest').checked,fav:$('#rf-fav').checked,again:$('#rf-again').value,method:$('#rf-method').value.replace(/\r/g,'').trim(),ing:rows.map(function(g){return{n:g.n,q:g.q,u:g.u}}),example:false,url:safeUrl($('#rf-url').value),made:(old&&old.made)||{count:0,last:'',wd:[0,0,0,0,0,0,0]}});
+  var doc=Object.assign({},old||{},{name:name,book:$('#rf-book').value.trim(),page:Math.round(num($('#rf-page').value))||0,kind:$('#rf-kind').value,minutes:Math.round(num($('#rf-min').value))||0,prot:$('#rf-prot').value,rest:$('#rf-rest').checked,fav:$('#rf-fav').checked,again:$('#rf-again').value,method:$('#rf-method').value.replace(/\r/g,'').trim(),ing:rows.map(function(g){return{n:g.n,q:g.q,u:g.u}}),example:false,url:safeUrl($('#rf-url').value),made:(old&&old.made)||{count:0,last:'',wd:[0,0,0,0,0,0,0]}});
   save(function(){
     var patch={},items=S.praw||{};
     rows.forEach(function(g){var k=slug(g.n),o=items[k],r=g.rule;
@@ -553,18 +557,83 @@ function resizeImage(file,max){
     im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('img'))};im.src=url;
   });
 }
+function phSt(kind,txt){var b=$('#ph-st');if(b)b.innerHTML=txt?'<div class="up-sum '+kind+'">'+(kind==='run'?'<span class="spin"></span>':kind==='ok'?CHECK:'')+'<span><b>'+esc(txt)+'</b></span></div>':''}
+function smallJpeg(file,max,q){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){var s=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(im.width*s));c.height=Math.max(1,Math.round(im.height*s));c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);try{res(c.toDataURL('image/jpeg',q))}catch(e){rej(e)}};
+    im.onerror=function(){URL.revokeObjectURL(url);rej(new Error('img'))};im.src=url;
+  });
+}
 function handlePhoto(file,id){
-  if(!file||!S.assets||!id||!S.recipes[id])return;
-  toast('Gemmer foto…');
-  resizeImage(file,1400).then(function(b){return S.assets.upload(b)}).then(function(res){
-    var old=S.recipes[id].img;
-    return up(udoc('recipes/'+id),{img:{id:res.id}}).then(function(){
-      S.recipes[id]=Object.assign({},S.recipes[id],{img:{id:res.id}});
-      var el=$('#hero-box');if(el)el.innerHTML=heroHtml(id,S.recipes[id]);
-      if(old&&old.id&&S.assets.delete)S.assets.delete(old.id).catch(function(){});
-      toast('Foto gemt');draw();
+  if(!file||!id||!S.recipes[id])return;
+  phSt('run','Gemmer foto…');
+  var done=function(img,old){
+    S.recipes[id]=Object.assign({},S.recipes[id],{img:img});
+    var el=$('#hero-box');if(el)el.innerHTML=heroHtml(id,S.recipes[id]);
+    if(old&&old.id&&S.assets&&S.assets.delete)S.assets.delete(old.id).catch(function(){});
+    phSt('ok','Foto gemt');toast('Foto gemt');draw();
+  };
+  var fail=function(e){console.error(e);phSt('bad','Kunne ikke gemme fotoet. Prøv et andet billede.')};
+  var old=S.recipes[id].img;
+  if(S.assets){
+    resizeImage(file,1400).then(function(b){return S.assets.upload(b)}).then(function(res){return up(udoc('recipes/'+id),{img:{id:res.id}}).then(function(){done({id:res.id},old)})}).catch(fail);
+    return;
+  }
+  /* web version: no file storage, so a small copy (max 640 px) is kept in the recipe itself */
+  smallJpeg(file,640,.72).then(function(d){
+    if(d.length>350000)return smallJpeg(file,480,.6);return d;
+  }).then(function(d){return up(udoc('recipes/'+id),{img:{data:d}}).then(function(){done({data:d},old)})}).catch(fail);
+}
+/* ---------- pictures of the dishes: free photos from Wikipedia / Wikimedia Commons ----------
+   Only when the dish name clearly is a known dish (title match), and only files on Commons with a free licence.
+   The result (or "nothing found") is saved on the recipe, so each dish is looked up once. */
+var DISH=['chili con carne','boller i karry','pytt i panden','tikka masala','butter chicken','pad thai','stegt flæsk','spaghetti bolognese','spaghetti carbonara','forloren hare','brændende kærlighed','risalamande','lasagne','risotto','tacos','taco','quesadillas','quesadilla','enchiladas','enchilada','burritos','burrito','pizza','burger','frikadeller','dahl','dal','paella','moussaka','shakshuka','omelet','pandekager','falafel','kebab','shawarma','sushi','ramen','biksemad','hakkebøf','millionbøf','tarteletter','æggekage','gullasch','stroganoff','fajitas','nachos','cannelloni','ravioli','gnocchi','minestrone','gazpacho','carbonara','bolognese','hummus','risengrød','frikassé','labskovs','wok','gratin','tærte','suppe','pyttipanna','curry'];
+var DSYN={dahl:'dal',quesadillas:'quesadilla',enchiladas:'enchilada',burritos:'burrito',tacos:'taco','pytt i panden':'pyttipanna'};
+function dishKeys(name){
+  var n=' '+String(name||'').toLowerCase().replace(/[()"«»]/g,' ').replace(/\s+/g,' ').trim()+' ',out=[];
+  var base=n.trim().split(/\s(?:med|og|på|til)\s|,/)[0].trim();
+  if(base&&base.split(' ').length<=4)out.push(base);
+  DISH.forEach(function(d){if(n.indexOf(' '+d+' ')>-1&&out.indexOf(d)<0)out.push(d)});
+  return out.map(function(k){return DSYN[k]||k}).filter(function(k,i,a){return a.indexOf(k)===i}).slice(0,3);
+}
+function loose(s){return String(s||'').toLowerCase().replace(/aa/g,'a').replace(/ae/g,'a').replace(/oe/g,'o').replace(/[øöòóô]/g,'o').replace(/[æäàáâå]/g,'a').replace(/[üúùû]/g,'u').replace(/[éèêë]/g,'e').replace(/[^a-z]/g,'')}
+function wikiTitleOk(title,key){var t=loose(String(title||'').replace(/\s*\([^)]*\)\s*$/,''));var k=loose(key);return !!t&&(t===k||t===k+'s'||t+'s'===k||(DSYN[key]&&t===loose(DSYN[key])))}
+function stripHtml(s){var d=document.createElement('div');d.innerHTML=String(s||'');return (d.textContent||'').replace(/\s+/g,' ').trim()}
+function wikiFind(name,F){
+  F=F||function(u){return fetch(u).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json()})};
+  var keys=dishKeys(name),wikis=['da','en'],tries=[];
+  keys.forEach(function(k){wikis.forEach(function(w){tries.push([w,k])})});
+  var step=function(i){
+    if(i>=tries.length)return Promise.resolve(null);
+    var w=tries[i][0],k=tries[i][1];
+    var url='https://'+w+'.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&generator=search&gsrnamespace=0&gsrlimit=6&gsrsearch='+encodeURIComponent(k)+'&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=640';
+    return F(url).then(function(j){
+      var pages=((j&&j.query&&j.query.pages)||[]).slice().sort(function(a,b){return (a.index||0)-(b.index||0)});
+      var p=pages.filter(function(x){return x.thumbnail&&x.pageimage&&wikiTitleOk(x.title,k)})[0];
+      if(!p)return step(i+1);
+      var cu='https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&prop=imageinfo&iiprop=url%7Cextmetadata&titles='+encodeURIComponent('File:'+p.pageimage);
+      return F(cu).then(function(c){
+        var pg=(c&&c.query&&c.query.pages&&c.query.pages[0])||{},ii=(pg.imageinfo||[])[0];
+        if(pg.missing||!ii)return step(i+1);                       /* not on Commons: may be a non-free local file */
+        var md=ii.extmetadata||{},lic=(md.LicenseShortName&&md.LicenseShortName.value)||'';
+        if(!lic||/fair use|non-free|copyright/i.test(lic))return step(i+1);
+        return{u:p.thumbnail.source,p:ii.descriptionurl||'',a:stripHtml(md.Artist&&md.Artist.value).slice(0,60),l:stripHtml(lic).slice(0,30),t:p.title,w:w};
+      });
     });
-  }).catch(function(e){console.error(e);toast('Kunne ikke gemme fotoet')});
+  };
+  return step(0);
+}
+var WQ={on:false,done:{}};
+function wikiKick(){
+  if(!window.UGEKURV_WEB||WQ.on||S.ro||!(S.ready&&S.ready.recipes))return;
+  var id=Object.keys(S.recipes).filter(function(k){var r=S.recipes[k];return r&&!ownImg(r)&&!r.noweb&&r.wimg===undefined&&!WQ.done[k]})[0];
+  if(!id)return;
+  WQ.on=true;WQ.done[id]=1;
+  wikiFind(S.recipes[id].name).then(function(res){
+    var v=res||{none:1,at:Date.now()};
+    return up(udoc('recipes/'+id),{wimg:v}).then(function(){if(S.recipes[id])S.recipes[id]=Object.assign({},S.recipes[id],{wimg:v});if(res)draw()});
+  },function(){/* offline or blocked: try again next time the app opens */}).then(function(){WQ.on=false;setTimeout(wikiKick,400)},function(){WQ.on=false});
 }
 
 /* stock sheet */
@@ -663,7 +732,7 @@ function openRate(id,i){
 function openCook(id){
   var r=S.recipes[id];if(!r)return;
   var pn=S.settings.persons||2,f=pn/2,k=kalc(r),al=recAlg(r);
-  var h='<div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.rating?'<span class="chip">★ '+nf(r.rating,1)+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.fav?'<span class="hrt">♥</span>':'')+dietChip(r)+'</div>';
+  var h='<div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.fav?'<span class="hrt">♥</span>':'')+dietChip(r)+'</div>';
   h+='<div class="sec"><div class="lbl">Ingredienser til '+esc(hhLabel())+'</div><div class="list cookl">'+(r.ing||[]).map(function(g){return '<div class="ci"><span>'+esc(g.n)+'</span><span class="mono">'+esc(fq(g.q*f,g.u))+'</span></div>'}).join('')+'</div></div>';
   var st=String(r.method||'').split(/\n+/).map(function(x){return x.trim().replace(/^\d+[.)]\s*/,'')}).filter(Boolean);
   if(st.length)h+='<div class="sec"><div class="lbl">Fremgangsmåde</div><ol class="steps">'+st.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol><p class="hint">Salt, peber, olie og krydderier står ikke på indkøbslisten.</p></div>';
@@ -684,7 +753,8 @@ function prefsForm(p,x){
     '<div class="field"><label for="'+p+'-bud">Madbudget</label><div class="grid2"><input id="'+p+'-bud" inputmode="numeric" placeholder="fx 900" value="'+(x.budget>0?esc(x.budget):'')+'" aria-label="Madbudget i kroner"><select id="'+p+'-bper" aria-label="Periode"><option value="week"'+(x.budgetPer==='month'?'':' selected')+'>kr pr. uge</option><option value="month"'+(x.budgetPer==='month'?' selected':'')+'>kr pr. måned</option></select></div><p class="hint">Valgfrit. Planen vælger billigere retter, hvis den ellers overskrider budgettet.</p></div>'+
     '<div class="field"><label>Kost</label><label class="chk"><input id="'+p+'-veg" type="checkbox"'+(x.veg?' checked':'')+'> Kun vegetarretter</label><label class="chk"><input id="'+p+'-quick" type="checkbox"'+(x.quick?' checked':'')+'> Hurtige hverdagsretter (højst 30 min.)</label></div>'+
     '<div class="field"><label>Allergener, der skal undgås</label><div class="algs">'+ALG_KEYS.map(function(k){return '<label class="chk"><input type="checkbox" class="'+p+'-al" value="'+k+'"'+((x.allergens||[]).indexOf(k)>-1?' checked':'')+'> '+esc(ALG[k].n)+'</label>'}).join('')+'</div><p class="hint">Retter med disse allergener udelades. Skønnet bygger på ingrediensnavne, så tjek varedeklarationen.</p></div>'+
-    '<div class="field"><label>Kød, fisk og æg</label><label class="chk"><input id="'+p+'-o" type="checkbox"'+(x.oko?' checked':'')+'> Økologi</label><label class="chk"><input id="'+p+'-fr" type="checkbox"'+(x.free?' checked':'')+'> Frilands (3 hjerter, frilandsæg)</label><p class="hint">Vælg én eller begge. Priser og tilbud følger valget. Højst 4 kødretter om ugen.</p></div>';
+    '<div class="field"><label>Kød, fisk og æg</label><label class="chk"><input id="'+p+'-o" type="checkbox"'+(x.oko?' checked':'')+'> Økologi</label><label class="chk"><input id="'+p+'-fr" type="checkbox"'+(x.free?' checked':'')+'> Frilands (3 hjerter, frilandsæg)</label><p class="hint">Vælg én eller begge. Priser og tilbud følger valget. Højst 4 kødretter om ugen.</p></div>'+
+    '<div class="field"><label>Frugt og grønt</label><label class="chk"><input id="'+p+'-ov" type="checkbox"'+(x.okoVeg?' checked':'')+'> Økologi</label><p class="hint">Vælges for sig, uafhængigt af kødet.</p></div>';
 }
 function readForm(p){
   var g=function(id){return document.getElementById(p+'-'+id)};
@@ -694,7 +764,7 @@ function readForm(p){
     budget:Math.max(0,Math.round(num(g('bud').value))),budgetPer:g('bper').value==='month'?'month':'week',
     veg:g('veg').checked,quick:g('quick').checked,
     allergens:[].map.call(document.querySelectorAll('.'+p+'-al:checked'),function(x){return x.value}),
-    stores:st.length?st:STORES.slice(),oko:g('o').checked,free:g('fr').checked
+    stores:st.length?st:STORES.slice(),oko:g('o').checked,free:g('fr').checked,okoVeg:g('ov').checked
   };
 }
 function hhUpdate(p){
@@ -716,19 +786,20 @@ function openSettings(){
 /* only in the web app: notifications and log out */
 function webBlock(){
   var W=window.UGEKURV_WEB;if(!W)return '';
-  return '<div class="field"><label>Notifikationer</label><p class="hint" id="pn-t">Tjekker…</p><div id="pn-b" class="btnrow"></div></div>'+
+  return '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
     '<div class="field"><label>Bruger</label><p class="hint">Logget ind som <b>'+esc(W.name||'')+'</b>. Koden kan ikke nulstilles, så husk den.</p><button class="btn ghost sm" data-act="logout">Log ud</button></div>';
 }
+function pnSwitch(on,dis,sub){return '<button class="lowcard pn" role="switch" aria-checked="'+(!!on)+'" data-act="pushtog"'+(dis?' disabled aria-disabled="true"':'')+'><span class="lc"><b>Ugentlig påmindelse</b><span>'+esc(sub||'Fredag aften, når ugens tilbud er klar.')+'</span></span><span class="sw" aria-hidden="true"></span></button>'}
 function webRefresh(){
   var W=window.UGEKURV_WEB;if(!W||!$('#pn-t'))return;
   W.push.status().then(function(s){
     var t=$('#pn-t'),b=$('#pn-b');if(!t||!b)return;
-    if(s.state==='unsupported'){t.textContent=s.msg||'Notifikationer virker ikke i denne browser.';b.innerHTML='';return}
-    if(s.state==='needhome'){t.textContent='På iPhone: læg appen på hjemmeskærmen (Del › Føj til hjemmeskærm), åbn den derfra, og slå notifikationer til.';b.innerHTML='';return}
-    if(s.state==='denied'){t.textContent='Notifikationer er blokeret. Slå dem til i telefonens indstillinger.';b.innerHTML='';return}
-    if(s.state==='off'){t.textContent='Påmindelse fredag aften om ugens madplan og indkøb.';b.innerHTML='<button class="btn sm" data-act="pushon">Slå notifikationer til</button>';return}
-    t.textContent='Slået til. Påmindelse fredag aften, når tilbuddene er klar.';b.innerHTML='<button class="btn ghost sm" data-act="pushoff">Slå fra</button><button class="btn ghost sm" data-act="pushtest">Send en test</button>';
-  }).catch(function(){var t=$('#pn-t');if(t)t.textContent='Kunne ikke tjekke notifikationer.'});
+    var no=function(msg){b.innerHTML=pnSwitch(false,true);t.hidden=false;t.textContent=msg};
+    if(s.state==='unsupported')return no(s.msg||'Notifikationer virker ikke i denne browser.');
+    if(s.state==='needhome')return no('På iPhone: læg appen på hjemmeskærmen (Del › Føj til hjemmeskærm), åbn den derfra, og slå notifikationer til.');
+    if(s.state==='denied')return no('Notifikationer er blokeret. Slå dem til i telefonens indstillinger.');
+    t.hidden=true;b.innerHTML=pnSwitch(s.state!=='off',false);
+  }).catch(function(){var t=$('#pn-t'),b=$('#pn-b');if(b)b.innerHTML=pnSwitch(false,true);if(t){t.hidden=false;t.textContent='Kunne ikke tjekke notifikationer.'}});
 }
 
 /* ---------- velkommen og startpakke ---------- */
@@ -739,7 +810,7 @@ function maybeOnboard(){
   if($('#sheet').firstChild)return;
   S.onb=true;openOnboard();
 }
-var OB0={adults:2,kids:0,budget:0,budgetPer:'week',veg:false,quick:false,allergens:[],stores:null,oko:true,free:true};
+var OB0={adults:2,kids:0,budget:0,budgetPer:'week',veg:false,quick:false,allergens:[],stores:null,oko:true,free:true,okoVeg:false};
 function openOnboard(){
   var n=Object.keys(S.starter).length,ni=Object.keys((S.ref&&S.ref.items)||{}).length,o=Object.assign({},OB0,S.ob||{});
   var h='<p class="muted">Din egen ugeplan, dit eget lager og dine egne retter. Alt kan ændres under Indstillinger.</p>'+prefsForm('ob',o);
@@ -986,7 +1057,7 @@ var ACT={
         days[i]=Object.assign({},day,{done:false,used:[]});
       }
       if(Object.keys(patch).length)ps.push(up(udoc('store/pantry'),{items:patch}));
-      return Promise.all(ps).then(function(){return savePlanDays(w,days)}).then(function(){toast(days[i].done?'Lavet. Lageret er opdateret':'Fortrudt. Lageret er rettet');if(days[i].done&&day.r&&!day.f)openRate(day.r,i)});
+      return Promise.all(ps).then(function(){return savePlanDays(w,days)}).then(function(){toast(days[i].done?'Lavet. Lageret er opdateret':'Fortrudt. Lageret er rettet');});
     });
   },
   addx:function(){
@@ -1037,6 +1108,9 @@ var ACT={
   saverec:function(d){saveRecipe(d.id,d.did)},
   delrec:function(d){save(function(){return udoc('recipes/'+d.id).delete().then(function(){openRecipes();toast('Retten er slettet')})})},
   photo:function(){var f=$('#rf-photo');if(f)f.click()},
+  noweb:function(d){var r=S.recipes[d.id];if(!r)return;save(function(){return up(udoc('recipes/'+d.id),{noweb:true}).then(function(){S.recipes[d.id]=Object.assign({},r,{noweb:true});openRecipe(d.id);draw()})})},
+  findimg:function(d){var r=S.recipes[d.id];if(!r)return;phSt('run','Leder efter et billede…');
+    wikiFind(r.name).then(function(res){var v=res||{none:1,at:Date.now()};return up(udoc('recipes/'+d.id),{noweb:false,wimg:v}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{noweb:false,wimg:v});openRecipe(d.id);draw();if(!res)phSt('bad','Der blev ikke fundet et billede af retten.')})},function(){phSt('bad','Kunne ikke søge. Tjek nettet.')})},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
     save(function(){return udoc('recipes/'+d.id).set(o).then(function(){S.recipes[d.id]=o;if(old.id&&S.assets&&S.assets.delete)S.assets.delete(old.id).catch(function(){});openRecipe(d.id);draw();toast('Fotoet er fjernet')})});
@@ -1052,7 +1126,7 @@ var ACT={
   onboard:function(){openOnboard()},
   pushon:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.enable().then(function(){toast('Notifikationer er slået til');webRefresh()}).catch(function(e){toast(e&&e.message?e.message:'Kunne ikke slå notifikationer til');webRefresh()})},
   pushoff:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.disable().then(function(){toast('Notifikationer er slået fra');webRefresh()}).catch(function(){toast('Kunne ikke slå dem fra')})},
-  pushtest:function(){var W=window.UGEKURV_WEB;if(!W)return;W.push.test().then(function(){toast('Testbesked sendt')}).catch(function(){toast('Kunne ikke sende testbesked')})},
+  pushtog:function(d,el){var on=el&&el.getAttribute('aria-checked')==='true';if(el){el.setAttribute('aria-checked',String(!on));el.disabled=true}if(on)ACT.pushoff();else ACT.pushon()},
   logout:function(){var W=window.UGEKURV_WEB;if(W)W.signOut()},
   obnext:function(){
     var f=readForm('ob'),m=document.querySelector('input[name="ob-m"]:checked'),mode=m?m.value:'empty';
@@ -1069,7 +1143,7 @@ var ACT={
         if(Object.keys(items).length)ps.push(udoc('store/pantry').set({items:items}));
         Object.keys(S.starter).forEach(function(id){ps.push(udoc('recipes/'+id).set(Object.assign(freshRecipe(S.starter[id]),{fav:!!fav[id]})))});
       }
-      var st=normSettings({adults:o.adults,kids:o.kids,budget:o.budget,budgetPer:o.budgetPer,veg:o.veg,quick:o.quick,allergens:o.allergens,oko:!!o.oko,free:!!o.free,friWeekend:true,candy:true,drive:40,stores:o.stores,example:false});
+      var st=normSettings({adults:o.adults,kids:o.kids,budget:o.budget,budgetPer:o.budgetPer,veg:o.veg,quick:o.quick,allergens:o.allergens,oko:!!o.oko,free:!!o.free,okoVeg:!!o.okoVeg,friWeekend:true,candy:true,drive:40,stores:o.stores,example:false});
       return Promise.all(ps).then(function(){return udoc('store/settings').set(st)}).then(function(){S.ob=null;S.fv=null;closeSheet();S.wzChecked=false;maybeWizard();if(!$('#sheet').firstChild)toast('Klar. Lav din første madplan.')});
     });
   },
@@ -1155,7 +1229,7 @@ document.addEventListener('keydown',function(e){
 /* a photo that cannot load falls back to the drawn plate */
 document.addEventListener('error',function(e){
   var t=e.target;if(!t||t.tagName!=='IMG'||t.dataset.fb===undefined)return;
-  var id=t.dataset.fb,r=Object.assign({},S.recipes[id]||{});delete r.img;var p=t.parentNode;if(p)p.innerHTML=artSVG(Object.assign({id:id},r),p.classList&&p.classList.contains('wide'));
+  var id=t.dataset.fb,r=Object.assign({},S.recipes[id]||{});delete r.img;delete r.wimg;var p=t.parentNode;var hb=p&&p.closest&&p.closest('#hero-box'),cr=hb&&hb.querySelector('.credit');if(cr)cr.remove();if(p)p.innerHTML=artSVG(Object.assign({id:id},r),p.classList&&p.classList.contains('wide'));
 },true);
 
 /* ---------- data ---------- */
@@ -1191,7 +1265,7 @@ function boot(){
     S.sample=sm;if(sm&&sm.limits)return sm.limits().then(function(l){S.imgOK=!!(l&&l.images)}).catch(function(){})
   }).catch(function(){});
 }
-if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){return Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name}).filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,dishKeys:dishKeys,wikiFind:wikiFind,wikiKick:wikiKick,WQ:WQ,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();

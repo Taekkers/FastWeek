@@ -8,6 +8,15 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 7)
+
+- **Billeder af retterne:** appen leder selv efter et frit foto af hver ret på Wikipedia/Wikimedia Commons og viser fotograf og licens. Kun når navnet tydeligt er en kendt ret (fx chili con carne, lasagne, tacos), ellers bruges tegningen. Du kan vælge *Brug tegning* eller tilføje dit eget foto, som gemmes i en lille udgave på retten.
+- **Bedre billedlæsning:** billedet læses i højere opløsning og to gange (almindelig opsætning og spredt tekst), og resultaterne slås sammen. Linjer, hvor tallet mangler, og ingredienser uden mængde i ingredienslisten tages med, og fejllæste ord rettes mod en liste over almindelige madvarer og dine egne varer.
+- **Økologi for frugt og grønt** vælges for sig under Indstillinger, uafhængigt af kød, fisk og æg. Uden kendt økologisk hyldepris regnes med normalpris + 40 %, og kun økologiske tilbud tæller.
+- **Butikker billigste først** overalt på Indkøb. Mærket på den anbefalede løsning hedder nu *Nemmest*.
+- **Notifikationer** er en kontakt, du slår til og fra. Testknappen er fjernet.
+- **Vurdering af retter er fjernet.** Favoritter bruges stadig til at lære jeres smag.
+
 ## Det kan appen (version 6)
 
 - **Planlæg efter tilbud eller vælg selv:** første trin i ugeguiden. *Efter ugens tilbud* vælger retter, der udnytter tilbuddene i dine butikker, og Ugeplan viser, hvilke tilbud der bruges og hvor. *Jeg vælger selv* lader dig vælge retterne; knappen *Foreslå retter* kan fylde resten ud. Valget gælder pr. uge og kan ændres med *Ændr*.
@@ -31,7 +40,6 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ## Det kan appen (version 2)
 
-- **Vurdér retten**, når den er lavet: 1-5 stjerner og om den skal med i en senere ugemenu (ja, måske eller nej). Appen bruger det i næste uges plan.
 - **Favoritter:** ved første login vælger man sine favoritretter, og appen lærer smagen af dem. Favoritterne kommer ikke hver uge. Man kan ændre dem under *Mine retter → Favoritter*.
 - **Vegetar** kan vælges i den ugentlige forespørgsel, ligesom fisk, fjerkræ, okse og svin.
 - **Økologi og frilands** er to separate valg for kød, fisk og æg (og to priser pr. vare). Sæt kryds ved en eller begge.
@@ -99,7 +107,7 @@ Teksten læses på telefonen (gratis, ingen billeder sendes nogen steder). Førs
 - **Navne er delt:** to personer kan ikke have det samme navn. Brug en kode på mindst 8 tegn, så den er svær at gætte.
 - **Som ejer af Firebase-projektet kan du teknisk set se alles data** i konsollen. Sig det til dem, der bruger appen.
 - **Gratis grænser:** Firestore giver ca. 50.000 læsninger og 20.000 skrivninger om dagen. Det rækker til en god håndfuld ugentlige brugere, men ikke til tusindvis. Går grænsen, stopper appen til næste dag. Der kommer aldrig en regning, så længe du holder dig på gratisplanen (Spark).
-- **Ingen rigtige madbilleder:** retterne får en tegnet illustration. Billeder af egne retter kan ikke gemmes i den gratis udgave.
+- **Madbilleder:** fotos fra Wikimedia Commons hentes direkte derfra (der sendes kun retnavnet). Eget foto gemmes i en lille udgave (max 640 px) i retten i Firebase.
 - Appen er testet med en simuleret Firebase, ikke med dit rigtige projekt. Hvis noget driller, så se herunder.
 
 ## Fejlfinding

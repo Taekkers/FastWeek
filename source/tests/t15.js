@@ -103,17 +103,17 @@ const T=require('./pw9.js');const {launch,ok,bad,owner}=T;
  console.log('form height closed:',r.h);
  await sh('form_closed');
  await pg.click('#rf-more summary');await pg.waitForTimeout(150);
- r=await q(()=>{const vis=id=>document.getElementById(id).checkVisibility();return{rate:vis('rf-rate'),url:vis('rf-url'),prot:vis('rf-prot'),again:vis('rf-again'),fav:vis('rf-fav'),rest:vis('rf-rest'),method:vis('rf-method'),h:document.querySelector('.sh-body').scrollHeight}});
- ok(r.rate&&r.url&&r.prot&&r.again&&r.fav&&r.rest&&r.method,'"Flere valg" opens with all seven fields');
+ r=await q(()=>{const vis=id=>document.getElementById(id).checkVisibility();return{url:vis('rf-url'),prot:vis('rf-prot'),again:vis('rf-again'),fav:vis('rf-fav'),rest:vis('rf-rest'),method:vis('rf-method'),h:document.querySelector('.sh-body').scrollHeight}});
+ ok(r.url&&r.prot&&r.again&&r.fav&&r.rest&&r.method,'"Flere valg" opens with all six fields (vurdering er fjernet)');
  console.log('form height open:',r.h);
  await sh('form_open');
  // save a new dish using fields from both parts
  await pg.fill('#rf-name','Test-ret Ø');await pg.fill('#rf-book','Testbogen');await pg.fill('#rf-page','12');await pg.fill('#rf-min','25');
- await pg.selectOption('#rf-rate','4');await pg.check('#rf-fav');await pg.fill('#rf-method','Trin ét\nTrin to');
+ await pg.check('#rf-fav');await pg.fill('#rf-method','Trin ét\nTrin to');
  await pg.fill('#rf-ings .i-n >> nth=0','pasta');await pg.fill('#rf-ings .i-q >> nth=0','200');
  await pg.click('[data-act="saverec"]');await pg.waitForTimeout(500);
  const sv=await q(()=>{const S=__TEST__.api.S,id=Object.keys(S.recipes).find(k=>S.recipes[k].name==='Test-ret Ø');const x=S.recipes[id];return x&&{book:x.book,page:x.page,min:x.minutes,rate:x.rating,fav:x.fav,method:x.method,ing:x.ing.length}});
- ok(sv&&sv.book==='Testbogen'&&sv.page===12&&sv.min===25&&sv.rate===4&&sv.fav===true&&/Trin ét/.test(sv.method)&&sv.ing>=1,'saving works with the folded fields: '+JSON.stringify(sv));
+ ok(sv&&sv.book==='Testbogen'&&sv.page===12&&sv.min===25&&sv.fav===true&&/Trin ét/.test(sv.method)&&sv.ing>=1,'saving works with the folded fields: '+JSON.stringify(sv));
 
  // ===== E. errors =====
  ok(errs.length===0,'no page errors'+(errs.length?': '+errs.slice(0,3).join(' | '):''));
