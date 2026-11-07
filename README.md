@@ -116,3 +116,5 @@ Teksten læses på telefonen (gratis, ingen billeder sendes nogen steder). Førs
 ## Opdater appen
 
 Upload de nye filer til GitHub på samme måde som i del 2. Brugernes data ligger i Firebase og påvirkes ikke. Eksisterende brugere får de nye startretter ved at trykke *Hent startretter* under *Mine retter*, og de nye priser hentes automatisk.
+
+Kildekoden ligger i mappen `source/`. Ret den, kør `python3 source/build.py`, og læg den nye `index.html` online.
