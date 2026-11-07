@@ -82,7 +82,9 @@ Tilbud ligger i filen **data/offers.json** og gælder for alle brugere. Uden fri
 
 ## Scanning af kogebøger
 
-I **Ny ret** kan man vælge et billede af en opskrift. Teksten læses på telefonen (gratis, ingen billeder sendes nogen steder). Første gang hentes tekstlæseren og en dansk sprogfil, så det kræver net og kan tage lidt. Læsningen er ikke perfekt: tjek altid mængder og navne, før du gemmer. Skarpt lys og et fladt billede giver det bedste resultat.
+Under **Mine retter** er der en knap, **Scan kogebog**. Skriv kogebogens navn, og tag et billede af hver opskrift (**Tag billede**) eller vælg flere billeder på én gang (**Vælg billeder**). Appen læser titel, tid, antal personer, ingredienser og sidetal, hvis det er med på billedet. Hver opskrift bliver et **udkast** under *Til gennemsyn*. Åbn et udkast, ret navn, side og mængder, og tryk **Gem ret**. Først da kommer retten med i madplanen og i lagerberegningen. Mængderne omregnes til 2 personer.
+
+Teksten læses på telefonen (gratis, ingen billeder sendes nogen steder). Første gang hentes tekstlæseren og en dansk sprogfil, så det kræver net og kan tage lidt. Læsningen er ikke perfekt: tjek altid mængder og navne, før du gemmer. Skarpt lys, et fladt billede og hele ingredienslisten i billedet giver det bedste resultat. Sidetal bliver kun fundet, hvis de står tydeligt. Fremgangsmåden gemmes ikke. Appen henviser til kogebogen og siden.
 
 ## Ting du skal vide
 

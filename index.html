@@ -388,6 +388,9 @@ input[type=checkbox]{accent-color:var(--pine)}
 .stockuse .slbl{font:700 11px var(--f-body);letter-spacing:.04em;text-transform:uppercase;color:var(--pine);margin-right:2px}
 .stockuse .chip{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
 .stockuse .chip.warn{background:var(--weekend-soft);border-color:transparent;color:var(--warn)}
+.scl{font-size:14px;padding:7px 0;border-top:1px solid var(--line);color:var(--ink)}
+.scl.bad{color:var(--offer)}
+#sc-res{display:flex;flex-direction:column}
 
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 #login[hidden]{display:none!important}
@@ -533,7 +536,7 @@ function planEst(ids,mi){
 function targetMon(){var t=todayStr(),m=mondayOf(t);return wdIdx(t)>=3?addDays(m,7):m}
 
 /* ---------- state ---------- */
-var S={tab:'week',mon:targetMon(),recipes:{},pantry:{items:{}},settings:Object.assign({},DEF),plans:{},offers:{},lists:{},prefs:{},
+var S={tab:'week',mon:targetMon(),recipes:{},scans:{},pantry:{items:{}},settings:Object.assign({},DEF),plans:{},offers:{},lists:{},prefs:{},
   ready:{},q:'',nodb:false,slow:false,ro:false,sample:null,imgOK:false,ctl:null,assets:null,sel:'',wz:null,skip:{},wzChecked:false,
   ref:{stores:{},items:{}},starter:{},praw:{},brands:{},bnames:{},uid:'',hasSettings:null,hasPantry:null,onb:false};
 var db=null,raf=0,UB='';
@@ -1375,12 +1378,13 @@ function openPick(i){
 
 /* recipes */
 function openRecipes(){
-  var ids=Object.keys(S.recipes),h='<div class="btnrow"><button class="btn" data-act="newrec">Ny ret</button>'+(ids.length?'<button class="btn ghost" data-act="favs">♥ Favoritter</button>':''),ns=Object.keys(S.starter).filter(function(id){return !S.recipes[id]}).length;
+  var ids=Object.keys(S.recipes),h='<div class="btnrow"><button class="btn" data-act="newrec">Ny ret</button><button class="btn ghost" data-act="scanbook">Scan kogebog</button>'+(ids.length?'<button class="btn ghost" data-act="favs">♥ Favoritter</button>':''),ns=Object.keys(S.starter).filter(function(id){return !S.recipes[id]}).length;
   if(ns)h+='<button class="btn ghost" data-act="getstarter">Hent '+ns+(ns===1?' startret':' startretter')+'</button>';
   h+='</div>';
   if(ids.length){var tm=tasteModel(),tl=tm.any?tasteLabels(tm):[];
     h+='<p class="hint">'+(tl.length?'Din smag lige nu: '+esc(tl.join(', '))+'. Appen vælger helst retter, der ligner dine favoritter og bedste vurderinger, men ikke de samme hver uge.':'Markér nogle favoritter eller bedøm retter, så lærer appen din smag og foreslår retter, du vil kunne lide.')+'</p>'}
-  if(!ids.length)h+='<p class="muted">Ingen retter endnu. Tag et billede af en opskrift i kogebogen, så udfylder appen ingredienserne.</p>';
+  if(!ids.length)h+='<p class="muted">Ingen retter endnu. Tryk Scan kogebog og tag billeder af opskrifterne i din kogebog, så udfylder appen ingredienserne. Du kan også trykke Ny ret og tage et billede af én opskrift.</p>';
+  h+=draftsHtml();
   var books={};ids.forEach(function(id){var r=S.recipes[id],b=r.book||'Egne retter';(books[b]=books[b]||[]).push(id)});
   Object.keys(books).sort(function(a,b){return a==='Egne retter'?1:b==='Egne retter'?-1:a.localeCompare(b,'da')}).forEach(function(b){
     h+='<div class="sec"><div class="lbl">'+esc(b)+'</div><div class="list">'+books[b].sort(function(a,c){return (S.recipes[a].page||0)-(S.recipes[c].page||0)||S.recipes[a].name.localeCompare(S.recipes[c].name,'da')}).map(function(id){
@@ -1416,9 +1420,9 @@ function heroHtml(id,r){
     (canUp&&r.img&&r.img.id?'<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>':'')+
     (canUp&&!(r.img&&r.img.id)?'<p class="hint">Tegningen er en pladsholder. Tag et billede af retten, når du har lavet den, så bruger appen dit foto.</p>':'');
 }
-function openRecipe(id){
-  var r=id?S.recipes[id]:null,books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});
-  var ing=(r&&r.ing&&r.ing.length?r.ing:[{},{}]);
+function openRecipe(id,did){
+  var dr=(!id&&did&&S.scans&&S.scans[did])||null,r=id?S.recipes[id]:null,v=r||dr,books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});Object.keys(S.scans||{}).forEach(function(k){if(S.scans[k].book)books[S.scans[k].book]=1});
+  var ing=(v&&v.ing&&v.ing.length?v.ing:[{},{}]);
   var h='<datalist id="pl">'+stockItems().filter(function(p){return !p.leftover}).map(function(p){return '<option value="'+esc(p.name)+'">'}).join('')+'</datalist><datalist id="bl">'+Object.keys(books).map(function(b){return '<option value="'+esc(b)+'">'}).join('')+'</datalist>';
   if(r){
     var k=kalc(r);
@@ -1426,25 +1430,26 @@ function openRecipe(id){
     h+='<div id="hero-box">'+heroHtml(id,r)+'</div><div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.rest?'<span class="chip ex">Holder sig godt</span>':'')+'</div>';
     if(k)h+='<p class="hint">Kalorierne er et overslag pr. portion ud fra ingredienserne og ca. '+KALLOW+' kcal til olie og krydderier.</p>';
   }
-  if(!r)h+='<div class="photo"><b>Læs fra billede</b><p class="muted sm">'+(window.UGEKURV_WEB?'Tag et billede af opskriften i kogebogen. Appen læser teksten på din egen telefon (gratis) og henter titel, tid og ingredienser. Læsningen er ikke perfekt, så tjek mængderne bagefter.':'Tag et billede af opskriften i kogebogen. Appen henter titel, tid og ingredienser. Du kan rette alt bagefter.')+'</p><input id="rf-file" type="file" accept="image/*" multiple aria-label="Billeder af opskrift"><div class="foot"><button class="btn ghost sm" data-act="readrec" id="rf-read">Læs ingredienser</button></div><div id="rf-st" class="sm muted"></div></div>';
-  h+='<div class="field"><label for="rf-name">Navn</label><input id="rf-name" type="text" value="'+esc(r?r.name:'')+'"></div>'+
+  if(dr)h+='<p class="hint">Udkast fra scanningen af '+esc(dr.book)+'. Tjek navn, side og mængder, og tryk Gem ret. Først da kommer retten med i madplanen.</p>';
+  if(!r&&!dr)h+='<div class="photo"><b>Læs fra billede</b><p class="muted sm">'+(window.UGEKURV_WEB?'Tag et billede af opskriften i kogebogen. Appen læser teksten på din egen telefon (gratis) og henter titel, tid og ingredienser. Læsningen er ikke perfekt, så tjek mængderne bagefter.':'Tag et billede af opskriften i kogebogen. Appen henter titel, tid og ingredienser. Du kan rette alt bagefter.')+'</p><input id="rf-file" type="file" accept="image/*" multiple aria-label="Billeder af opskrift"><div class="foot"><button class="btn ghost sm" data-act="readrec" id="rf-read">Læs ingredienser</button></div><div id="rf-st" class="sm muted"></div></div>';
+  h+='<div class="field"><label for="rf-name">Navn</label><input id="rf-name" type="text" value="'+esc(v?v.name||'':'')+'"></div>'+
     (r&&safeUrl(r.url)?'<a class="srcl" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+LINK+'<span>Åbn opskriften på '+esc(srcHost(r.url))+'</span></a>':'')+
-    '<div class="grid2"><div class="field"><label for="rf-book">Kogebog</label><input id="rf-book" list="bl" type="text" value="'+esc(r?r.book||'':'')+'" placeholder="Fx titel på bogen"></div><div class="field"><label for="rf-page">Side</label><input id="rf-page" inputmode="numeric" value="'+(r&&r.page?r.page:'')+'"></div></div>'+
-    '<div class="grid3"><div class="field"><label for="rf-kind">Type</label><select id="rf-kind">'+opt([['hverdag','Hverdag'],['weekend','Weekend']],r?r.kind:'hverdag')+'</select></div><div class="field"><label for="rf-min">Minutter</label><input id="rf-min" inputmode="numeric" value="'+(r&&r.minutes?r.minutes:'')+'"></div><div class="field"><label for="rf-rate">Vurdering</label><select id="rf-rate">'+opt([['0','Ingen'],['1','1/5'],['2','2/5'],['3','3/5'],['4','4/5'],['5','5/5']],String(r?Math.round(r.rating||0):0))+'</select></div></div>'+
+    '<div class="grid2"><div class="field"><label for="rf-book">Kogebog</label><input id="rf-book" list="bl" type="text" value="'+esc(v?v.book||'':'')+'" placeholder="Fx titel på bogen"></div><div class="field"><label for="rf-page">Side</label><input id="rf-page" inputmode="numeric" value="'+(v&&v.page?v.page:'')+'"></div></div>'+
+    '<div class="grid3"><div class="field"><label for="rf-kind">Type</label><select id="rf-kind">'+opt([['hverdag','Hverdag'],['weekend','Weekend']],v?v.kind:'hverdag')+'</select></div><div class="field"><label for="rf-min">Minutter</label><input id="rf-min" inputmode="numeric" value="'+(v&&v.minutes?v.minutes:'')+'"></div><div class="field"><label for="rf-rate">Vurdering</label><select id="rf-rate">'+opt([['0','Ingen'],['1','1/5'],['2','2/5'],['3','3/5'],['4','4/5'],['5','5/5']],String(r?Math.round(r.rating||0):0))+'</select></div></div>'+
     '<div class="field"><label for="rf-url">Link til opskrift (valgfri)</label><input id="rf-url" type="text" inputmode="url" autocomplete="off" value="'+esc(r?safeUrl(r.url):'')+'" placeholder="https://"></div>'+
-    '<div class="field"><label for="rf-prot">Hovedingrediens</label><select id="rf-prot">'+opt(PROTS,r?r.prot||'':'')+'</select></div>'+
+    '<div class="field"><label for="rf-prot">Hovedingrediens</label><select id="rf-prot">'+opt(PROTS,v?v.prot||'':'')+'</select></div>'+
     '<div class="grid2"><div class="field"><label for="rf-again">Skal den gentages?</label><select id="rf-again">'+opt([['','Ikke valgt'],['yes','Ja, gerne'],['maybe','Måske'],['no','Nej, ikke igen']],r?r.again||'':'')+'</select></div><div class="field"><label>&nbsp;</label><label class="chk"><input id="rf-fav" type="checkbox"'+(r&&r.fav?' checked':'')+'> Favorit ♥</label></div></div>'+
     '<label class="chk"><input id="rf-rest" type="checkbox"'+(r&&r.rest?' checked':'')+'> Holder sig godt og kan laves i dobbelt portion</label>'+
     '<div class="field"><label>Ingredienser til 2 personer</label><p class="hint">Skriv mængderne til 2 personer. Appen regner selv om til '+hhLabel()+' ('+nf(S.settings.persons||2,1)+' portioner). Åbn en ingrediens for at vælge, hvornår den kommer på indkøbslisten.</p><div id="rf-ings" style="display:flex;flex-direction:column;gap:8px">'+ing.map(ingRow).join('')+'</div><div><button class="btn ghost sm" data-act="ingadd">Tilføj ingrediens</button></div></div>'+
     '<div class="field"><label for="rf-method">Fremgangsmåde (valgfri)</label><textarea id="rf-method" rows="7" placeholder="Skriv ét trin pr. linje, så vises opskriften i ugeplanen">'+esc(r?r.method||'':'')+'</textarea></div>'+
-    '<div class="foot"><button class="btn" data-act="saverec" data-id="'+esc(id||'')+'">Gem ret</button>'+(r?'<button class="btn danger" data-act="delrec" data-id="'+esc(id)+'">Slet</button>':'')+'</div>';
-  openSheet(r?'Ret':'Ny ret',h);
+    '<div class="foot"><button class="btn" data-act="saverec" data-id="'+esc(id||'')+'" data-did="'+esc(dr?did:'')+'">Gem ret</button>'+(r?'<button class="btn danger" data-act="delrec" data-id="'+esc(id)+'">Slet</button>':'')+(dr?'<button class="btn danger" data-act="deldraft" data-id="'+esc(did)+'">Slet udkast</button>':'')+'</div>';
+  openSheet(r?'Ret':dr?'Udkast':'Ny ret',h);
 }
 function kalc(r){var k=kcalOf(r);return k.k>KALLOW+5?'ca. '+k.k+' kcal pr. portion':''}
 function collectIng(){
   return Array.prototype.map.call(document.querySelectorAll('#rf-ings .ingw'),function(row){return{n:row.querySelector('.i-n').value.trim().toLowerCase(),q:num(row.querySelector('.i-q').value),u:row.querySelector('.i-u').value,rule:readRule(row.querySelector('.rule'))}}).filter(function(g){return g.n&&g.q>0});
 }
-function saveRecipe(id){
+function saveRecipe(id,did){
   var name=$('#rf-name').value.trim(),rows=collectIng();
   if(!name){toast('Giv retten et navn');return}
   if(!rows.length){toast('Tilføj mindst én ingrediens med mængde');return}
@@ -1456,7 +1461,7 @@ function saveRecipe(id){
       if(!o){var rf=(S.ref.items||{})[k];patch[k]=Object.assign({name:g.n,unit:g.u,qty:0,price:0,perish:!!(rf&&rf.perish&&rf.unit===g.u),cat:(rf&&rf.cat)||'Andet',expires:'',at:t},r)}
       else patch[k]=Object.assign({},r,(r.use>0&&!o.at)?{at:t}:{});
     });
-    return up(udoc('store/pantry'),{items:patch}).then(function(){return udoc('recipes/'+rid).set(doc)}).then(function(){openRecipes();toast('Ret gemt')});
+    return up(udoc('store/pantry'),{items:patch}).then(function(){return udoc('recipes/'+rid).set(doc)}).then(function(){return did?udoc('scans/'+did).delete().catch(function(){}):null}).then(function(){if(did&&S.scans)delete S.scans[did];openRecipes();toast('Ret gemt')});
   });
 }
 function readRecipe(){
@@ -1465,10 +1470,9 @@ function readRecipe(){
   if(!S.sample||!S.imgOK){st.textContent='Fotolæsning er ikke tilgængelig her. Skriv ingredienserne ind selv.';return}
   S.ctl=new AbortController();$('#rf-read').disabled=true;
   st.innerHTML='Læser billedet…'+(window.UGEKURV_WEB&&!window.UgekurvOCR?' Første gang hentes tekstlæseren, det kan tage lidt.':'')+' <button class="btn ghost sm" data-act="stopread">Stop</button>';
-  var prompt='Billederne viser en opskrift fra en kogebog, som tilhører brugeren, til privat brug. Udtræk KUN retnavn, ca. tilberedningstid i minutter, antal portioner opskriften er skrevet til og ingredienslisten. Kopiér ikke fremgangsmåden. Omregn alle mængder til g, ml eller stk (1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 kg = 1000 g, 1 l = 1000 ml). Udelad salt, peber og vand. Skriv ingrediensnavne med små bogstaver i ubestemt form, fx "hakket oksekød" eller "løg". Svar kun med JSON: {"name":string,"minutes":number|null,"servings":number,"ingredients":[{"n":string,"q":number,"u":"g"|"ml"|"stk"}]}';
+  var prompt=RECIPE_PROMPT;
   S.sample.json(prompt,{images:files,signal:S.ctl.signal}).then(function(res){
-    var f=2/(num(res.servings)>0?num(res.servings):2);
-    var rows=(res.ingredients||[]).filter(function(g){return g&&g.n&&num(g.q)>0}).map(function(g){var u=UNITS.indexOf(g.u)>-1?g.u:'stk',q=num(g.q)*f;q=u==='stk'?Math.round(q*2)/2:q>=20?Math.round(q/5)*5:r1(q);return{n:String(g.n).toLowerCase(),q:q||1,u:u}});
+    var rows=rowsFromRes(res);
     if(!rows.length){st.textContent='Kunne ikke finde en ingrediensliste. Prøv et skarpere billede.';return}
     if(!$('#rf-name').value&&res.name)$('#rf-name').value=res.name;
     if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
@@ -1477,6 +1481,75 @@ function readRecipe(){
   }).catch(function(e){
     var c=e&&e.code;st.textContent=c==='cancelled'?'Stoppet.':c==='not_granted'?'Du har ikke givet appen lov til at bruge Claude.':c==='rate_limited'?'For mange forsøg. Vent lidt og prøv igen.':c==='invalid_json'||c==='refused'||c==='image_rejected'?'Kunne ikke læse billedet. Prøv et skarpere billede.':c==='unavailable'&&window.UGEKURV_WEB?'Tekstlæseren kunne ikke hentes. Tjek nettet og prøv igen. Første gang skal der hentes en sprogfil.':'Noget gik galt. Prøv igen.';
   }).then(function(){S.ctl=null;var b=$('#rf-read');if(b)b.disabled=false});
+}
+
+/* ---- scan a cookbook: one photo = one draft, saved under scans/ until it is checked ---- */
+var RECIPE_PROMPT='Billederne viser en opskrift fra en kogebog, som tilhører brugeren, til privat brug. Udtræk KUN retnavn, sidetallet hvis det står på billedet, ca. tilberedningstid i minutter, antal portioner opskriften er skrevet til og ingredienslisten. Kopiér ikke fremgangsmåden. Omregn alle mængder til g, ml eller stk (1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 kg = 1000 g, 1 l = 1000 ml). Udelad salt, peber og vand. Skriv ingrediensnavne med små bogstaver i ubestemt form, fx "hakket oksekød" eller "løg". Svar kun med JSON: {"name":string,"minutes":number|null,"servings":number,"page":number|null,"ingredients":[{"n":string,"q":number,"u":"g"|"ml"|"stk"}]}';
+function rowsFromRes(res){
+  var f=2/(num(res.servings)>0?num(res.servings):2);
+  return (res.ingredients||[]).filter(function(g){return g&&g.n&&num(g.q)>0}).map(function(g){var u=UNITS.indexOf(g.u)>-1?g.u:'stk',q=num(g.q)*f;q=u==='stk'?Math.round(q*2)/2:q>=20?Math.round(q/5)*5:r1(q);return{n:String(g.n).toLowerCase(),q:q||1,u:u}});
+}
+/* Careful guess of the main ingredient. Stock cubes and sauces do not count. Never guesses vegetarian: isVeg() reads the ingredients instead. */
+function guessProt(rows){
+  var t=(rows||[]).map(function(g){return String(g.n||'').toLowerCase()}).filter(function(n){return !/bouillon|fond|terning|krydderi|sauce|jus\b/.test(n)}).join(' | ');
+  if(/okse|kalv|bøf|culotte|entrecote|roastbeef/.test(t))return 'okse';
+  if(/kylling|kalkun|ande(?:bryst|lår|konfit)|(?:^|[^a-zæøå])and(?![a-zæøå])/.test(t))return 'kylling';
+  if(/svin|flæsk|bacon|skinke|medister|pølse|frikadelle|nakke|kotelet/.test(t))return 'svin';
+  if(/laks|torsk|fisk|rejer|(?:^|[^a-zæøå])tun(?![a-zæøå])|makrel|sild|rødspætte|(?:^|[^a-zæøå])sej(?![a-zæøå])|muslinger/.test(t))return 'fisk';
+  if(/(?:^|[^a-zæøå])æg(?![a-zæøå])/.test(t)&&!MEATRE.test(t))return 'aeg';
+  return '';
+}
+function draftList(){
+  return Object.keys(S.scans||{}).sort(function(a,c){var x=S.scans[a],y=S.scans[c];return String(x.book||'').localeCompare(String(y.book||''),'da')||(x.page||0)-(y.page||0)||(x.at||0)-(y.at||0)});
+}
+function draftsHtml(){
+  var ids=draftList();if(!ids.length)return '';
+  return '<div class="sec"><div class="lbl">Til gennemsyn ('+ids.length+')</div><div class="list">'+ids.map(function(id){var d=S.scans[id],n=(d.ing||[]).length;
+    return '<button class="li rec" data-act="editdraft" data-id="'+esc(id)+'"><span class="art plate">'+PLATE+'</span><span><span class="nm">'+esc(d.name||'Uden navn')+'</span><span class="sub"><span>'+esc(d.book||'')+'</span>'+(d.page?'<span class="mono">s. '+d.page+'</span>':'')+'<span>'+n+(n===1?' ingrediens':' ingredienser')+'</span><span class="chip warn">Udkast</span></span></span><span></span></button>'}).join('')+'</div></div>';
+}
+function openScan(){
+  var books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});Object.keys(S.scans||{}).forEach(function(k){if(S.scans[k].book)books[S.scans[k].book]=1});
+  var n=draftList().length,web=!!window.UGEKURV_WEB;
+  var h='<datalist id="bl">'+Object.keys(books).map(function(b){return '<option value="'+esc(b)+'">'}).join('')+'</datalist>'+
+    '<p class="muted sm">Tag et billede af hver opskrift i kogebogen, ét billede pr. opskrift. '+(web?'Appen læser teksten på din egen telefon (gratis). ':'')+'Hver opskrift bliver et udkast med titel, tid, side og ingredienser. Du tjekker udkastene bagefter. Først når en ret er gemt, kommer den med i madplanen.</p>'+
+    '<div class="field"><label for="sc-book">Kogebog</label><input id="sc-book" list="bl" type="text" value="'+esc(S.lastBook||'')+'" placeholder="Fx titel på bogen"></div>'+
+    '<div class="btnrow"><button class="btn" data-act="sccam">Tag billede</button><button class="btn ghost" data-act="scpick">Vælg billeder</button></div>'+
+    '<input id="sc-cam" type="file" accept="image/*" capture="environment" hidden aria-label="Tag billede af opskrift"><input id="sc-files" type="file" accept="image/*" multiple hidden aria-label="Vælg billeder af opskrifter">'+
+    '<div id="sc-st" class="sm muted" aria-live="polite"></div><div id="sc-res"></div>'+
+    '<p class="hint">Luk ikke vinduet, mens appen læser. Tag gerne hele opskriften med ingredienslisten tydeligt i billedet.</p>'+
+    '<div class="foot"><button class="btn ghost" data-act="scanreview">Gennemse udkast'+(n?' ('+n+')':'')+'</button></div>';
+  openSheet('Scan kogebog',h);
+}
+function scanFiles(list){
+  var files=[].slice.call(list||[]),st=$('#sc-st'),bk=$('#sc-book');
+  if(!files.length||!st||!bk)return;
+  var book=bk.value.trim();
+  if(!book){st.textContent='Skriv først kogebogens navn.';bk.focus();return}
+  if(!S.sample||!S.imgOK){st.textContent='Fotolæsning er ikke tilgængelig her. Tryk Ny ret og skriv ingredienserne ind selv.';return}
+  if(S.ctl){st.textContent='Appen læser stadig. Vent til den er færdig.';return}
+  S.lastBook=book;
+  var ctl=new AbortController(),sig=ctl.signal,n=files.length,ok=0,bad=0,i=0;S.ctl=ctl;
+  var put=function(cls,t){var o=$('#sc-res');if(o)o.insertAdjacentHTML('beforeend','<div class="scl'+(cls?' '+cls:'')+'">'+t+'</div>')};
+  function finish(){
+    if(S.ctl===ctl)S.ctl=null;var s=$('#sc-st');if(!s)return;
+    s.textContent=(sig.aborted?'Stoppet. ':'')+ok+' af '+n+(n===1?' billede':' billeder')+' læst'+(bad?', '+bad+' kunne ikke læses':'')+'. '+(ok?'Tryk Gennemse udkast for at tjekke dem. Du kan tage flere billeder.':'Prøv et skarpere billede, hvor ingredienslisten fylder godt.');
+  }
+  function next(){
+    if(sig.aborted||i>=n)return finish();
+    var f=files[i],k=++i;
+    var s=$('#sc-st');if(!s)return finish();
+    s.innerHTML='Læser billede '+k+' af '+n+'…'+(window.UGEKURV_WEB&&!window.UgekurvOCR?' Første gang hentes tekstlæseren, det kan tage lidt.':'')+' <button class="btn ghost sm" data-act="stopread">Stop</button>';
+    return S.sample.json(RECIPE_PROMPT,{images:[f],signal:sig}).then(function(res){
+      var rows=rowsFromRes(res);
+      if(!rows.length){bad++;put('bad','Billede '+k+': fandt ingen ingredienser.');return}
+      var id=uid(),d={book:book,page:Math.max(0,Math.round(num(res.page)))||0,name:String(res.name||'').trim().slice(0,80),minutes:Math.round(num(res.minutes))||0,kind:'hverdag',prot:guessProt(rows),ing:rows,at:Date.now()};
+      return udoc('scans/'+id).set(d).then(function(){S.scans[id]=d;ok++;put('','<b>'+esc(d.name||'Uden navn')+'</b>'+(d.page?' · s. '+d.page:'')+' · '+rows.length+(rows.length===1?' ingrediens':' ingredienser'))});
+    }).catch(function(e){
+      if(e&&e.code==='cancelled')return;
+      bad++;put('bad','Billede '+k+' kunne ikke læses.'+(e&&e.code==='unavailable'&&window.UGEKURV_WEB?' Tjek nettet. Første gang skal der hentes en sprogfil.':''));
+    }).then(next);
+  }
+  next();
 }
 /* own photo of a dish */
 function resizeImage(file,max){
@@ -1937,8 +2010,14 @@ var ACT={
   },
   recs:openRecipes,
   newrec:function(){openRecipe('')},
+  scanbook:openScan,
+  sccam:function(){var f=$('#sc-cam');if(f)f.click()},
+  scpick:function(){var f=$('#sc-files');if(f)f.click()},
+  scanreview:openRecipes,
+  editdraft:function(d){openRecipe('',d.id)},
+  deldraft:function(d){save(function(){return udoc('scans/'+d.id).delete().then(function(){delete S.scans[d.id];openRecipes();toast('Udkastet er slettet')})})},
   editrec:function(d){openRecipe(d.id)},
-  saverec:function(d){saveRecipe(d.id)},
+  saverec:function(d){saveRecipe(d.id,d.did)},
   delrec:function(d){save(function(){return udoc('recipes/'+d.id).delete().then(function(){openRecipes();toast('Retten er slettet')})})},
   photo:function(){var f=$('#rf-photo');if(f)f.click()},
   rmphoto:function(d){
@@ -2031,6 +2110,7 @@ document.addEventListener('change',function(e){
     S.lists[w]=Object.assign({},L,{checked:c});draw();
     var p={};p[key]=v;save(function(){return up(udoc('lists/'+w),{checked:p})});
   }else if(t.id==='rf-photo'){handlePhoto(t.files&&t.files[0],t.dataset.id);t.value=''}
+  else if(t.id==='sc-cam'||t.id==='sc-files'){scanFiles(t.files);t.value=''}
   else if(t.matches('.r-mode')){syncRule(t.closest('.rule'));refreshSummary(t.closest('.ingw'))}
   else if(t.name==='ob-m'){var g=$('#ob-go');if(g)g.textContent=t.value==='starter'&&Object.keys(S.starter).length?'Næste: vælg favoritter':'Kom i gang'}
   else if(t.matches('.i-u')){refreshSummary(t.closest('.ingw'))}
@@ -2073,6 +2153,7 @@ function boot(){
       sub(udoc('store/brands'),function(s){var d=s.exists?s.data():{};S.brands=d.b||{};S.bnames=d.n||{};render()});
       sub(udoc('store/settings'),function(s){S.hasSettings=!!s.exists;S.settings=normSettings(s.exists?s.data():{});ready('settings')});
       sub(ucol('recipes'),function(s){fromCol(s,'recipes')});
+      sub(ucol('scans'),function(s){var o={};s.docs.forEach(function(d){o[d.id]=d.data()});S.scans=o;render()});
       sub(ucol('plans'),function(s){fromCol(s,'plans')});
       sub(ucol('prefs'),function(s){fromCol(s,'prefs')});
       sub(ucol('lists'),function(s){fromCol(s,'lists')});
@@ -2088,7 +2169,7 @@ function boot(){
   }).catch(function(){});
 }
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){return Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name}).filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();
 

@@ -2,7 +2,7 @@
    Nothing is uploaded: the photo is read on the phone. Results always need a quick check. */
 (function(root){
 'use strict';
-var UNIT={kg:['g',1000],g:['g',1],gr:['g',1],gram:['g',1],l:['ml',1000],liter:['ml',1000],dl:['ml',100],cl:['ml',10],ml:['ml',1],spsk:['ml',15],tsk:['ml',5],
+var UNIT={kg:['g',1000],g:['g',1],gr:['g',1],gram:['g',1],l:['ml',1000],liter:['ml',1000],dl:['ml',100],cl:['ml',10],ml:['ml',1],di:['ml',100],mi:['ml',1],spsk:['ml',15],tsk:['ml',5],
   stk:['stk',1],fed:['stk',1],bdt:['stk',1],bundt:['stk',1],'dåse':['stk',1],'dåser':['stk',1],'dase':['stk',1],'daase':['stk',1],'däse':['stk',1],'dåsen':['stk',1],ds:['stk',1],pk:['stk',1],pakke:['stk',1],pakker:['stk',1],skive:['stk',1],skiver:['stk',1],
   knivspids:null,knsp:null,nip:null};
 var SKIP=/^(salt|peber|vand|salt og peber|friskkværnet peber|friskkvaernet peber)\b/;
@@ -22,7 +22,8 @@ function cleanName(n){
 function parseLine(line){
   var s=line.replace(/^[\s•·*▪●○\-–—]+/,'').trim();
   /* OCR often reads the half sign as a percent sign: "1% dl" and "11% dl" both mean 1½ dl */
-  s=normFractions(s.replace(/^(\d)\d?%\s*(?=(?:dl|cl|ml|l|kg|g|spsk|tsk)\b)/i,'$1½ '));
+  s=s.replace(/^%[:.]?\s*(?=(?:dl|di|cl|ml|l|kg|g|spsk|tsk)\b)/i,'½ ');
+  s=normFractions(s.replace(/^(\d)\d?%\s*(?=(?:dl|di|cl|ml|l|kg|g|spsk|tsk)\b)/i,'$1½ '));
   var m=s.match(/^(\d+\s+\d\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)(?:\s*[-–]\s*\d+(?:[.,]\d+)?)?\s*([A-Za-zæøåäöüÆØÅ]+\.?)?\s*(.*)$/);
   if(!m)return null;
   var q=toNum(m[1]);if(!(q>0)||q>5000)return null;
@@ -38,6 +39,7 @@ function parseLine(line){
   var name=cleanName(rest);
   if(name.length<2||name.length>40||/^\d+$/.test(name))return null;
   if(SKIP.test(name))return null;
+  if(/^(personer|person|pers|portioner|portion|port|minutter|minut|min|timer|time)$/.test(name))return null;
   /* step text in the method section: long sentence */
   if(name.split(' ').length>6||/[.!?]\s*[A-ZÆØÅ]/.test(rest))return null;
   var qq=q*conv[1];
@@ -62,7 +64,29 @@ function fixNames(ings,known){
     if(!hit&&l.length>=6){for(i=0;i<idx.length;i++){if(idx[i].l.length>=6&&lev(idx[i].l,l)<=1){hit=idx[i];break}}}
     if(hit)g.n=hit.k.toLowerCase();
   });
+  ings.forEach(function(g){
+    if(g.u!=='stk'||g.q<5)return;
+    var m=g.n.match(/^g([a-zæøå]{3,})$/),l0=loose(g.n),j;
+    if(!m)return;
+    for(j=0;j<idx.length;j++){if(idx[j].l===l0)return}
+    var l1=loose(m[1]);
+    for(j=0;j<idx.length;j++){if(idx[j].l===l1){g.n=idx[j].k.toLowerCase();g.u='g';return}}
+  });
   return ings;
+}
+function findPage(lines){
+  var cand=lines.slice(0,2).concat(lines.slice(-3)),i,m,n;
+  for(i=0;i<cand.length;i++){
+    /* a line that is only the page number: "47", "— 47 —", "Side 47". "3." and "3)" are step numbers, not pages. */
+    m=cand[i].match(/^[^\w.)]*(?:side\s+)?(\d{1,3})\s*[^\w.)]*$/i);
+    if(m){n=+m[1];if(n>=1&&n<=999)return n}
+  }
+  for(i=0;i<cand.length;i++){
+    /* "47 · Hverdagsretter" or "Hverdagsretter · 47" in a running head or foot */
+    m=cand[i].match(/^(\d{1,3})\s*[·•|–—]\s*[A-Za-zÆØÅæøå]/)||cand[i].match(/[A-Za-zÆØÅæøå]\s*[·•|–—]\s*(\d{1,3})$/);
+    if(m){n=+m[1];if(n>=1&&n<=999)return n}
+  }
+  return 0;
 }
 function parseText(text,known){
   var lines=String(text||'').split(/\r?\n/).map(function(l){return l.trim()}).filter(Boolean);
@@ -85,7 +109,7 @@ function parseText(text,known){
   if((mm=all.match(/(\d{1,3})\s*(?:min\b|minutter)/i)))minutes=+mm[1];
   else if((mm=all.match(/(\d+(?:[.,]5)?)\s*(?:time|timer)\b/i)))minutes=Math.round(parseFloat(mm[1].replace(',','.'))*60);
   if((mm=all.match(/(\d{1,2})\s*(?:personer|pers\b|portioner|port\b)/i)))servings=+mm[1];
-  return{name:title,minutes:minutes,servings:servings||0,ingredients:fixNames(ings,known)};
+  return{name:title,minutes:minutes,servings:servings||0,page:findPage(lines),ingredients:fixNames(ings,known)};
 }
 /* ---- browser part ---- */
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=function(){rej({code:'unavailable'})};document.head.appendChild(s)})}
@@ -113,6 +137,11 @@ function getWorker(){
   }).catch(function(e){worker=null;throw(e&&e.code?e:{code:'unavailable'})});
   return worker;
 }
+/* Page segmentation: 3 = normal columns, 11 = sparse text (finds the lines when photo blocks, tinted panels or uneven light confuse the layout) */
+function recog(w,blob,psm){
+  var p;try{p=Promise.resolve(w.setParameters({tessedit_pageseg_mode:String(psm)}))}catch(e){p=Promise.resolve()}
+  return p.catch(function(){}).then(function(){return w.recognize(blob)});
+}
 function readRecipe(files,signal,known){
   var text='';
   return getWorker().then(function(w){
@@ -120,7 +149,13 @@ function readRecipe(files,signal,known){
     files.forEach(function(f){
       chain=chain.then(function(){
         if(signal&&signal.aborted)throw{code:'cancelled'};
-        return prep(f).then(function(b){return w.recognize(b)}).then(function(r){text+=r.data.text+'\n'});
+        return prep(f).then(function(b){
+          return recog(w,b,3).then(function(r){
+            var t=r.data.text,n=parseText(t,known).ingredients.length;
+            if(n>=4||(signal&&signal.aborted))return t;
+            return recog(w,b,11).then(function(r2){var t2=r2.data.text;return parseText(t2,known).ingredients.length>n?t2:t},function(){return t});
+          });
+        }).then(function(t){text+=t+'\n'});
       });
     });
     return chain;
@@ -128,7 +163,7 @@ function readRecipe(files,signal,known){
     var out=parseText(text,known);out.raw=text;return out;
   });
 }
-var api={readRecipe:readRecipe,parseText:parseText,parseLine:parseLine,loose:loose};
+var api={readRecipe:readRecipe,parseText:parseText,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
