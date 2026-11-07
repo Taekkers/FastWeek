@@ -8,9 +8,16 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 6)
+
+- **Planlæg efter tilbud eller vælg selv:** første trin i ugeguiden. *Efter ugens tilbud* vælger retter, der udnytter tilbuddene i dine butikker, og Ugeplan viser, hvilke tilbud der bruges og hvor. *Jeg vælger selv* lader dig vælge retterne; knappen *Foreslå retter* kan fylde resten ud. Valget gælder pr. uge og kan ændres med *Ændr*.
+- **2–3 butikker:** har du valgt to eller tre butikker, sammenlignes hver vare dem imellem. Indkøb viser prisen pr. butik, markerer den billigste og de varer, der er på tilbud, og samler listen under *Køb i …* pr. butik.
+- **Upload kan ses:** i Scan kogebog får hvert billede et kort med miniature og status (i kø, læser, gemt som udkast, kunne ikke læses). Du kan åbne udkastet fra kortet, prøve igen eller stoppe. Ny ret viser, at billedet er modtaget og hvad der blev læst.
+- **Kortere tekster** i hele appen.
+
 ## Det kan appen (version 5)
 
-- **Én butik eller flere?** Indkøb viser den billigste enkeltbutik, de bedste to og tre butikker, hvor meget hver ekstra butik sparer, og en anbefaling. Under Indstillinger vælger du, hvad en ekstra butik er værd for dig (standard 50 kr): kun hvis den sparer mere, anbefales den. Tallene er overslag ud fra normalpriser, butiksindeks og de tilbud, der ligger i `data/offers.json`.
+- **Én butik eller flere?** Indkøb viser den billigste enkeltbutik, de bedste to og tre butikker, hvor meget hver ekstra butik sparer, og en anbefaling. Hver ekstra butik skal spare mindst 20 kr for at blive anbefalet. Tallene er overslag ud fra normalpriser, butiksindeks og de tilbud, der ligger i `data/offers.json`.
 
 ### Version 3
 
