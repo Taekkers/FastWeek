@@ -69,7 +69,7 @@ Hver fredag kl. 18-19 får alle, der har slået det til, en besked om at lave ug
    - `VAPID_SUBJECT`: `mailto:din@mail.dk`
 5. Tryk **Add file → Create new file**. Skriv navnet `.github/workflows/weekly-push.yml` (med punktummet foran). Indsæt hele indholdet af filen **github-workflow/weekly-push.yml**, og tryk **Commit**.
 6. Test: **Actions → Ugentlig påmindelse → Run workflow**. Sæt kryds i **Tørkørsel** første gang. I loggen står *Brugere med notifikationer: …*. Kør den bagefter uden kryds for at sende en rigtig besked.
-7. I appen: **tandhjulet → Notifikationer → Slå notifikationer til**.
+7. I appen: **menuen (de tre streger øverst til venstre) → Indstillinger → Notifikationer → Slå notifikationer til**.
 
 **iPhone:** notifikationer virker kun, når appen er lagt på hjemmeskærmen og åbnet derfra (iOS 16.4 eller nyere).
 
