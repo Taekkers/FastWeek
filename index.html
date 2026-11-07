@@ -9,7 +9,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png"><link rel="icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Titillium+Web:wght@400;600;700;900&display=swap">
 <style>
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 body{margin:0;font:14px system-ui,-apple-system,"Segoe UI",sans-serif}
@@ -27,8 +27,8 @@ img{max-width:100%}
   --sh:0 1px 2px rgba(18,40,30,.06),0 12px 28px -16px rgba(18,40,30,.24);
   --sh-up:0 -10px 40px -12px rgba(18,40,30,.28);
   --glass:rgba(255,255,255,.82);
-  --f-display:'Schibsted Grotesk',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
-  --f-body:'Schibsted Grotesk',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  --f-display:'Titillium Web',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
+  --f-body:'Titillium Web',ui-sans-serif,system-ui,'Segoe UI',sans-serif;
   --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -52,7 +52,7 @@ img{max-width:100%}
 
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--f-body);
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--f-body);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:0 128px;-webkit-text-size-adjust:100%}
 body.lock{overflow:hidden}
@@ -71,7 +71,7 @@ h2{font:700 18px/1.25 var(--f-display);text-wrap:balance}
 /* header */
 #top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg)}
 .top-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 8px}
-.brand{font:800 22px/1 var(--f-display);letter-spacing:-.02em}
+.brand{font:900 22px/1 var(--f-display);letter-spacing:-.02em}
 .brand i{font-style:normal;color:var(--pine)}
 .icon-btn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;padding:0;box-shadow:var(--sh)}
 .icon-btn svg,.tab svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -110,7 +110,7 @@ h2{font:700 18px/1.25 var(--f-display);text-wrap:balance}
 .wnav{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:6px}
 .wnav .x{width:44px;height:44px;border:1px solid var(--line);border-radius:14px;font-size:24px;background:var(--surface)}
 .wnav div.c{text-align:center}
-.wt{font:800 28px/1.05 var(--f-display);letter-spacing:-.02em}
+.wt{font:900 28px/1.05 var(--f-display);letter-spacing:-.02em}
 .wr{font-size:13px;color:var(--ink2);margin-top:2px}
 .wishes{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .wishes .chip{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
@@ -179,7 +179,7 @@ h2{font:700 18px/1.25 var(--f-display);text-wrap:balance}
 .sto .bar{height:4px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:6px}
 .sto .bar i{display:block;height:100%;background:var(--pine);border-radius:4px}
 .reco{padding:16px;display:flex;flex-direction:column;gap:12px}
-.reco .big{font:800 20px/1.2 var(--f-display);letter-spacing:-.01em}
+.reco .big{font:900 20px/1.2 var(--f-display);letter-spacing:-.01em}
 .reco .big em{font-style:normal;color:var(--pine)}
 .fine{font-size:12.5px;color:var(--ink2)}
 .group{display:flex;flex-direction:column;border-radius:18px;background:var(--surface);border:1px solid var(--line);overflow:hidden}
@@ -258,7 +258,7 @@ input[type=checkbox]{accent-color:var(--pine)}
 .wz-bar i{height:4px;border-radius:4px;background:var(--line);transition:background .3s}
 .wz-bar i.on{background:var(--pine)}
 .wz-body{overflow:auto;padding:12px 2px 18px;display:flex;flex-direction:column;gap:14px;flex:1;min-height:0}
-.wz-q{font:800 24px/1.15 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.wz-q{font:900 24px/1.15 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
 .wz-s{color:var(--ink2);max-width:46ch}
 .wz-foot{border-top:1px solid var(--line);background:var(--bg);padding:12px 0 calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:8px}
 .wz-sum{font-size:13px;color:var(--ink2);text-align:center}
@@ -332,7 +332,7 @@ input[type=checkbox]{accent-color:var(--pine)}
 .pairbox{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start}
 .reco .big.sm{font-size:17px}
 .storehead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:6px 2px 0;font-size:13px;color:var(--ink2)}
-.storehead b{font:800 18px var(--f-display);color:var(--ink);letter-spacing:-.01em}
+.storehead b{font:900 18px var(--f-display);color:var(--ink);letter-spacing:-.01em}
 .btnrow{display:flex;gap:8px;flex-wrap:wrap}
 
 /* v9: favourites, rating, cook view */
@@ -360,7 +360,7 @@ input[type=checkbox]{accent-color:var(--pine)}
 /* v10: budget card, allergen grid */
 .bud{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
 .bud-r{font:600 15px/1.35 var(--f-body)}
-.bud-r b{font:800 18px var(--f-display)}
+.bud-r b{font:900 18px var(--f-display)}
 .bbar{height:8px;border-radius:99px;background:var(--pine-soft);overflow:hidden}
 .bbar i{display:block;height:100%;background:var(--pine);border-radius:99px}
 .bbar.over i{background:var(--warn)}
