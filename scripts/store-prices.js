@@ -2,6 +2,7 @@
 'use strict';
 var UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 async function get(u){var r=await fetch(u,{headers:{'User-Agent':UA,'Accept-Language':'da-DK,da;q=0.9'},redirect:'follow'});return{status:r.status,url:r.url,ct:r.headers.get('content-type'),text:await r.text()}}
+async function probe5(){var r=await get('https://api.prej.app/llms.txt');var t=r.text;var i=t.indexOf('/v1/products');console.log('#### LLMS '+r.status+' '+t.length+'\n'+t.slice(Math.max(0,i-200),i+7000))}
 async function probe4(){
   var a=await get('https://prej.dk/api');var links=(a.text.match(/href="([^"]+)"/g)||[]).map(function(x){return x.slice(6,-1)}).filter(function(x){return /api|docs|json|vilk/i.test(x)});console.log('#### LINKS '+links.join(' '));
   for(var u of links.filter(function(x,i,arr){return arr.indexOf(x)===i}).slice(0,8)){var full=u.startsWith('http')?u:'https://prej.dk'+u;var r=await get(full);var t=r.text.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');console.log('#### '+full+' '+r.status+' '+r.ct+'\n'+t.slice(0,3500))}
@@ -34,4 +35,4 @@ async function probe(){
     }catch(e){console.log('#### '+u+' FEJL '+e.message)}
   }
 }
-if(require.main===module)(process.env.MODE==='probe'?probe4():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
+if(require.main===module)(process.env.MODE==='probe'?probe5():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
