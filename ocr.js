@@ -274,7 +274,7 @@ function readRecipe(files,signal,known,onStep){
 /* ---------- reading with Google Gemini (when the user has put in a key) ----------
    The model sees the photo itself, so italics, fractions and two columns are no problem.
    It returns every ingredient line as written; the same parser as above turns the lines into amounts in g / ml / stk. */
-var GMODELS=['gemini-flash-latest','gemini-2.5-flash','gemini-3.5-flash'];
+var GMODELS=['gemini-flash-latest','gemini-2.5-flash','gemini-flash-lite-latest','gemini-2.5-flash-lite','gemini-3.5-flash'];
 var GPROMPT='Billedet (eller billederne) viser en opskrift fra en dansk kogebog. Udtræk opskriftens titel, antal personer, tid i minutter, sidetal (hvis det står på siden) '+
   'og ALLE ingredienser fra alle ingredienslister på siden, også under underoverskrifter som "Dressing" eller "Til servering". Spring intet over, heller ikke salt, peber og vand. '+
   'Hver ingrediens: amount = mængden som tal (½ = 0.5, 1½ = 1.5, "2-3" = 2; null hvis der ingen mængde står), unit = enheden præcis som i bogen (g, kg, dl, l, ml, spsk, tsk, stk, fed, dåse, bundt, håndfuld, knivspids, skiver, pakke …; tom hvis ingen), '+
@@ -289,18 +289,31 @@ function toB64(file,max){
     im.onerror=function(){URL.revokeObjectURL(url);rej({code:'image_rejected'})};im.src=url;
   });
 }
-function geminiCall(key,parts,signal,mi){
-  mi=mi||0;var model=GMODELS[mi];
+function geminiCall(key,parts,signal,mi,plain){
+  mi=mi||0;var model=GMODELS[mi],cfg=plain?{temperature:0}:{temperature:0,responseMimeType:'application/json',responseSchema:GSCHEMA};
+  var next=function(e){if(mi+1<GMODELS.length&&!(signal&&signal.aborted))return geminiCall(key,parts,signal,mi+1,plain);throw e};
   return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',signal:signal,
     headers:{'Content-Type':'application/json','x-goog-api-key':key},
-    body:JSON.stringify({contents:[{role:'user',parts:parts}],generationConfig:{temperature:0,responseMimeType:'application/json',responseSchema:GSCHEMA}})})
-  .then(function(r){return r.json().catch(function(){return{}}).then(function(j){
-    if(r.status===404&&mi+1<GMODELS.length)return geminiCall(key,parts,signal,mi+1);   /* model name retired: try the next */
-    if(!r.ok){var m=(j&&j.error&&j.error.message)||('HTTP '+r.status);throw{code:r.status===429?'rate_limited':(r.status===400||r.status===401||r.status===403)?'bad_key':'unavailable',message:m}}
-    var c=j.candidates&&j.candidates[0],t=c&&c.content&&c.content.parts&&c.content.parts.map(function(p){return p.text||''}).join('');
-    if(!t)throw{code:'refused',message:'tomt svar'};
-    return JSON.parse(t);
-  })});
+    body:JSON.stringify({contents:[{role:'user',parts:parts}],generationConfig:cfg})})
+  .then(function(r){return r.text().then(function(txt){
+    var j={};try{j=JSON.parse(txt)}catch(x){}
+    var gm=(j&&j.error&&(j.error.message||j.error.status))||'',why=(j&&j.error&&j.error.details||[]).map(function(d){return d.reason||''}).filter(Boolean).join(',');
+    var info='HTTP '+r.status+' ('+model+')'+(gm?': '+gm:'')+(why?' ['+why+']':'');
+    if(!r.ok){
+      if(r.status===400||r.status===401||r.status===403){
+        /* a key Google does not know at all: no point trying other models */
+        if(/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED|ACCESS_TOKEN|SERVICE_DISABLED|has not been used|disabled/i.test(gm+why)||r.status===401)throw{code:'bad_key',message:info};
+        return next({code:'unavailable',message:info});
+      }
+      if(r.status===429)return next({code:'rate_limited',message:info});          /* quota is per model: try the next */
+      return next({code:'unavailable',message:info});                               /* 404 retired model, 500/503 busy */
+    }
+    if(plain)return true;
+    var c=j.candidates&&j.candidates[0],t=c&&c.content&&c.content.parts&&c.content.parts.filter(function(p){return !p.thought}).map(function(p){return p.text||''}).join('');
+    if(!t)return next({code:'refused',message:info+': tomt svar'+(c&&c.finishReason?' ('+c.finishReason+')':'')});
+    t=t.replace(/^\s*```(?:json)?\s*/,'').replace(/\s*```\s*$/,'');
+    try{return JSON.parse(t)}catch(x){return next({code:'unavailable',message:info+': svaret var ikke JSON'})}
+  })},function(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};return next({code:'network',message:'Ingen forbindelse ('+model+'): '+((e&&e.message)||e)})});
 }
 function readWithGemini(files,key,signal,known,onStep){
   var step=function(t){if(onStep)try{onStep(t)}catch(e){}};
@@ -335,7 +348,7 @@ function readWithGemini(files,key,signal,known,onStep){
     return out;
   });
 }
-function testGemini(key){return geminiCall(key,[{text:'Svar med JSON: {"ingredients":[{"name":"test"}]}'}]).then(function(){return true})}
+function testGemini(key){return geminiCall(key,[{text:'Svar kun: ok'}],null,0,true)}
 var api={readRecipe:readRecipe,readWithGemini:readWithGemini,testGemini:testGemini,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
