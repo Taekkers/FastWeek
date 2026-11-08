@@ -1,0 +1,35 @@
+name: Billeder af retterne
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'apply = gem fotos på retterne, preview = vis kun hvad der findes for startretterne'
+        type: choice
+        options: [apply, preview]
+        default: apply
+permissions:
+  contents: write
+concurrency:
+  group: dish-photos
+  cancel-in-progress: false
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --omit=dev --no-audit --no-fund
+      - run: node scripts/dish-photos.js
+        env:
+          MODE: ${{ inputs.mode || 'apply' }}
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Kontaktark til gennemsyn (kun preview)
+        if: ${{ inputs.mode == 'preview' }}
+        run: |
+          sudo apt-get install -y -qq imagemagick >/dev/null
+          cd out && montage img/* -auto-orient -thumbnail 320x240^ -gravity center -extent 320x240 -set label '%t' -pointsize 13 -tile 5x -geometry +6+6 preview.jpg
+          cd .. && git config user.name "github-actions" && git config user.email "actions@users.noreply.github.com"
+          git checkout --orphan photo-preview && git rm -rq --cached . && git add -f out/preview.json out/preview.jpg && git commit -qm "Forhåndsvisning af retbilleder" && git push -f origin photo-preview
