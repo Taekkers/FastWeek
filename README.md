@@ -11,7 +11,8 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 ## Det kan appen (version 11)
 
 - **Forstør billedet af retten:** tryk på billedet (foto eller tegning) på retsiden. Luk med ×, Escape eller et tryk på billedet.
-- **Færre manglende ingredienser ved billedlæsning:** æg kom ikke med (navnet var for kort), linjer med *ca.* eller *evt.* foran mængden blev sprunget over, *+ til servering* og *eller …* forstyrrede navnet, og to forskellige varer kunne blive slået sammen (fx sukker og rørsukker, tomater og cherrytomater). *Salt og peber* kommer nu med på listen (1 g hver, efter smag).
+- **Færre manglende ingredienser ved billedlæsning:** æg kom ikke med (navnet var for kort), linjer med *ca.* eller *evt.* foran mængden blev sprunget over, og *+ til servering* og *eller …* forstyrrede navnet. *Salt og peber* kommer med på listen (1 g hver, efter smag; står der en mængde, bruges den).
+- **Sammenlægning:** står præcis samme vare to gange i opskriften (fx sukker i dejen og i fyldet), lægges mængderne sammen til én linje. Forskellige varer (fx sukker og rørsukker, tomater og cherrytomater) holdes altid for sig. Der er ingen grænse for, hvor mange ingredienser en ret kan have.
 
 ## Det kan appen (version 10)
 

@@ -6,7 +6,7 @@ var UNIT={kg:['g',1000],g:['g',1],gr:['g',1],gram:['g',1],l:['ml',1000],liter:['
   stk:['stk',1],fed:['stk',1],bdt:['stk',1],bundt:['stk',1],'dåse':['stk',1],'dåser':['stk',1],'dase':['stk',1],'daase':['stk',1],'däse':['stk',1],'dåsen':['stk',1],ds:['stk',1],pk:['stk',1],pakke:['stk',1],pakker:['stk',1],skive:['stk',1],skiver:['stk',1],
   'håndfuld':['stk',1],'håndfulde':['stk',1],handfuld:['stk',1],'händfuld':['stk',1],drys:['stk',1],stilk:['stk',1],stilke:['stk',1],kvist:['stk',1],kviste:['stk',1],
   knivspids:null,knsp:null,nip:null};
-var SKIP=/^(salt|peber|vand|salt og peber|friskkværnet peber|friskkvaernet peber)\b/;
+var SKIP=/^(vand|salt og peber|friskkværnet peber|friskkvaernet peber|salt og friskkværnet peber)\b/;
 function toNum(s){
   s=String(s).trim();var m;
   if((m=s.match(/^(\d+)\s+(\d)\/(\d+)$/)))return +m[1]+(+m[2])/(+m[3]);
@@ -141,7 +141,7 @@ function mergeIngs(lists){
   var out=[];
   lists.forEach(function(list,pi){list.forEach(function(g){
     var l=loose(g.n),hit=null;
-    for(var i=0;i<out.length;i++){var o=loose(out[i].n),sh=Math.min(o.length,l.length)/Math.max(o.length,l.length);if(o===l||(l.length>=5&&o.length>=5&&lev(o,l)<=1)||(l.length>=6&&o.length>=6&&sh>=.8&&(o.indexOf(l)>-1||l.indexOf(o)>-1))){hit=i;break}}
+    for(var i=0;i<out.length;i++){var o=loose(out[i].n),sh=Math.min(o.length,l.length)/Math.max(o.length,l.length);if(o===l||(l.length>=6&&o.length>=6&&lev(o,l)<=1&&o.slice(0,3)===l.slice(0,3))){hit=i;break}}
     if(hit===null){if(pi>0&&g.guess)return;out.push(g)}
     else if((out[hit].guess&&!g.guess)||(/[^a-zæøåäöü\s-]/.test(out[hit].n)&&!/[^a-zæøåäöü\s-]/.test(g.n))||(out[hit].u==='stk'&&g.u!=='stk'&&!g.guess&&out[hit].q===g.q))out[hit]=g;
   })});
@@ -160,7 +160,10 @@ function parseText(text,known){
   if(iStart>=0){for(var j=iStart+1;j<lines.length;j++){if(isMethodHead(lines[j])){iEnd=j;break}}}
   var body=iStart>=0?lines.slice(iStart+1,iEnd):lines;
   var ings=[],seen={};
-  body.forEach(function(l){var g=parseLine(l,iStart>=0);if(g&&!seen[g.n]){seen[g.n]=1;ings.push(g)}});
+  body.forEach(function(l){var g=parseLine(l,iStart>=0);if(!g)return;
+    var same=ings.filter(function(x){return x.n===g.n&&x.u===g.u})[0];
+    if(same){if(!g.guess){if(same.guess){same.q=g.q;same.guess=false}else same.q=Math.round((same.q+g.q)*100)/100}return}
+    seen[g.n]=1;ings.push(g)});
   /* "salt og peber" without an amount: still part of the dish, listed with a pinch so the list is complete */
   body.forEach(function(l){var w=l.toLowerCase();if(w.split(/\s+/).length>6||/^\s*[\d½¼¾]/.test(w))return;
     if(/\bsalt\b/.test(w)&&!seen.salt){seen.salt=1;ings.push({n:'salt',q:1,u:'g',guess:true,known:true})}

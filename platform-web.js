@@ -157,7 +157,7 @@ var sample={
   limits:function(){return Promise.resolve({images:true})},
   json:function(prompt,opts){
     opts=opts||{};var files=[].slice.call(opts.images||[]),sig=opts.signal;
-    return (window.UgekurvOCR?Promise.resolve():loadScript('ocr.js?v=10')).then(function(){
+    return (window.UgekurvOCR?Promise.resolve():loadScript('ocr.js?v=11')).then(function(){
       if(sig&&sig.aborted)throw{code:'cancelled'};
       return window.UgekurvOCR.readRecipe(files,sig,window.UGEKURV_WEB&&window.UGEKURV_WEB.known?window.UGEKURV_WEB.known():[],opts.onStep);
     });
