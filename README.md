@@ -17,7 +17,7 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 ### Sådan slår du AI-læsning til (én gang, ca. 2 minutter)
 1. Åbn **aistudio.google.com/apikey** og log ind med din Google-konto. Godkend vilkårene, hvis du bliver spurgt.
 2. Tryk **Create API key** (vælg evt. et projekt eller *Create project*). Der kræves intet betalingskort.
-3. Kopiér nøglen (den starter med `AIza`).
+3. Kopiér nøglen. Nye nøgler starter med `AQ.` (ældre nøgler med `AIza`; begge virker i appen).
 4. I FastWeek: **Menu > Indstillinger > Billedlæsning med AI**. Indsæt nøglen og tryk **Gem og afprøv**. Står der *Aktiv*, er det slået til.
 
 ## Det kan appen (version 11)

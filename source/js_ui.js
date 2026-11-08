@@ -752,7 +752,7 @@ function webBlock(){
   var hasK=!!(S.keys&&S.keys.gemini);
   return '<div class="field"><label for="ai-k">Billedlæsning med AI (Google Gemini)</label>'+
     '<p class="hint" id="ai-st">'+(hasK?'Aktiv. Kogebogsbilleder læses af Gemini.':'Ikke sat op. Hent en gratis nøgle på aistudio.google.com/apikey (Create API key), og indsæt den her.')+'</p>'+
-    '<div class="np-in"><input id="ai-k" type="password" autocomplete="off" spellcheck="false" placeholder="'+(hasK?'••••••••'+esc(String(S.keys.gemini).slice(-4)):'AIza…')+'" aria-label="Gemini-nøgle"></div>'+
+    '<div class="np-in"><input id="ai-k" type="password" autocomplete="off" spellcheck="false" placeholder="'+(hasK?'••••••••'+esc(String(S.keys.gemini).slice(-4)):'AQ.…')+'" aria-label="Gemini-nøgle"></div>'+
     '<div class="btnrow"><button class="btn sm" data-act="aisave">Gem og afprøv</button>'+(hasK?'<button class="btn ghost sm" data-act="aidel">Fjern nøgle</button>':'')+'</div></div>'+
     '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
     '<div class="field"><label>Bruger</label><p class="hint">Logget ind som <b>'+esc(W.name||'')+'</b>. Koden kan ikke nulstilles, så husk den.</p><button class="btn ghost sm" data-act="logout">Log ud</button></div>';
@@ -1089,8 +1089,8 @@ var ACT={
     var x=box.querySelector('.lb-x');if(x)x.focus();
   },
   zoomclose:function(){var b=$('#lb');if(b)b.remove();if(!$('#sheet').innerHTML)document.body.classList.remove('lock');if(S.lbBack&&S.lbBack.focus){try{S.lbBack.focus()}catch(e){}}S.lbBack=null},
-  aisave:function(){var i=$('#ai-k'),st=$('#ai-st'),k=i?i.value.trim():'';if(!k){if(st)st.textContent='Indsæt nøglen først.';return}
-    if(!/^[A-Za-z0-9_\-]{20,}$/.test(k)){if(st)st.textContent='Det ligner ikke en nøgle. Den starter typisk med AIza.';return}
+  aisave:function(){var i=$('#ai-k'),st=$('#ai-st'),k=i?i.value.replace(/\s+/g,''):'';if(!k){if(st)st.textContent='Indsæt nøglen først.';return}
+    if(!/^[A-Za-z0-9_.\-]{20,}$/.test(k)){if(st)st.textContent='Det ligner ikke en nøgle. Den starter med AQ. (ældre nøgler med AIza).';return}
     if(st)st.textContent='Afprøver nøglen…';
     var test=window.UgekurvOCR?Promise.resolve():new Promise(function(r,j){var s=document.createElement('script');s.src='ocr.js?v=12';s.onload=r;s.onerror=j;document.head.appendChild(s)});
     test.then(function(){return window.UgekurvOCR.testGemini(k)}).then(function(){return udoc('store/keys').set({gemini:k,at:Date.now()},{merge:true})}).then(function(){S.keys=Object.assign({},S.keys,{gemini:k});if(st)st.textContent='Aktiv. Nøglen virker, og kogebogsbilleder læses nu af Gemini.';if(i)i.value='';toast('Billedlæsning med AI er slået til')},
