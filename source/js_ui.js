@@ -125,6 +125,7 @@ function storeTiles(sc,sel,best,pair){
   return h+'</div>';
 }
 var STSHORT={'Rema 1000':'Rema','Coop 365':'365','SuperBrugsen':'SuperB.','Løvbjerg':'Løvbj.'};
+var SPON=false;
 function stShort(s){return STSHORT[s]||s}
 function nameList(a){a=a.map(function(x){return '<em>'+esc(x)+'</em>'});return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' og '+a[a.length-1]}
 function optsHtml(sc,w,op){
@@ -165,47 +166,12 @@ function budgetHtml(total){
     '<div class="bbar'+(left<0?' over':'')+'" role="img" aria-label="'+pct+' procent af budgettet"><i style="width:'+Math.max(4,pct)+'%"></i></div>'+
     '<p class="fine">'+(left>=0?'Du holder budgettet med ca. '+kr(Math.round(left))+' til overs.':'Ca. '+kr(Math.round(-left))+' over budgettet. Prøv Lav ny plan.')+'</p></div>';
 }
-function uLbl(u){return u==='g'?'kg':u==='ml'?'l':'stk'}
-function packQ(p){return p&&p.pack>0?p.pack:0}
-function normOf(p){var b=qbest(p);return{v:b?b.price:(p.kp||0),f:b?(b.q==='oko'?'kpo':'kpf'):'kp'}}
-function priceBtn(it){
-  var p=pan(it.k);if(!p||p.leftover)return '';
-  var n=normOf(p).v,pk=packQ(p),lbl;
-  if(!(n>0))lbl='Sæt pris';
-  else if(pk)lbl=nf(n*(p.unit==='stk'?pk:pk/1000),2)+' kr/'+fq(pk,p.unit);
-  else lbl=nf(n,2)+' kr/'+uLbl(p.unit);
-  return '<button type="button" class="chip pc'+(p.kpx?' on':'')+'" data-act="normprice" data-k="'+esc(it.k)+'" aria-label="Normalpris for '+esc(it.name)+': '+esc(lbl)+'. Tryk for at ændre">'+(p.kpx?'Din pris ':'Normalpris ')+esc(lbl)+'</button>';
-}
-function openNormPrice(k){
-  var p=pan(k);if(!p)return;
-  var nm=normOf(p),pk=packQ(p),per=pk?(p.unit==='stk'?pk:pk/1000):1,ul=uLbl(p.unit);
-  var ref=(S.ref&&S.ref.items&&S.ref.items[k])||null,refv=ref?(nm.f==='kpo'?ref.kpo:nm.f==='kpf'?(ref.kpf||ref.kpg):ref.kp):0;
-  var h='<p class="muted sm">'+(p.kpx?'Du har selv sat prisen. Den bruges i alle butikker, indtil du ændrer den.':'Butikkernes normalpris er et skøn. Skriv den pris, du plejer at betale, så regner appen med den fremover.')+'</p>'+
-    '<div class="field"><label for="np-v">Normalpris for '+(pk?esc(fq(pk,p.unit)):'1 '+ul)+(nm.f==='kpo'?' (økologi)':nm.f==='kpf'?' (frilands)':'')+'</label><div class="np-in"><input id="np-v" inputmode="decimal" autocomplete="off" value="'+(nm.v>0?esc(dec(Math.round(nm.v*per*100)/100)):'')+'"><span>kr</span></div>'+
-    (pk?'<p class="hint" id="np-u">'+(nm.v>0?'= '+nf(nm.v,2)+' kr pr. '+ul:'')+'</p>':'')+'<p class="err" id="np-err" role="alert" hidden>Skriv en pris over 0 kr.</p></div>'+
-    '<div class="foot"><button class="btn" data-act="savenorm" data-k="'+esc(k)+'">Gem pris</button>'+(p.kpx&&refv>0?'<button class="btn ghost" data-act="resetnorm" data-k="'+esc(k)+'">Brug skønnet ('+nf(refv*per,2)+' kr)</button>':'')+'</div>';
-  openSheet(p.name.charAt(0).toUpperCase()+p.name.slice(1),h);
-  var i=$('#np-v');if(i){i.focus();i.select&&i.select();if(pk)i.addEventListener('input',function(){var v=num(i.value),e=$('#np-u');if(e)e.textContent=v>0?'= '+nf(v/per,2)+' kr pr. '+ul:''})}
-}
-function saveNorm(k){
-  var p=pan(k),i=$('#np-v'),e=$('#np-err');if(!p||!i)return;
-  var v=num(i.value);if(!(v>0)){if(e)e.hidden=false;i.setAttribute('aria-invalid','true');return}
-  var nm=normOf(p),pk=packQ(p),per=pk?(p.unit==='stk'?pk:pk/1000):1,unitP=Math.round(v/per*10000)/10000;
-  var o=Object.assign({},p);delete o.k;o[nm.f]=unitP;if(nm.f!=='kp')o.kpg=unitP;o.kpx=true;o.pv='';
-  var patch={};patch[k]=o;
-  save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Normalpris gemt. Indkøbet er regnet om.');draw()})});
-}
-function resetNorm(k){
-  var p=pan(k),ref=(S.ref&&S.ref.items&&S.ref.items[k])||null;if(!p||!ref)return;
-  var o=Object.assign({},p);delete o.k;['kp','kpo','kpf','kpg'].forEach(function(f){if(ref[f]!=null)o[f]=ref[f];else delete o[f]});o.kpx=false;
-  var patch={};patch[k]=o;
-  save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Skønnet bruges igen');draw()})});
-}
 function brandBtn(it){
   var b=brandsOf(it.k),nm=esc(it.name);
   return '<button type="button" class="chip bk'+(b.length?' on':'')+'" data-act="brand" data-k="'+esc(it.k)+'" data-n="'+nm+'" aria-label="'+(b.length?'Ret foretrukket mærke for ':'Vælg foretrukket mærke for ')+nm+'">'+(b.length?'★ '+esc(brandLabel(it.k)):'+ Mærke')+'</button>';
 }
 function viewShop(){
+  SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
   var sc=storeCosts(items,w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
@@ -228,10 +194,10 @@ function viewShop(){
       var rows=groups[c].sort(function(a,b){return a.name.localeCompare(b.name,'da')}).map(function(it){
         var key=it.k+'_'+it.unit,on=!!chk[key];if(on)nchk++;
         var so=storeOf(it),ln=so&&sc.stores[so]?sc.stores[so].lines[key]:null,via=ln&&ln.via,qt=it.pack>0?it.packs+' pk. · '+fq(it.qty,it.unit):fq(it.qty,it.unit);
-        var cells=combo?'<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+'">'+(l2?nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>':'';
+        var cells=combo?'<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>':'';
         var price=ln?'<span class="pr'+(via?' off':'')+'">ca. '+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':''):'';
         var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>':'';
-        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+priceBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
+        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
         if(on){doneRows.push(rh);return ''}openN++;return rh}).filter(Boolean);
       var lb=combo?'<div class="lbl cmp-l"><span>'+esc(c)+'</span><span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){return '<span>'+esc(stShort(s2))+'</span>'}).join('')+'</span></div>':'<div class="lbl">'+esc(c)+'</div>';
       if(rows.length)g+='<div class="sec">'+lb+'<div class="group">'+rows.join('')+'</div></div>';
@@ -239,7 +205,7 @@ function viewShop(){
     return g;
   };
   if(combo){
-    h+='<p class="legend"><span class="cc min">kr</span> billigste butik <span class="cc off">kr</span> tilbud</p>';
+    h+='<p class="legend"><span class="cc min">kr</span> billigste butik <span class="cc off">kr</span> tilbud'+(SPON?' <span class="cc est">≈kr</span> skøn':'')+'</p>';
     combo.stores.forEach(function(s){
       var part=items.filter(function(it){return storeOf(it)===s});
       if(!part.length)return;
@@ -260,7 +226,7 @@ function viewShop(){
   if(doneRows.length)h+='<div class="sec bought"><div class="lbl">Købt ('+doneRows.length+')</div><div class="group">'+doneRows.join('')+'</div></div>';
   if(nchk)h+='<button class="btn block" data-act="tostock">Læg afkrydsede på lageret</button>';
   if(sc.norm>0){
-    var od=S.offers[w],fine='Priserne er overslag.';
+    var od=S.offers[w],fine=SPON?'Normalpriser fra kædernes egne kataloger. ≈ er et skøn, hvor kæden ikke viser sin hyldepris (Coop-kæderne og Løvbjerg).':'Priserne er overslag.';
     if(!od||!(od.items||[]).length)fine+=' Ingen tilbud for uge '+isoWeek(S.mon)[1]+' endnu.';
     if(sc.unpriced)fine+=' '+sc.unpriced+(sc.unpriced===1?' vare':' varer')+' uden pris er udeladt.';
     h+='<p class="fine">'+esc(fine)+'</p>';
@@ -634,6 +600,7 @@ function openStock(k){
     openSheet(p.name,h);return;
   }
   var more='<details class="rl"><summary>Flere indstillinger</summary><div class="rule">'+
+    '<div class="field"><label for="sf-kp">Normalpris (kr pr. kg, l eller stk)</label><input id="sf-kp" inputmode="decimal" value="'+(p&&p.kp?esc(dec(p.kp)):'')+'"></div>'+
     '<div class="grid2"><div class="field"><label for="sf-cat">Afdeling</label><select id="sf-cat">'+opt(CATS,p?p.cat||'Andet':'Andet')+'</select></div><div class="field"><label for="sf-loc">Opbevaring</label><select id="sf-loc">'+opt([['','Skab og køl'],['fryser','Fryser']],p?p.loc||'':'')+'</select></div></div>'+
     '<div class="grid2"><div class="field"><label for="sf-kpo">Pris for økologi</label><input id="sf-kpo" inputmode="decimal" value="'+(p&&qprices(p).oko?esc(dec(qprices(p).oko)):'')+'"></div><div class="field"><label for="sf-kpf">Pris for frilands</label><input id="sf-kpf" inputmode="decimal" value="'+(p&&qprices(p).god?esc(dec(qprices(p).god)):'')+'"></div></div>'+
     '<div class="field"><label for="sf-kc">Kalorier pr. 100 g eller ml (pr. stk., hvis enheden er stk)</label><input id="sf-kc" inputmode="decimal" value="'+(p&&p.kc!=null&&p.kc!==''?esc(dec(p.kc)):'')+'"></div>'+
@@ -642,7 +609,7 @@ function openStock(k){
   var vare='<div class="field"><label for="sf-name">Navn</label><input id="sf-name" type="text" value="'+esc(p?p.name:'')+'"'+(p?' disabled':'')+'></div>'+
     '<div class="grid2"><div class="field"><label for="sf-qty">På lager nu</label><input id="sf-qty" inputmode="decimal" value="'+(p?esc(dec(r1(curQty(p)))):'0')+'"></div><div class="field"><label for="sf-unit">Enhed</label><select id="sf-unit">'+opt(UNITS,p?p.unit:'g')+'</select></div></div>'+
     '<div class="field"><label for="sf-br">Foretrukne mærker</label><input id="sf-br" type="text" autocomplete="off" placeholder="fx Barilla, De Cecco" value="'+esc(p?brandsOf(k).join(', '):'')+'"><p class="hint">Valgfrit. Kun tilbud på dette mærke tæller.</p></div>'+
-    '<div class="field"><label for="sf-kp">Normalpris (kr pr. kg, l eller stk)</label><input id="sf-kp" inputmode="decimal" value="'+(p&&p.kp?esc(dec(p.kp)):'')+'"></div>'+
+    +
     ruleHtml(p||{})+more;
   if(p){
     h=vare+'<div class="foot"><button class="btn" data-act="savestock" data-k="'+esc(k)+'">Gem</button><button class="btn danger" data-act="delstock" data-k="'+esc(k)+'">Slet vare</button></div>';
@@ -1103,9 +1070,6 @@ var ACT={
   nextimg:function(d){var r=S.recipes[d.id];if(!r||!r.photo)return;var sk=(Array.isArray(r.photoSkip)?r.photoSkip:[]).concat(r.photo.u).slice(-20);
     save(function(){return up(udoc('recipes/'+d.id),{photoReq:true,photoSkip:sk,noweb:false}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{photoReq:true,photoSkip:sk});toast('Et andet foto hentes inden for en time');openRecipe(d.id)})})},
   copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
-  normprice:function(d){openNormPrice(d.k)},
-  savenorm:function(d){saveNorm(d.k)},
-  resetnorm:function(d){resetNorm(d.k)},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
     save(function(){return udoc('recipes/'+d.id).set(o).then(function(){S.recipes[d.id]=o;if(old.id&&S.assets&&S.assets.delete)S.assets.delete(old.id).catch(function(){});openRecipe(d.id);draw();toast('Fotoet er fjernet')})});

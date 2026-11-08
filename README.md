@@ -8,9 +8,15 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 9)
+
+- **Normalpris pr. butik:** appen sammenligner nu ikke kun tilbud, men også hver kædes almindelige hyldepris på varen. Priserne kommer fra kædernes egne kataloger via Prej (api.prej.app) og hentes hver nat af GitHub Actions (`scripts/store-prices.js`, op til 24 varer pr. nat med den gratis nøgle). Coop-kæderne (Coop 365, SuperBrugsen, Kvickly) og Løvbjerg udgiver ikke hyldepriser online; for dem bruges kædens prisniveau som skøn, vist med ≈.
+- **Kræver en gratis nøgle:** hent den på prej.dk/api og læg den i GitHub under Settings > Secrets and variables > Actions som `PREJ_API_KEY`. Uden nøgle bruger appen skøn som før.
+- **Normalpris-knappen på indkøbslisten er fjernet igen.** Prisen kan stadig rettes under Lager > vare > Flere indstillinger.
+- **Billedlæsning:** testet på et rigtigt kogebogsfoto (13 af 13 ingredienser med mængder). Kursivt "g" læst som 3/£/8, ½ læst som 74/14/%/få, overskrifter i versaler og tekst fra fremgangsmåden ved siden af listen håndteres. Er billedet for stort til telefonens hukommelse, prøves en mindre kopi.
+
 ## Det kan appen (version 8)
 
-- **Normalpris pr. vare:** hver vare på indkøbslisten viser sin normalpris (fx *Normalpris 13 kr/1 l*). Tryk på den og skriv den pris, du plejer at betale. Den gemmes, bruges i alle butikker og i alle beregninger fremover (vises som *Din pris*). *Brug skønnet* tager appens skøn tilbage. Prisen kan også rettes under Lager.
 - **Billeder af selve retten:** fotos findes ved billedsøgning på rettens fulde navn (+ "opskrift"), ikke længere på Wikipedia. Søgningen kører hver time i GitHub Actions (`scripts/dish-photos.js`), så en ny ret får sit foto inden for en time. Retsiden viser kilden med link, *Find et andet* og *Brug tegning*.
 - **Billedlæsning af ingredienslister i to kolonner** (mængder til venstre, varer til højre) og billeder taget på skrå eller på siden: appen læser nu først hele listen som én blok, drejer billedet, hvis det ligger forkert, og læser derefter igen med sideopsætning. *Vis den læste tekst* viser præcis, hvad appen læste.
 

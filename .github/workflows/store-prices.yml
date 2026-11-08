@@ -1,17 +1,16 @@
 name: Normalpriser pr. butik
 on:
+  schedule:
+    - cron: '37 4 * * *'
   workflow_dispatch:
-    inputs:
-      mode:
-        type: choice
-        options: [probe, update]
-        default: probe
 permissions:
   contents: write
+concurrency:
+  group: store-prices
 jobs:
   prices:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,4 +18,10 @@ jobs:
           node-version: 20
       - run: node scripts/store-prices.js
         env:
-          MODE: ${{ inputs.mode }}
+          PREJ_API_KEY: ${{ secrets.PREJ_API_KEY }}
+      - name: Gem nye priser
+        run: |
+          if ! git diff --quiet data/ref.json; then
+            git config user.name "github-actions" && git config user.email "actions@users.noreply.github.com"
+            git add data/ref.json && git commit -qm "Normalpriser pr. butik opdateret" && git push
+          fi

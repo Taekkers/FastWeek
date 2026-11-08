@@ -1,38 +1,78 @@
-/* Normalpriser pr. butik for appens standardvarer. MODE=probe viser kun, hvordan kildesiderne ser ud (udvikling). */
+/* Normalpriser pr. butik for appens standardvarer (data/ref.json -> items[k].sp).
+   Kilde: Prej's API (api.prej.app), som samler kædernes egne kataloger. Kræver en gratis nøgle i GitHub-hemmeligheden PREJ_API_KEY.
+   Gratis-nøglen giver 25 kald i døgnet, så scriptet slår højst 24 varer op pr. kørsel og tager de ældste først.
+   Kun hyldepriser tæller: tilbud (is_offer), tilbudsaviser (source=flyer) og AI-matchede priser springes over.
+   Coop-kæderne og Løvbjerg udgiver ikke hyldepriser online; for dem bliver appens skøn stående. */
 'use strict';
-var UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-async function get(u){var r=await fetch(u,{headers:{'User-Agent':UA,'Accept-Language':'da-DK,da;q=0.9'},redirect:'follow'});return{status:r.status,url:r.url,ct:r.headers.get('content-type'),text:await r.text()}}
-async function probe5(){var r=await get('https://api.prej.app/llms.txt');var t=r.text;var i=t.indexOf('/v1/products');console.log('#### LLMS '+r.status+' '+t.length+'\n'+t.slice(Math.max(0,i-200),i+7000))}
-async function probe4(){
-  var a=await get('https://prej.dk/api');var links=(a.text.match(/href="([^"]+)"/g)||[]).map(function(x){return x.slice(6,-1)}).filter(function(x){return /api|docs|json|vilk/i.test(x)});console.log('#### LINKS '+links.join(' '));
-  for(var u of links.filter(function(x,i,arr){return arr.indexOf(x)===i}).slice(0,8)){var full=u.startsWith('http')?u:'https://prej.dk'+u;var r=await get(full);var t=r.text.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<style[\s\S]*?<\/style>/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');console.log('#### '+full+' '+r.status+' '+r.ct+'\n'+t.slice(0,3500))}
+var fs=require('fs'),path=require('path');
+var ROOT=path.join(__dirname,'..'),REF=path.join(ROOT,'data/ref.json');
+var CHAIN={netto:'Netto',rema1000:'Rema 1000',fotex:'Føtex',bilka:'Bilka',bilkatogo:'Bilka',meny:'Meny',spar:'Spar',lidl:'Lidl','365discount':'Coop 365',superbrugsen:'SuperBrugsen',kvickly:'Kvickly'};
+var MAX=Number(process.env.MAX_ITEMS||24);
+function norm(s){return String(s||'').toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'oe').replace(/å/g,'aa').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
+/* Ord, der betyder, at det er en anden vare end den, vi leder efter */
+var NOT=/\b(chips|snack|sauce|dressing|marinade|pesto|suppe|pulver|krydderi|smag|drik|juice|saft|is|kage|slik|chokolade|dip|spread|salat med|fyld|pålæg|paalaeg|toast|pizza|wrap|burger|nuggets|panering|paneret|frost|frossen|frosne|tørret|toerret|syltet|mos|puré|pure|kids|baby|hund|kat|shampoo|sæbe|saebe)\b/;
+var EXTRA={ /* søgeord og ord, der skal med, hvor varens navn alene ikke er nok */
+  maelk:{q:'letmælk',must:['maelk']},floede:{q:'piskefløde',must:['floede']},madlavningsfloede:{q:'madlavningsfløde',must:['floede']},
+  pasta:{q:'spaghetti',must:[]},ris:{q:'jasminris',must:['ris']},mel:{q:'hvedemel',must:['mel']},smoer:{q:'smør',must:['smoer']},
+  'hakket-oksekoed':{q:'hakket oksekød',must:['hakket','okse']},'hakket-kylling':{q:'hakket kylling',must:['hakket','kylling']},
+  'hakket-svine-og-kalvekoed':{q:'hakket svine kalvekød',must:['hakket','svin','kalv']},kyllingebryst:{q:'kyllingebryst',must:['kyllingebryst']},
+  'hel-kylling':{q:'hel kylling',must:['hel','kylling']},laksfilet:{q:'laksefilet',must:['laks']},torskefilet:{q:'torskefilet',must:['torsk']},
+  aeg:{q:'æg 10 stk',must:['aeg']},'hakkede-tomater':{q:'hakkede tomater',must:['hakkede','tomat']},tomatpur:{q:'tomatpuré',must:['tomatpur']},
+  kokosmaelk:{q:'kokosmælk',must:['kokosmaelk']},kidneyboenner:{q:'kidneybønner',must:['kidney']},kikaerter:{q:'kikærter',must:['kikaert']}};
+function itemsToDo(ref,state){
+  var ks=Object.keys(ref.items||{});
+  ks.sort(function(a,b){return ((state[a]&&state[a].at)||'').localeCompare((state[b]&&state[b].at)||'')});
+  return ks.slice(0,MAX);
 }
-async function probe3(){
-  var a=await get('https://prej.dk/api');var t=a.text.slice(a.text.indexOf('<main'));t=t.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');console.log('#### API-SIDE '+a.status+'\n'+t.slice(0,4000));
-  var q=await get('https://prej.dk/?q=hakket%20oksek%C3%B8d');var b=q.text.slice(q.text.indexOf('<main'));b=b.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<svg[\s\S]*?<\/svg>/g,'').replace(/\s(class|style|data-astro-cid-[a-z0-9]+)="[^"]*"/g,'').replace(/data-astro-cid-[a-z0-9]+/g,'');console.log('#### SOEG\n'+b.slice(0,6000));
+/* Fra et søgesvar: billigste hyldepris pr. kæde i kr pr. kg / liter / stk, kun for produkter, der ligner varen */
+function pick(item,key,res){
+  var ex=EXTRA[key]||{},must=(ex.must&&ex.must.length?ex.must:norm(item.name).split(' ').filter(function(w){return w.length>2}));
+  var want=item.unit==='g'?'kg':item.unit==='ml'?'l':'stk',out={},used={};
+  (res.products||[]).forEach(function(pr){
+    var n=norm(pr.name);
+    if(!must.every(function(w){return n.indexOf(w)>-1}))return;
+    if(NOT.test(n)&&!NOT.test(norm(item.name)))return;
+    if(/\b(oeko|okologisk|oekologisk|frilands)\b/.test(n))return;          /* almindelig vare; økologi/frilands har egne priser i appen */
+    (pr.prices||[]).forEach(function(p){
+      var st=CHAIN[p.chain_slug];if(!st)return;
+      if(p.is_offer||p.source==='flyer'||p.ai_matched)return;
+      var lab=String(p.unit_price_label||'').toLowerCase();
+      var u=/kr\/kg/.test(lab)?'kg':/kr\/l\b|kr\/liter/.test(lab)?'l':/kr\/stk/.test(lab)?'stk':'';
+      if(u!==want||!(p.unit_price>0))return;
+      var v=p.unit_price/100;
+      /* sanity: within a wide band around the app's own price, so a different product (fx kokosmælk for mælk) cannot sneak in */
+      if(item.kp>0&&(v<item.kp*0.35||v>item.kp*3.2))return;
+      if(!(st in out)||v<out[st]){out[st]=Math.round(v*100)/100;used[st]=pr.name}
+    });
+  });
+  return{sp:out,from:used};
 }
-async function probe2(){
-  var r=await get('https://prej.dk/produkt/lurpak-smoer-saltet-9'),t=r.text;
-  var body=t.slice(t.indexOf('<body'));
-  var i=body.indexOf('365discount');console.log('#### BUTIKSLISTE:\n'+body.slice(Math.max(0,i-2500),i+6000));
-  var j=t.indexOf('application/ld+json');if(j>-1)console.log('#### LDJSON:\n'+t.slice(j,j+2500));
-  var sm=await get('https://prej.dk/sitemap-index.xml');console.log('#### SITEMAP-INDEX '+sm.status+'\n'+sm.text.slice(0,1500));
-  var locs=(sm.text.match(/<loc>([^<]+)<\/loc>/g)||[]).map(function(x){return x.replace(/<\/?loc>/g,'')});
-  for(var u of locs.slice(0,6)){var x=await get(u);var ps=(x.text.match(/<loc>([^<]+)<\/loc>/g)||[]);console.log('#### '+u+' '+x.status+' '+ps.length+' urls, fx '+ps.slice(0,5).join(' ').replace(/<\/?loc>/g,''))}
-  for(var q of ['https://prej.dk/sog?q=smoer','https://prej.dk/?q=smoer','https://prej.dk/api/search?q=smoer','https://prej.dk/soeg/smoer']){var y=await get(q);console.log('#### '+q+' -> '+y.status+' '+y.ct+' '+(y.text.match(/\/produkt\/[a-z0-9-]+/g)||[]).length+' produktlinks')}
+async function api(pathq,key){
+  var r=await fetch('https://api.prej.app'+pathq,{headers:{Authorization:'Bearer '+key,'User-Agent':'FastWeek (privat madplan-app)'}});
+  var j=await r.json().catch(function(){return{}});
+  if(r.status===429)throw Object.assign(new Error('kvote brugt'),{quota:true,body:j});
+  if(!r.ok)throw new Error('HTTP '+r.status+' '+JSON.stringify(j).slice(0,200));
+  return{j:j,left:r.headers.get('x-ratelimit-remaining-day')};
 }
-async function probe(){
-  var urls=['https://prej.dk/soeg?q=hakket%20oksek%C3%B8d','https://prej.dk/search?q=hakket%20oksek%C3%B8d','https://prej.dk/produkt/lurpak-smoer-saltet-9','https://prej.dk/kategori/koed','https://prej.dk/robots.txt','https://prej.dk/sitemap.xml','https://api.digital.rema1000.dk/api/v3/products?search=hakket%20oksek%C3%B8d'];
-  for(var u of urls){
-    try{var r=await get(u);console.log('\n#### '+u+' -> '+r.status+' '+r.ct+' '+r.text.length+' bytes, final '+r.url);
-      var t=r.text;
-      var links=(t.match(/\/produkt\/[a-z0-9-]+/g)||[]).slice(0,15);console.log('produkt-links: '+links.join(' '));
-      var api=(t.match(/https?:\/\/[a-z0-9.-]*api[a-z0-9.-]*[^"'\s]{0,80}/gi)||[]).slice(0,10);console.log('api-urls: '+api.join(' '));
-      var nd=t.indexOf('__NEXT_DATA__');if(nd>-1)console.log('NEXT_DATA: '+t.slice(nd,nd+1500));
-      var i=t.search(/[0-9],[0-9]{2}\s*kr/);if(i>-1)console.log('omkring pris: '+t.slice(Math.max(0,i-1500),i+1500).replace(/\s+/g,' '));
-      if(/robots|sitemap/.test(u))console.log(t.slice(0,1500));
-      if(/rema1000/.test(u))console.log(t.slice(0,1500));
-    }catch(e){console.log('#### '+u+' FEJL '+e.message)}
+async function update(){
+  var key=process.env.PREJ_API_KEY;
+  if(!key){console.log('PREJ_API_KEY mangler. Hent en gratis nøgle på https://prej.dk/api og læg den som hemmelighed i GitHub (Settings > Secrets and variables > Actions > New repository secret, navn PREJ_API_KEY). Intet ændret.');return false}
+  var ref=JSON.parse(fs.readFileSync(REF,'utf8')),state=ref.stores.spState||{},n=0,changed=false;
+  for(var k of itemsToDo(ref,state)){
+    var it=ref.items[k],q=(EXTRA[k]&&EXTRA[k].q)||it.name;
+    try{
+      var r=await api('/v1/products?q='+encodeURIComponent(q)+'&limit=40&exclude_border_trade=1',key);
+      var got=pick(it,k,r.j);n++;
+      state[k]={at:new Date().toISOString().slice(0,10),n:Object.keys(got.sp).length};
+      if(Object.keys(got.sp).length){it.sp=got.sp;it.spAt=state[k].at;changed=true}
+      console.log((Object.keys(got.sp).length?'OK   ':'INGEN')+' '+it.name+'  '+Object.keys(got.sp).map(function(s){return s+' '+got.sp[s]}).join(' · ')+'   (kvote tilbage: '+r.left+')');
+    }catch(e){if(e.quota){console.log('Dagens kvote er brugt. Fortsætter i morgen.');break}console.log('FEJL '+it.name+': '+e.message)}
+    await new Promise(function(r){setTimeout(r,700)});
   }
+  ref.stores.spState=state;ref.stores.spNote='Normalpriser pr. butik fra kædernes egne kataloger via Prej (api.prej.app). Coop-kæderne og Løvbjerg udgiver ikke hyldepriser online.';
+  fs.writeFileSync(REF,JSON.stringify(ref,null,1));
+  console.log('Slået op: '+n+(changed?', ref.json opdateret':''));
+  return changed;
 }
-if(require.main===module)(process.env.MODE==='probe'?probe5():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
+module.exports={pick:pick,norm:norm};
+if(require.main===module)update().catch(function(e){console.error(e);process.exit(1)});

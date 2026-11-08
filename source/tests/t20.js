@@ -1,0 +1,25 @@
+const T=require('./pw9.js');const {launch,ok,owner}=T;
+(async()=>{
+ const P0='data/users/uA/u/';const D=owner('uA');Object.keys(T.starters).forEach(id=>{if(!D[P0+'recipes/'+id])D[P0+'recipes/'+id]=Object.assign({},T.starters[id],{example:false})});
+ D[P0+'store/settings']=Object.assign({},D[P0+'store/settings'],{stores:['Netto','Rema 1000','SuperBrugsen']});
+ const {b,pg,errs}=await launch({uid:'uA',docs:D,wait:1500});const q=f=>pg.evaluate(f);
+ await q(()=>{__TEST__.api.ACT.tab({tab:'shop'})});await pg.waitForTimeout(300);
+ const before=await q(()=>{const A=__TEST__.api,w=A.weekId(A.S.mon),its=A.computeList(w);return its.map(i=>i.k)});
+ const k=await pg.evaluate(ks=>ks.find(x=>{const A=__TEST__.api,p=A.pan(x);return p&&!A.qbest(p)&&A.ppu(p)>0}),before);
+ const r=await pg.evaluate(k=>{const A=__TEST__.api,S=A.S,w=A.weekId(A.S.mon);const p=A.pan(k);const it=A.computeList(w).find(i=>i.k===k),key=it.k+'_'+it.unit;
+   const b0=A.storeCosts(A.computeList(w),w);const old={Netto:b0.stores.Netto.lines[key].norm,Rema:b0.stores['Rema 1000'].lines[key].norm,SB:b0.stores.SuperBrugsen.lines[key].norm};
+   const base=A.ppu(p);S.ref.items[k]=Object.assign({},S.ref.items[k]||{},{sp:{Netto:base*2,'Rema 1000':base*0.5}});
+   A.draw();const b1=A.storeCosts(A.computeList(w),w);
+   return{k,base,qbest:!!A.qbest(p),old,nw:{Netto:b1.stores.Netto.lines[key].norm,Rema:b1.stores['Rema 1000'].lines[key].norm,SB:b1.stores.SuperBrugsen.lines[key].norm},est:{Netto:b1.stores.Netto.lines[key].est,SB:b1.stores.SuperBrugsen.lines[key].est},c0:A.lineCost(it)}},k);
+ console.log(JSON.stringify(r));
+ ok(!r.qbest&&Math.abs(r.nw.Netto-r.c0*2)<0.01&&Math.abs(r.nw.Rema-r.c0*0.5)<0.01,'Hyldepris pr. butik bruges: Netto '+r.nw.Netto.toFixed(2)+' (2× app-prisen), Rema '+r.nw.Rema.toFixed(2)+' (½×)');
+ ok(Math.abs(r.nw.SB-r.old.SB)<0.01&&r.est.SB===true&&r.est.Netto===false,'  SuperBrugsen uden hyldepris: skøn som før og markeret som skøn');
+ await pg.waitForTimeout(200);
+ const v=await q(()=>({est:document.querySelectorAll('.cc.est').length,leg:(document.querySelector('.legend')||{}).textContent,fine:(document.body.innerText.match(/Normalpriser fra kædernes[^\n]*/)||[''])[0]}));
+ ok(v.est>0&&/skøn/.test(v.leg)&&v.fine,'  Indkøb viser ≈ ved skøn og forklarer kilden: '+JSON.stringify(v.fine));
+ const chip=await q(()=>document.querySelectorAll('.chip.pc,[data-act="normprice"]').length);
+ ok(chip===0,'Normalpris-knappen er fjernet');
+ await pg.screenshot({path:'/tmp/claude-0/shot_20.png',fullPage:false});
+ ok(errs.length===0,'ingen JS-fejl '+errs.slice(0,2).join('|'));
+ await b.close();T.done();
+})();
