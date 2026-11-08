@@ -2,6 +2,16 @@
 'use strict';
 var UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 async function get(u){var r=await fetch(u,{headers:{'User-Agent':UA,'Accept-Language':'da-DK,da;q=0.9'},redirect:'follow'});return{status:r.status,url:r.url,ct:r.headers.get('content-type'),text:await r.text()}}
+async function probe2(){
+  var r=await get('https://prej.dk/produkt/lurpak-smoer-saltet-9'),t=r.text;
+  var body=t.slice(t.indexOf('<body'));
+  var i=body.indexOf('365discount');console.log('#### BUTIKSLISTE:\n'+body.slice(Math.max(0,i-2500),i+6000));
+  var j=t.indexOf('application/ld+json');if(j>-1)console.log('#### LDJSON:\n'+t.slice(j,j+2500));
+  var sm=await get('https://prej.dk/sitemap-index.xml');console.log('#### SITEMAP-INDEX '+sm.status+'\n'+sm.text.slice(0,1500));
+  var locs=(sm.text.match(/<loc>([^<]+)<\/loc>/g)||[]).map(function(x){return x.replace(/<\/?loc>/g,'')});
+  for(var u of locs.slice(0,6)){var x=await get(u);var ps=(x.text.match(/<loc>([^<]+)<\/loc>/g)||[]);console.log('#### '+u+' '+x.status+' '+ps.length+' urls, fx '+ps.slice(0,5).join(' ').replace(/<\/?loc>/g,''))}
+  for(var q of ['https://prej.dk/sog?q=smoer','https://prej.dk/?q=smoer','https://prej.dk/api/search?q=smoer','https://prej.dk/soeg/smoer']){var y=await get(q);console.log('#### '+q+' -> '+y.status+' '+y.ct+' '+(y.text.match(/\/produkt\/[a-z0-9-]+/g)||[]).length+' produktlinks')}
+}
 async function probe(){
   var urls=['https://prej.dk/soeg?q=hakket%20oksek%C3%B8d','https://prej.dk/search?q=hakket%20oksek%C3%B8d','https://prej.dk/produkt/lurpak-smoer-saltet-9','https://prej.dk/kategori/koed','https://prej.dk/robots.txt','https://prej.dk/sitemap.xml','https://api.digital.rema1000.dk/api/v3/products?search=hakket%20oksek%C3%B8d'];
   for(var u of urls){
@@ -16,4 +26,4 @@ async function probe(){
     }catch(e){console.log('#### '+u+' FEJL '+e.message)}
   }
 }
-if(require.main===module)(process.env.MODE==='probe'?probe():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
+if(require.main===module)(process.env.MODE==='probe'?probe2():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
