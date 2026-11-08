@@ -1,5 +1,7 @@
 name: Billeder af retterne
 on:
+  schedule:
+    - cron: '23 * * * *'
   workflow_dispatch:
     inputs:
       mode:

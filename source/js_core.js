@@ -197,6 +197,8 @@ function brandSuggest(k,name,w){
 }
 function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
 /* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
+/* a price the user typed in is her own normal price: it is used as it is in every store */
+function pfac(k,s){var p=pan(k);return p&&p.kpx?1:pidx(s)}
 function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
 function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
 function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
@@ -222,7 +224,7 @@ function storeCosts(items,w){
     if(!(c0>0)){unpriced++;return}
     norm+=c0;priced++;if(pan(it.k)&&pan(it.k).pv)looked++;
     AS.forEach(function(s){
-      var n0=c0*pidx(s),bo=bestOfferAt(it,w,s),c=n0,via=null;
+      var n0=c0*pfac(it.k,s),bo=bestOfferAt(it,w,s),c=n0,via=null;
       if(bo&&bo.cost<n0-.005){c=bo.cost;via=bo;res[s].n++;res[s].save+=n0-c}
       res[s].total+=c;res[s].lines[key]={cost:c,norm:n0,via:via};
       if(!via&&qual(it.k)){var lo=bestOfferAt(it,w,s,true);if(lo&&lo.cost<n0-.005)skipped++}
@@ -566,7 +568,7 @@ function offerModel(w,ids){
       var n=needs[nk],p=pan(n.k),it={k:n.k,name:n.name,unit:n.unit,qty:n.need,packs:1};
       if(p&&p.unit===n.unit&&curQty(p)>=n.need)return;
       var c0=lineCost(it);if(!(c0>0))return;
-      var row=AS.map(function(s){var bo=bestOfferAt(it,w,s);return bo?Math.max(0,c0*pidx(s)-bo.cost):0});
+      var row=AS.map(function(s){var bo=bestOfferAt(it,w,s);return bo?Math.max(0,c0*pfac(it.k,s)-bo.cost):0});
       if(row.some(function(v){return v>0}))lines.push(row);
     });
     OFM.rec[id]=subs.map(function(sub){var t=0;lines.forEach(function(row){var m=0;sub.forEach(function(s){var v=row[AS.indexOf(s)];if(v>m)m=v});t+=m});return t});

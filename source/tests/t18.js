@@ -56,48 +56,7 @@ const PNG=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42
  r=await q(()=>({rate:!!document.querySelector('#rf-rate'),txt:/Vurdering/.test(document.querySelector('#sheet').innerText)}));
  ok(!r.rate&&!r.txt,'  retformularen har ikke længere et vurderingsfelt');
  await pg.keyboard.press('Escape');await pg.waitForTimeout(100);
- // ===== E. dish photos =====
- r=await q(()=>{const A=__TEST__.api;return ['Chili con carne med ris','Boller i karry','Mexi smashed tacos med kylling','Indisk dahl','Ovnbagt laks med citron og dildkartofler','Pytt i panden med rødbeder og spejlæg','Lasagne med spinat'].map(n=>n+' -> '+A.dishKeys(n).join(' / '))});
- console.log(r.join('\n'));
- // mocked Wikipedia/Commons
- await q(()=>{window.__calls=[];window.fetch=function(u){window.__calls.push(u);let j={};
-   if(/da\.wikipedia/.test(u)&&/gsrsearch=chili%20con%20carne/.test(u))j={query:{pages:[{title:'Chili',index:2,thumbnail:{source:'https://upload.wikimedia.org/x/chili.jpg'},pageimage:'Chili.jpg'},{title:'Chili con carne',index:1,thumbnail:{source:'https://upload.wikimedia.org/x/ccc.jpg'},pageimage:'Chili_con_carne.jpg'}]}};
-   else if(/da\.wikipedia/.test(u)&&/gsrsearch=boller%20i%20karry/.test(u))j={query:{pages:[{title:'Boller i karry',index:1,thumbnail:{source:'https://upload.wikimedia.org/x/bik.jpg'},pageimage:'Local_nonfree.jpg'}]}};
-   else if(/wikipedia/.test(u)&&/gsrsearch=taco/.test(u))j={query:{pages:[{title:'Taco',index:1,thumbnail:{source:'https://upload.wikimedia.org/x/taco.jpg'},pageimage:'Taco.jpg'}]}};
-   else if(/wikipedia/.test(u)&&/ovnbagt%20laks|gsrsearch=laks/.test(u))j={query:{pages:[{title:'Laks',index:1,thumbnail:{source:'https://upload.wikimedia.org/x/laks.jpg'},pageimage:'Laks.jpg'}]}};
-   else if(/commons/.test(u)&&/Chili_con_carne/.test(u))j={query:{pages:[{title:'File:Chili_con_carne.jpg',imageinfo:[{descriptionurl:'https://commons.wikimedia.org/wiki/File:Chili_con_carne.jpg',extmetadata:{Artist:{value:'<a href="x">Jane Doe</a>'},LicenseShortName:{value:'CC BY-SA 4.0'}}}]}]}};
-   else if(/commons/.test(u)&&/Taco\.jpg/.test(u))j={query:{pages:[{title:'File:Taco.jpg',imageinfo:[{descriptionurl:'https://commons.wikimedia.org/wiki/File:Taco.jpg',extmetadata:{Artist:{value:'Foodie'},LicenseShortName:{value:'CC BY 2.0'}}}]}]}};
-   else if(/commons/.test(u))j={query:{pages:[{title:'File:x',missing:true}]}};
-   else j={query:{pages:[]}};
-   return Promise.resolve({ok:true,json:()=>Promise.resolve(j)})}});
- r=await q(async()=>{const A=__TEST__.api;const o={};for(const n of ['Chili con carne med ris','Boller i karry','Mexi smashed tacos med kylling','Ovnbagt laks med citron og dildkartofler'])o[n]=await A.wikiFind(n);return o});
- console.log(JSON.stringify(r));
- ok(r['Chili con carne med ris']&&r['Chili con carne med ris'].u.endsWith('ccc.jpg')&&r['Chili con carne med ris'].a==='Jane Doe'&&r['Chili con carne med ris'].l==='CC BY-SA 4.0','Billeder: chili con carne finder artiklens foto med fotograf og licens (ikke "Chili")');
- ok(r['Boller i karry']===null,'  fil der ikke ligger frit på Commons afvises');
- ok(r['Mexi smashed tacos med kylling']&&/taco\.jpg/.test(r['Mexi smashed tacos med kylling'].u),'  "tacos" i navnet giver et taco-foto');
- ok(r['Ovnbagt laks med citron og dildkartofler']===null,'  "Ovnbagt laks" giver ikke et billede af rå laks');
- // background lookup stores result and shows the photo
- const cid=await q(()=>{const A=__TEST__.api,S=A.S;const id=Object.keys(S.recipes).find(k=>/chili con carne/i.test(S.recipes[k].name));return id});
- await q(()=>{const A=__TEST__.api;window.UGEKURV_WEB.known=()=>[];A.S.tab='week';A.draw()});await pg.waitForTimeout(6000);
- r=await pg.evaluate(id=>{const A=__TEST__.api,S=A.S,ks=Object.keys(S.recipes);return{chili:S.recipes[id]&&S.recipes[id].wimg,stored:window.__store['data/users/uA/u/recipes/'+id].wimg,looked:ks.filter(k=>S.recipes[k].wimg!==undefined).length,n:ks.length,imgs:[...document.querySelectorAll('#view img')].map(i=>i.src)}},cid);
- console.log('looked up',r.looked,'of',r.n,'| chili',JSON.stringify(r.chili),'| imgs',r.imgs.slice(0,3));
- ok(r.stored&&r.stored.u&&/ccc/.test(r.stored.u),'  baggrundsopslag gemmer fotoet på retten');
- ok(r.looked>=3,'  opslag kører én ret ad gangen ('+r.looked+' slået op)');
- await pg.evaluate(id=>__TEST__.api.openRecipe(id),cid);await pg.waitForTimeout(300);
- r=await pg.evaluate(id=>({img:__TEST__.api.heroHtml(id,__TEST__.api.S.recipes[id]),credit:(new DOMParser().parseFromString(__TEST__.api.heroHtml(id,__TEST__.api.S.recipes[id]),'text/html').querySelector('.credit')||{}).textContent}),cid);
- ok(/ccc\.jpg/.test(r.img||'')&&/Jane Doe, CC BY-SA 4\.0/.test(r.credit||''),'  retsiden viser fotoet med kreditering: '+JSON.stringify(r.credit));
- await pg.screenshot({path:'/tmp/claude-0/shot_18_photo.png'});
- await pg.evaluate(id=>__TEST__.api.ACT.noweb({id}),cid);await pg.waitForTimeout(400);
- r=await pg.evaluate(id=>({img:!!document.querySelector('.hero-img img'),svg:!!document.querySelector('.hero-img svg'),noweb:__TEST__.api.S.recipes[id].noweb,find:!!document.querySelector('[data-act="findimg"]')}),cid);
- ok(!r.img&&r.svg&&r.noweb&&r.find,'  "Brug tegning" skifter tilbage, og "Find et billede" vises');
- // own photo in the web version (no file storage)
- await q(()=>{__TEST__.api.S.assets=null});
- await pg.evaluate(id=>__TEST__.api.openRecipe(id),cid);await pg.waitForTimeout(200);
- const cam=await q(()=>!!document.querySelector('[data-act="photo"]'));
- ok(cam,'  "Tilføj foto" findes også i webversionen');
- await pg.setInputFiles('#rf-photo',[{name:'dish.png',mimeType:'image/png',buffer:PNG}]);await pg.waitForTimeout(800);
- r=await pg.evaluate(id=>{const d=window.__store['data/users/uA/u/recipes/'+id].img;return{d:d&&d.data&&d.data.slice(0,23),len:d&&d.data&&d.data.length,img:(document.querySelector('.hero-img img')||{}).src||'',st:(document.querySelector('#ph-st')||{}).innerText,rm:!!document.querySelector('[data-act="rmphoto"]')}},cid);
- ok(r.d==='data:image/jpeg;base64,'&&r.img.startsWith('data:image/jpeg')&&/Foto gemt/.test(r.st)&&r.rm,'  eget foto gemmes som lille billede på retten ('+r.len+' tegn) og vises: '+r.st);
+ // (E. Wikipedia-billeder er erstattet af søgning på rettens fulde navn: se t19.js og scripts/dish-photos.js)
  ok(errs.length===0,'ingen JS-fejl '+errs.slice(0,3).join(' | '));
  await b.close();T.done();
 })();

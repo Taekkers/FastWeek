@@ -280,7 +280,7 @@ function artSVG(r,wide){
   return s+'</svg>';
 }
 function ownImg(r){return !!(r&&r.img&&(r.img.id||r.img.data))}
-function imgSrc(r){if(!r)return '';if(r.img&&r.img.data&&/^data:image\/(jpeg|png|webp);base64,/.test(r.img.data))return r.img.data;if(r.img&&r.img.id)return '/_blob/'+encodeURIComponent(r.img.id);if(r.wimg&&r.wimg.u&&!r.noweb&&/^https:\/\/upload\.wikimedia\.org\//.test(r.wimg.u))return r.wimg.u;return ''}
+function imgSrc(r){if(!r)return '';if(r.img&&r.img.data&&/^data:image\/(jpeg|png|webp);base64,/.test(r.img.data))return r.img.data;if(r.img&&r.img.id)return '/_blob/'+encodeURIComponent(r.img.id);if(r.photo&&r.photo.u&&!r.noweb&&/^https:\/\//.test(r.photo.u))return r.photo.u;return ''}
 function artHtml(r,id,wide){
   var src=imgSrc(r);
   return src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-fb="'+esc(id||'')+'">':artSVG(Object.assign({id:id},r||{}),wide);

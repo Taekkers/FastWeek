@@ -502,6 +502,16 @@ input[aria-invalid="true"]{border-color:var(--offer)}
 .credit .lnk,.hint .lnk{font-size:12px;display:inline;padding:0;margin-left:4px}
 #ph-st:empty{display:none}
 #ph-st{margin-top:8px}
+/* normal price */
+.chip.pc{min-height:28px;cursor:pointer;background:transparent;border:1px dashed var(--line);color:var(--ink2);padding:3px 10px;font-variant-numeric:tabular-nums}
+.chip.pc.on{background:var(--pine-soft);border:1px solid transparent;color:var(--pine)}
+.np-in{display:flex;align-items:center;gap:8px}
+.np-in input{flex:1;font-size:20px;font-family:var(--f-mono)}
+.np-in span{font-weight:600;color:var(--ink2)}
+/* read text (OCR) */
+details.raw{margin-top:8px;font-size:13px}
+details.raw summary{cursor:pointer;color:var(--ink2);font-weight:600}
+details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px/1.45 var(--f-mono);margin:8px 0}
 
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 #login[hidden]{display:none!important}
@@ -732,6 +742,8 @@ function brandSuggest(k,name,w){
 }
 function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
 /* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
+/* a price the user typed in is her own normal price: it is used as it is in every store */
+function pfac(k,s){var p=pan(k);return p&&p.kpx?1:pidx(s)}
 function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
 function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
 function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
@@ -757,7 +769,7 @@ function storeCosts(items,w){
     if(!(c0>0)){unpriced++;return}
     norm+=c0;priced++;if(pan(it.k)&&pan(it.k).pv)looked++;
     AS.forEach(function(s){
-      var n0=c0*pidx(s),bo=bestOfferAt(it,w,s),c=n0,via=null;
+      var n0=c0*pfac(it.k,s),bo=bestOfferAt(it,w,s),c=n0,via=null;
       if(bo&&bo.cost<n0-.005){c=bo.cost;via=bo;res[s].n++;res[s].save+=n0-c}
       res[s].total+=c;res[s].lines[key]={cost:c,norm:n0,via:via};
       if(!via&&qual(it.k)){var lo=bestOfferAt(it,w,s,true);if(lo&&lo.cost<n0-.005)skipped++}
@@ -1101,7 +1113,7 @@ function offerModel(w,ids){
       var n=needs[nk],p=pan(n.k),it={k:n.k,name:n.name,unit:n.unit,qty:n.need,packs:1};
       if(p&&p.unit===n.unit&&curQty(p)>=n.need)return;
       var c0=lineCost(it);if(!(c0>0))return;
-      var row=AS.map(function(s){var bo=bestOfferAt(it,w,s);return bo?Math.max(0,c0*pidx(s)-bo.cost):0});
+      var row=AS.map(function(s){var bo=bestOfferAt(it,w,s);return bo?Math.max(0,c0*pfac(it.k,s)-bo.cost):0});
       if(row.some(function(v){return v>0}))lines.push(row);
     });
     OFM.rec[id]=subs.map(function(sub){var t=0;lines.forEach(function(row){var m=0;sub.forEach(function(s){var v=row[AS.indexOf(s)];if(v>m)m=v});t+=m});return t});
@@ -1407,7 +1419,7 @@ function artSVG(r,wide){
   return s+'</svg>';
 }
 function ownImg(r){return !!(r&&r.img&&(r.img.id||r.img.data))}
-function imgSrc(r){if(!r)return '';if(r.img&&r.img.data&&/^data:image\/(jpeg|png|webp);base64,/.test(r.img.data))return r.img.data;if(r.img&&r.img.id)return '/_blob/'+encodeURIComponent(r.img.id);if(r.wimg&&r.wimg.u&&!r.noweb&&/^https:\/\/upload\.wikimedia\.org\//.test(r.wimg.u))return r.wimg.u;return ''}
+function imgSrc(r){if(!r)return '';if(r.img&&r.img.data&&/^data:image\/(jpeg|png|webp);base64,/.test(r.img.data))return r.img.data;if(r.img&&r.img.id)return '/_blob/'+encodeURIComponent(r.img.id);if(r.photo&&r.photo.u&&!r.noweb&&/^https:\/\//.test(r.photo.u))return r.photo.u;return ''}
 function artHtml(r,id,wide){
   var src=imgSrc(r);
   return src?'<img src="'+esc(src)+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-fb="'+esc(id||'')+'">':artSVG(Object.assign({id:id},r||{}),wide);
@@ -1432,7 +1444,6 @@ function draw(){
   if(nc){var on=nc.querySelector('.sto[aria-pressed="true"]');
     if(on&&S.shownSel!==S.sel){nc.scrollLeft=Math.max(0,on.offsetLeft-nc.offsetLeft-(nc.clientWidth-on.offsetWidth)/2)}else nc.scrollLeft=ol;
     S.shownSel=S.sel}
-  if(window.UGEKURV_WEB)setTimeout(wikiKick,1500);
   var cu=$('#cur');if(cu)cu.textContent={week:'Ugeplan',stock:'Lager',shop:'Indkøb'}[S.tab]||'Ugeplan';
 }
 function weekNav(){
@@ -1581,6 +1592,42 @@ function budgetHtml(total){
     '<div class="bbar'+(left<0?' over':'')+'" role="img" aria-label="'+pct+' procent af budgettet"><i style="width:'+Math.max(4,pct)+'%"></i></div>'+
     '<p class="fine">'+(left>=0?'Du holder budgettet med ca. '+kr(Math.round(left))+' til overs.':'Ca. '+kr(Math.round(-left))+' over budgettet. Prøv Lav ny plan.')+'</p></div>';
 }
+function uLbl(u){return u==='g'?'kg':u==='ml'?'l':'stk'}
+function packQ(p){return p&&p.pack>0?p.pack:0}
+function normOf(p){var b=qbest(p);return{v:b?b.price:(p.kp||0),f:b?(b.q==='oko'?'kpo':'kpf'):'kp'}}
+function priceBtn(it){
+  var p=pan(it.k);if(!p||p.leftover)return '';
+  var n=normOf(p).v,pk=packQ(p),lbl;
+  if(!(n>0))lbl='Sæt pris';
+  else if(pk)lbl=nf(n*(p.unit==='stk'?pk:pk/1000),2)+' kr/'+fq(pk,p.unit);
+  else lbl=nf(n,2)+' kr/'+uLbl(p.unit);
+  return '<button type="button" class="chip pc'+(p.kpx?' on':'')+'" data-act="normprice" data-k="'+esc(it.k)+'" aria-label="Normalpris for '+esc(it.name)+': '+esc(lbl)+'. Tryk for at ændre">'+(p.kpx?'Din pris ':'Normalpris ')+esc(lbl)+'</button>';
+}
+function openNormPrice(k){
+  var p=pan(k);if(!p)return;
+  var nm=normOf(p),pk=packQ(p),per=pk?(p.unit==='stk'?pk:pk/1000):1,ul=uLbl(p.unit);
+  var ref=(S.ref&&S.ref.items&&S.ref.items[k])||null,refv=ref?(nm.f==='kpo'?ref.kpo:nm.f==='kpf'?(ref.kpf||ref.kpg):ref.kp):0;
+  var h='<p class="muted sm">'+(p.kpx?'Du har selv sat prisen. Den bruges i alle butikker, indtil du ændrer den.':'Butikkernes normalpris er et skøn. Skriv den pris, du plejer at betale, så regner appen med den fremover.')+'</p>'+
+    '<div class="field"><label for="np-v">Normalpris for '+(pk?esc(fq(pk,p.unit)):'1 '+ul)+(nm.f==='kpo'?' (økologi)':nm.f==='kpf'?' (frilands)':'')+'</label><div class="np-in"><input id="np-v" inputmode="decimal" autocomplete="off" value="'+(nm.v>0?esc(dec(Math.round(nm.v*per*100)/100)):'')+'"><span>kr</span></div>'+
+    (pk?'<p class="hint" id="np-u">'+(nm.v>0?'= '+nf(nm.v,2)+' kr pr. '+ul:'')+'</p>':'')+'<p class="err" id="np-err" role="alert" hidden>Skriv en pris over 0 kr.</p></div>'+
+    '<div class="foot"><button class="btn" data-act="savenorm" data-k="'+esc(k)+'">Gem pris</button>'+(p.kpx&&refv>0?'<button class="btn ghost" data-act="resetnorm" data-k="'+esc(k)+'">Brug skønnet ('+nf(refv*per,2)+' kr)</button>':'')+'</div>';
+  openSheet(p.name.charAt(0).toUpperCase()+p.name.slice(1),h);
+  var i=$('#np-v');if(i){i.focus();i.select&&i.select();if(pk)i.addEventListener('input',function(){var v=num(i.value),e=$('#np-u');if(e)e.textContent=v>0?'= '+nf(v/per,2)+' kr pr. '+ul:''})}
+}
+function saveNorm(k){
+  var p=pan(k),i=$('#np-v'),e=$('#np-err');if(!p||!i)return;
+  var v=num(i.value);if(!(v>0)){if(e)e.hidden=false;i.setAttribute('aria-invalid','true');return}
+  var nm=normOf(p),pk=packQ(p),per=pk?(p.unit==='stk'?pk:pk/1000):1,unitP=Math.round(v/per*10000)/10000;
+  var o=Object.assign({},p);delete o.k;o[nm.f]=unitP;if(nm.f!=='kp')o.kpg=unitP;o.kpx=true;o.pv='';
+  var patch={};patch[k]=o;
+  save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Normalpris gemt. Indkøbet er regnet om.');draw()})});
+}
+function resetNorm(k){
+  var p=pan(k),ref=(S.ref&&S.ref.items&&S.ref.items[k])||null;if(!p||!ref)return;
+  var o=Object.assign({},p);delete o.k;['kp','kpo','kpf','kpg'].forEach(function(f){if(ref[f]!=null)o[f]=ref[f];else delete o[f]});o.kpx=false;
+  var patch={};patch[k]=o;
+  save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Skønnet bruges igen');draw()})});
+}
 function brandBtn(it){
   var b=brandsOf(it.k),nm=esc(it.name);
   return '<button type="button" class="chip bk'+(b.length?' on':'')+'" data-act="brand" data-k="'+esc(it.k)+'" data-n="'+nm+'" aria-label="'+(b.length?'Ret foretrukket mærke for ':'Vælg foretrukket mærke for ')+nm+'">'+(b.length?'★ '+esc(brandLabel(it.k)):'+ Mærke')+'</button>';
@@ -1611,7 +1658,7 @@ function viewShop(){
         var cells=combo?'<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+'">'+(l2?nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>':'';
         var price=ln?'<span class="pr'+(via?' off':'')+'">ca. '+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':''):'';
         var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>':'';
-        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
+        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+priceBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
         if(on){doneRows.push(rh);return ''}openN++;return rh}).filter(Boolean);
       var lb=combo?'<div class="lbl cmp-l"><span>'+esc(c)+'</span><span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){return '<span>'+esc(stShort(s2))+'</span>'}).join('')+'</span></div>':'<div class="lbl">'+esc(c)+'</div>';
       if(rows.length)g+='<div class="sec">'+lb+'<div class="group">'+rows.join('')+'</div></div>';
@@ -1772,14 +1819,16 @@ function ingRow(g){
     '<details class="rl"><summary>'+esc(ruleSummary(ruleOf(rp),u))+'</summary>'+ruleHtml(rp)+'</details></div>';
 }
 function heroHtml(id,r){
-  var canUp=!!S.assets||!!window.UGEKURV_WEB,own=ownImg(r),wi=!own&&!r.noweb&&r.wimg&&r.wimg.u?r.wimg:null,h='';
+  var canUp=!!S.assets||!!window.UGEKURV_WEB,own=ownImg(r),ph=!own&&!r.noweb&&r.photo&&r.photo.u?r.photo:null,h='';
   h+='<div class="hero-img"><span class="art wide">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(own?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>';
   if(canUp)h+='<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">';
   h+='<div id="ph-st" aria-live="polite"></div>';
   if(own)h+='<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>';
-  else if(wi)h+='<p class="credit">Foto: <a href="'+esc(safeUrl(wi.p))+'" target="_blank" rel="noopener noreferrer">'+esc((wi.a?wi.a+', ':'')+(wi.l||'fri licens'))+'</a> · Wikimedia Commons. Ikke nødvendigvis præcis denne opskrift. <button class="lnk" data-act="noweb" data-id="'+esc(id)+'">Brug tegning</button></p>';
-  else if(r.noweb&&window.UGEKURV_WEB)h+='<p class="hint">Tegningen er en pladsholder. <button class="lnk" data-act="findimg" data-id="'+esc(id)+'">Find et billede</button></p>';
-  else if(canUp)h+='<p class="hint">Der er ikke fundet et billede af retten. Tilføj dit eget foto.</p>';
+  else if(ph)h+='<p class="credit">Foto: '+(ph.p?'<a href="'+esc(safeUrl(ph.p))+'" target="_blank" rel="noopener noreferrer">'+esc(ph.h||'kilde')+'</a>':esc(ph.h||''))+'. Fundet ved søgning på rettens navn. <button class="lnk" data-act="nextimg" data-id="'+esc(id)+'">Find et andet</button> <button class="lnk" data-act="noweb" data-id="'+esc(id)+'">Brug tegning</button></p>';
+  else if(r.photoReq&&!r.noweb)h+='<p class="hint">Et nyt foto af retten hentes automatisk inden for en time.</p>';
+  else if(r.noweb)h+='<p class="hint">Tegningen bruges. <button class="lnk" data-act="findimg" data-id="'+esc(id)+'">Brug et foto af retten</button></p>';
+  else if(r.photo&&r.photo.none)h+='<p class="hint">Der blev ikke fundet et foto af retten. Tilføj dit eget.</p>';
+  else if(id)h+='<p class="hint">Et foto af retten hentes automatisk inden for en time.</p>';
   return h;
 }
 function openRecipe(id,did){
@@ -1792,7 +1841,7 @@ function openRecipe(id,did){
     h+='<div id="hero-box">'+heroHtml(id,r)+'</div><div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.rest?'<span class="chip ex">Holder sig godt</span>':'')+'</div>';
     if(k)h+='<p class="hint">Kalorier pr. portion er et overslag inkl. ca. '+KALLOW+' kcal til olie og krydderier.</p>';
   }
-  if(dr)h+='<p class="hint">Udkast fra scanning af '+esc(dr.book)+'. Tjek oplysningerne, og tryk Gem ret.</p>';
+  if(dr)h+='<p class="hint">Udkast fra scanning af '+esc(dr.book)+'. Tjek oplysningerne, og tryk Gem ret.</p>'+(dr.raw?rawHtml(dr.raw):'');
   if(!r&&!dr)h+='<div class="photo"><b>Læs fra billede</b><p class="muted sm">'+(window.UGEKURV_WEB?'Vælg et billede af opskriften. Titel, tid og ingredienser udfyldes automatisk. Tjek mængderne.':'Vælg et billede af opskriften. Titel, tid og ingredienser udfyldes automatisk.')+'</p><input id="rf-file" type="file" accept="image/*" multiple aria-label="Billeder af opskrift"><div id="rf-th" class="ths"></div><div id="rf-st" aria-live="polite"></div><button class="btn ghost sm" data-act="readrec" id="rf-read" hidden>Læs igen</button></div>';
   h+='<div class="field"><label for="rf-name">Navn</label><input id="rf-name" type="text" value="'+esc(v?v.name||'':'')+'"></div>'+
     (r&&safeUrl(r.url)?'<a class="srcl" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+LINK+'<span>Åbn opskriften på '+esc(srcHost(r.url))+'</span></a>':'')+
@@ -1829,6 +1878,7 @@ function saveRecipe(id,did){
   });
 }
 var RFU=[];
+function rawHtml(t){return '<details class="raw"><summary>Vis den læste tekst</summary><pre>'+esc(String(t).slice(0,6000))+'</pre><button type="button" class="btn ghost sm" data-act="copyraw">Kopiér teksten</button></details>'}
 function rfDrop(){RFU.forEach(function(u){try{URL.revokeObjectURL(u)}catch(e){}});RFU=[]}
 function rfSt(kind,title,sub,stop){
   var st=$('#rf-st');if(!st)return;
@@ -1845,13 +1895,14 @@ function readRecipe(){
   if(S.ctl){rfSt('run','Læser stadig','Vent, til den er færdig.');return}
   var n=files.length;S.ctl=new AbortController();if(rb)rb.disabled=true;
   rfSt('run',(n===1?'Billedet er modtaget. Læser…':n+' billeder er modtaget. Læser…'),window.UGEKURV_WEB&&!window.UgekurvOCR?'Første gang hentes tekstlæseren.':'',true);
-  S.sample.json(RECIPE_PROMPT,{images:files,signal:S.ctl.signal}).then(function(res){
+  var t0=Date.now();S.sample.json(RECIPE_PROMPT,{images:files,signal:S.ctl.signal,onStep:function(m){rfSt('run',m,'Det kan tage op til et minut.',true)}}).then(function(res){
     var rows=rowsFromRes(res);
-    if(!rows.length){rfSt('bad','Fandt ingen ingredienser','Prøv et skarpere billede.');return}
+    var addRaw=function(){var st=$('#rf-st');if(st&&res&&res.raw)st.insertAdjacentHTML('beforeend',rawHtml(res.raw))};
+    if(!rows.length){rfSt('bad','Fandt ingen ingredienser','Prøv et skarpere billede.');addRaw();return}
     if(!$('#rf-name').value&&res.name)$('#rf-name').value=res.name;
     if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
     $('#rf-ings').innerHTML=rows.map(ingRow).join('');
-    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat'),'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');
+    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat'),'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');addRaw();
     var ing=$('#rf-ings');if(ing&&ing.scrollIntoView)ing.scrollIntoView({block:'nearest'});
   }).catch(function(e){
     var c=e&&e.code;
@@ -1954,10 +2005,10 @@ function scPump(){
   }
   scSet(it,'run');scSum();
   var ctl=new AbortController();S.ctl=ctl;
-  S.sample.json(RECIPE_PROMPT,{images:[it.file],signal:ctl.signal}).then(function(res){
+  S.sample.json(RECIPE_PROMPT,{images:[it.file],signal:ctl.signal,onStep:function(m){var c=$('#'+it.id+' .up-s');if(c)c.textContent=m}}).then(function(res){
     var rows=rowsFromRes(res);
     if(!rows.length){scSet(it,'bad','Fandt ingen ingredienser.');return}
-    var id=uid(),d={book:it.book,page:Math.max(0,Math.round(num(res.page)))||0,name:String(res.name||'').trim().slice(0,80),minutes:Math.round(num(res.minutes))||0,kind:'hverdag',prot:guessProt(rows),ing:rows,at:Date.now()};
+    var id=uid(),d={book:it.book,page:Math.max(0,Math.round(num(res.page)))||0,name:String(res.name||'').trim().slice(0,80),minutes:Math.round(num(res.minutes))||0,kind:'hverdag',prot:guessProt(rows),ing:rows,raw:String(res.raw||'').slice(0,6000),at:Date.now()};
     return udoc('scans/'+id).set(d).then(function(){S.scans[id]=d;it.draft=id;scSet(it,'ok',(d.name||'Uden navn')+(d.page?' · s. '+d.page:'')+' · '+rows.length+(rows.length===1?' ingrediens':' ingredienser'))});
   }).catch(function(e){
     if(e&&e.code==='cancelled'){Q.stopped=true;scSet(it,'stop','');return}
@@ -2000,56 +2051,6 @@ function handlePhoto(file,id){
     if(d.length>350000)return smallJpeg(file,480,.6);return d;
   }).then(function(d){return up(udoc('recipes/'+id),{img:{data:d}}).then(function(){done({data:d},old)})}).catch(fail);
 }
-/* ---------- pictures of the dishes: free photos from Wikipedia / Wikimedia Commons ----------
-   Only when the dish name clearly is a known dish (title match), and only files on Commons with a free licence.
-   The result (or "nothing found") is saved on the recipe, so each dish is looked up once. */
-var DISH=['chili con carne','boller i karry','pytt i panden','tikka masala','butter chicken','pad thai','stegt flæsk','spaghetti bolognese','spaghetti carbonara','forloren hare','brændende kærlighed','risalamande','lasagne','risotto','tacos','taco','quesadillas','quesadilla','enchiladas','enchilada','burritos','burrito','pizza','burger','frikadeller','dahl','dal','paella','moussaka','shakshuka','omelet','pandekager','falafel','kebab','shawarma','sushi','ramen','biksemad','hakkebøf','millionbøf','tarteletter','æggekage','gullasch','stroganoff','fajitas','nachos','cannelloni','ravioli','gnocchi','minestrone','gazpacho','carbonara','bolognese','hummus','risengrød','frikassé','labskovs','wok','gratin','tærte','suppe','pyttipanna','curry'];
-var DSYN={dahl:'dal',quesadillas:'quesadilla',enchiladas:'enchilada',burritos:'burrito',tacos:'taco','pytt i panden':'pyttipanna'};
-function dishKeys(name){
-  var n=' '+String(name||'').toLowerCase().replace(/[()"«»]/g,' ').replace(/\s+/g,' ').trim()+' ',out=[];
-  var base=n.trim().split(/\s(?:med|og|på|til)\s|,/)[0].trim();
-  if(base&&base.split(' ').length<=4)out.push(base);
-  DISH.forEach(function(d){if(n.indexOf(' '+d+' ')>-1&&out.indexOf(d)<0)out.push(d)});
-  return out.map(function(k){return DSYN[k]||k}).filter(function(k,i,a){return a.indexOf(k)===i}).slice(0,3);
-}
-function loose(s){return String(s||'').toLowerCase().replace(/aa/g,'a').replace(/ae/g,'a').replace(/oe/g,'o').replace(/[øöòóô]/g,'o').replace(/[æäàáâå]/g,'a').replace(/[üúùû]/g,'u').replace(/[éèêë]/g,'e').replace(/[^a-z]/g,'')}
-function wikiTitleOk(title,key){var t=loose(String(title||'').replace(/\s*\([^)]*\)\s*$/,''));var k=loose(key);return !!t&&(t===k||t===k+'s'||t+'s'===k||(DSYN[key]&&t===loose(DSYN[key])))}
-function stripHtml(s){var d=document.createElement('div');d.innerHTML=String(s||'');return (d.textContent||'').replace(/\s+/g,' ').trim()}
-function wikiFind(name,F){
-  F=F||function(u){return fetch(u).then(function(r){if(!r.ok)throw new Error('http '+r.status);return r.json()})};
-  var keys=dishKeys(name),wikis=['da','en'],tries=[];
-  keys.forEach(function(k){wikis.forEach(function(w){tries.push([w,k])})});
-  var step=function(i){
-    if(i>=tries.length)return Promise.resolve(null);
-    var w=tries[i][0],k=tries[i][1];
-    var url='https://'+w+'.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&redirects=1&generator=search&gsrnamespace=0&gsrlimit=6&gsrsearch='+encodeURIComponent(k)+'&prop=pageimages&piprop=thumbnail%7Cname&pithumbsize=640';
-    return F(url).then(function(j){
-      var pages=((j&&j.query&&j.query.pages)||[]).slice().sort(function(a,b){return (a.index||0)-(b.index||0)});
-      var p=pages.filter(function(x){return x.thumbnail&&x.pageimage&&wikiTitleOk(x.title,k)})[0];
-      if(!p)return step(i+1);
-      var cu='https://commons.wikimedia.org/w/api.php?action=query&format=json&formatversion=2&origin=*&prop=imageinfo&iiprop=url%7Cextmetadata&titles='+encodeURIComponent('File:'+p.pageimage);
-      return F(cu).then(function(c){
-        var pg=(c&&c.query&&c.query.pages&&c.query.pages[0])||{},ii=(pg.imageinfo||[])[0];
-        if(pg.missing||!ii)return step(i+1);                       /* not on Commons: may be a non-free local file */
-        var md=ii.extmetadata||{},lic=(md.LicenseShortName&&md.LicenseShortName.value)||'';
-        if(!lic||/fair use|non-free|copyright/i.test(lic))return step(i+1);
-        return{u:p.thumbnail.source,p:ii.descriptionurl||'',a:stripHtml(md.Artist&&md.Artist.value).slice(0,60),l:stripHtml(lic).slice(0,30),t:p.title,w:w};
-      });
-    });
-  };
-  return step(0);
-}
-var WQ={on:false,done:{}};
-function wikiKick(){
-  if(!window.UGEKURV_WEB||WQ.on||S.ro||!(S.ready&&S.ready.recipes))return;
-  var id=Object.keys(S.recipes).filter(function(k){var r=S.recipes[k];return r&&!ownImg(r)&&!r.noweb&&r.wimg===undefined&&!WQ.done[k]})[0];
-  if(!id)return;
-  WQ.on=true;WQ.done[id]=1;
-  wikiFind(S.recipes[id].name).then(function(res){
-    var v=res||{none:1,at:Date.now()};
-    return up(udoc('recipes/'+id),{wimg:v}).then(function(){if(S.recipes[id])S.recipes[id]=Object.assign({},S.recipes[id],{wimg:v});if(res)draw()});
-  },function(){/* offline or blocked: try again next time the app opens */}).then(function(){WQ.on=false;setTimeout(wikiKick,400)},function(){WQ.on=false});
-}
 
 /* stock sheet */
 function openStock(k){
@@ -2061,13 +2062,14 @@ function openStock(k){
   }
   var more='<details class="rl"><summary>Flere indstillinger</summary><div class="rule">'+
     '<div class="grid2"><div class="field"><label for="sf-cat">Afdeling</label><select id="sf-cat">'+opt(CATS,p?p.cat||'Andet':'Andet')+'</select></div><div class="field"><label for="sf-loc">Opbevaring</label><select id="sf-loc">'+opt([['','Skab og køl'],['fryser','Fryser']],p?p.loc||'':'')+'</select></div></div>'+
-    '<div class="field"><label for="sf-kp">Normalpris (kr pr. kg, l eller stk)</label><input id="sf-kp" inputmode="decimal" value="'+(p&&p.kp?esc(dec(p.kp)):'')+'"></div><div class="grid2"><div class="field"><label for="sf-kpo">Pris for økologi</label><input id="sf-kpo" inputmode="decimal" value="'+(p&&qprices(p).oko?esc(dec(qprices(p).oko)):'')+'"></div><div class="field"><label for="sf-kpf">Pris for frilands</label><input id="sf-kpf" inputmode="decimal" value="'+(p&&qprices(p).god?esc(dec(qprices(p).god)):'')+'"></div></div>'+
+    '<div class="grid2"><div class="field"><label for="sf-kpo">Pris for økologi</label><input id="sf-kpo" inputmode="decimal" value="'+(p&&qprices(p).oko?esc(dec(qprices(p).oko)):'')+'"></div><div class="field"><label for="sf-kpf">Pris for frilands</label><input id="sf-kpf" inputmode="decimal" value="'+(p&&qprices(p).god?esc(dec(qprices(p).god)):'')+'"></div></div>'+
     '<div class="field"><label for="sf-kc">Kalorier pr. 100 g eller ml (pr. stk., hvis enheden er stk)</label><input id="sf-kc" inputmode="decimal" value="'+(p&&p.kc!=null&&p.kc!==''?esc(dec(p.kc)):'')+'"></div>'+
     '<div class="field"><label for="sf-exp">Holdbar til</label><input id="sf-exp" type="date" value="'+esc(p?p.expires||'':'')+'"></div>'+
     '<label class="chk"><input id="sf-per" type="checkbox"'+(p&&p.perish?' checked':'')+'> Frisk vare, der hurtigt bliver dårlig</label></div></details>';
   var vare='<div class="field"><label for="sf-name">Navn</label><input id="sf-name" type="text" value="'+esc(p?p.name:'')+'"'+(p?' disabled':'')+'></div>'+
     '<div class="grid2"><div class="field"><label for="sf-qty">På lager nu</label><input id="sf-qty" inputmode="decimal" value="'+(p?esc(dec(r1(curQty(p)))):'0')+'"></div><div class="field"><label for="sf-unit">Enhed</label><select id="sf-unit">'+opt(UNITS,p?p.unit:'g')+'</select></div></div>'+
     '<div class="field"><label for="sf-br">Foretrukne mærker</label><input id="sf-br" type="text" autocomplete="off" placeholder="fx Barilla, De Cecco" value="'+esc(p?brandsOf(k).join(', '):'')+'"><p class="hint">Valgfrit. Kun tilbud på dette mærke tæller.</p></div>'+
+    '<div class="field"><label for="sf-kp">Normalpris (kr pr. kg, l eller stk)</label><input id="sf-kp" inputmode="decimal" value="'+(p&&p.kp?esc(dec(p.kp)):'')+'"></div>'+
     ruleHtml(p||{})+more;
   if(p){
     h=vare+'<div class="foot"><button class="btn" data-act="savestock" data-k="'+esc(k)+'">Gem</button><button class="btn danger" data-act="delstock" data-k="'+esc(k)+'">Slet vare</button></div>';
@@ -2524,8 +2526,13 @@ var ACT={
   delrec:function(d){save(function(){return udoc('recipes/'+d.id).delete().then(function(){openRecipes();toast('Retten er slettet')})})},
   photo:function(){var f=$('#rf-photo');if(f)f.click()},
   noweb:function(d){var r=S.recipes[d.id];if(!r)return;save(function(){return up(udoc('recipes/'+d.id),{noweb:true}).then(function(){S.recipes[d.id]=Object.assign({},r,{noweb:true});openRecipe(d.id);draw()})})},
-  findimg:function(d){var r=S.recipes[d.id];if(!r)return;phSt('run','Leder efter et billede…');
-    wikiFind(r.name).then(function(res){var v=res||{none:1,at:Date.now()};return up(udoc('recipes/'+d.id),{noweb:false,wimg:v}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{noweb:false,wimg:v});openRecipe(d.id);draw();if(!res)phSt('bad','Der blev ikke fundet et billede af retten.')})},function(){phSt('bad','Kunne ikke søge. Tjek nettet.')})},
+  findimg:function(d){var r=S.recipes[d.id];if(!r)return;save(function(){return up(udoc('recipes/'+d.id),{noweb:false}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{noweb:false});openRecipe(d.id);draw()})})},
+  nextimg:function(d){var r=S.recipes[d.id];if(!r||!r.photo)return;var sk=(Array.isArray(r.photoSkip)?r.photoSkip:[]).concat(r.photo.u).slice(-20);
+    save(function(){return up(udoc('recipes/'+d.id),{photoReq:true,photoSkip:sk,noweb:false}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{photoReq:true,photoSkip:sk});toast('Et andet foto hentes inden for en time');openRecipe(d.id)})})},
+  copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
+  normprice:function(d){openNormPrice(d.k)},
+  savenorm:function(d){saveNorm(d.k)},
+  resetnorm:function(d){resetNorm(d.k)},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
     save(function(){return udoc('recipes/'+d.id).set(o).then(function(){S.recipes[d.id]=o;if(old.id&&S.assets&&S.assets.delete)S.assets.delete(old.id).catch(function(){});openRecipe(d.id);draw();toast('Fotoet er fjernet')})});
@@ -2644,7 +2651,7 @@ document.addEventListener('keydown',function(e){
 /* a photo that cannot load falls back to the drawn plate */
 document.addEventListener('error',function(e){
   var t=e.target;if(!t||t.tagName!=='IMG'||t.dataset.fb===undefined)return;
-  var id=t.dataset.fb,r=Object.assign({},S.recipes[id]||{});delete r.img;delete r.wimg;var p=t.parentNode;var hb=p&&p.closest&&p.closest('#hero-box'),cr=hb&&hb.querySelector('.credit');if(cr)cr.remove();if(p)p.innerHTML=artSVG(Object.assign({id:id},r),p.classList&&p.classList.contains('wide'));
+  var id=t.dataset.fb,r=Object.assign({},S.recipes[id]||{});delete r.img;delete r.photo;var p=t.parentNode;var hb=p&&p.closest&&p.closest('#hero-box'),cr=hb&&hb.querySelector('.credit');if(cr)cr.remove();if(p)p.innerHTML=artSVG(Object.assign({id:id},r),p.classList&&p.classList.contains('wide'));
 },true);
 
 /* ---------- data ---------- */
@@ -2681,7 +2688,7 @@ function boot(){
   }).catch(function(){});
 }
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,dishKeys:dishKeys,wikiFind:wikiFind,wikiKick:wikiKick,WQ:WQ,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();
 

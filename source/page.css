@@ -483,3 +483,13 @@ input[aria-invalid="true"]{border-color:var(--offer)}
 .credit .lnk,.hint .lnk{font-size:12px;display:inline;padding:0;margin-left:4px}
 #ph-st:empty{display:none}
 #ph-st{margin-top:8px}
+/* normal price */
+.chip.pc{min-height:28px;cursor:pointer;background:transparent;border:1px dashed var(--line);color:var(--ink2);padding:3px 10px;font-variant-numeric:tabular-nums}
+.chip.pc.on{background:var(--pine-soft);border:1px solid transparent;color:var(--pine)}
+.np-in{display:flex;align-items:center;gap:8px}
+.np-in input{flex:1;font-size:20px;font-family:var(--f-mono)}
+.np-in span{font-weight:600;color:var(--ink2)}
+/* read text (OCR) */
+details.raw{margin-top:8px;font-size:13px}
+details.raw summary{cursor:pointer;color:var(--ink2);font-weight:600}
+details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px;font:12px/1.45 var(--f-mono);margin:8px 0}

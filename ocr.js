@@ -160,13 +160,19 @@ var COMMON='agurk,ananas,appelsin,asparges,aubergine,avocado,bacon,bagepulver,ba
 function commonKnown(k){var seen={},out=[];(k||[]).concat(COMMON).forEach(function(n){n=String(n||'').trim();var l=n.toLowerCase();if(n&&!seen[l]){seen[l]=1;out.push(n)}});return out}
 /* ---- browser part ---- */
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=function(){rej({code:'unavailable'})};document.head.appendChild(s)})}
-function prep(file){
+function prep(file,rot){
+  rot=rot||0;
   return new Promise(function(res,rej){
     var url=URL.createObjectURL(file),im=new Image();
     im.onload=function(){
       var long=Math.max(im.width,im.height),s=long>3200?3200/long:long<1600?Math.min(2,1600/long):1;
-      var c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
-      var x=c.getContext('2d');x.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      var w0=Math.round(im.width*s),h0=Math.round(im.height*s),side=rot===90||rot===270;
+      var c=document.createElement('canvas');c.width=side?h0:w0;c.height=side?w0:h0;
+      var x=c.getContext('2d');
+      /* photo taken sideways or upside down: turn it before reading */
+      if(rot){x.translate(c.width/2,c.height/2);x.rotate(rot*Math.PI/180);x.drawImage(im,-w0/2,-h0/2,w0,h0);x.setTransform(1,0,0,1,0,0)}
+      else x.drawImage(im,0,0,w0,h0);
+      URL.revokeObjectURL(url);
       try{var d=x.getImageData(0,0,c.width,c.height),p=d.data,lo=255,hi=0,i,g;
         for(i=0;i<p.length;i+=4){g=(p[i]*.3+p[i+1]*.59+p[i+2]*.11);p[i]=p[i+1]=p[i+2]=g;if(g<lo)lo=g;if(g>hi)hi=g}
         var k=hi>lo+20?255/(hi-lo):1;for(i=0;i<p.length;i+=4){g=(p[i]-lo)*k;p[i]=p[i+1]=p[i+2]=g<0?0:g>255?255:g}
@@ -189,29 +195,53 @@ function recog(w,blob,psm){
   var p;try{p=Promise.resolve(w.setParameters({tessedit_pageseg_mode:String(psm)}))}catch(e){p=Promise.resolve()}
   return p.catch(function(){}).then(function(){return w.recognize(blob)});
 }
-function readRecipe(files,signal,known){
+/* How good does one reading look? Number of ingredient lines the parser understands, then Tesseract's own confidence. */
+function quality(text,conf,known){var n=parseText(text,known).ingredients.filter(function(g){return !g.guess}).length;return n*100+(conf||0)}
+function readRecipe(files,signal,known,onStep){
   var texts=[];known=commonKnown(known);
+  var step=function(t){if(onStep)try{onStep(t)}catch(e){}};
+  var stop=function(){if(signal&&signal.aborted)throw{code:'cancelled'}};
   return getWorker().then(function(w){
     var chain=Promise.resolve();
-    files.forEach(function(f){
+    files.forEach(function(f,fi){
+      var mine=[];
       chain=chain.then(function(){
-        if(signal&&signal.aborted)throw{code:'cancelled'};
-        return prep(f).then(function(b){
-          /* two readings of the same photo: normal layout (3) and sparse text (11) find different lines; the parser merges them */
-          return recog(w,b,3).then(function(r){
-            texts.push(r.data.text);
-            if(signal&&signal.aborted)throw{code:'cancelled'};
-            return recog(w,b,11).then(function(r2){texts.push(r2.data.text)},function(){});
-          });
+        stop();step('Læser billede'+(files.length>1?' '+(fi+1)+' af '+files.length:'')+'…');
+        /* 6 = one block of text: keeps an amount and its ingredient on the same line, also in a two-column list (best for close-ups) */
+        return prep(f,0).then(function(b){return recog(w,b,6).then(function(r){return{b:b,r:r}})});
+      }).then(function(o){
+        stop();
+        var q0=quality(o.r.data.text,o.r.data.confidence,known);
+        if(q0>=300)return o;
+        /* few lines understood: read the normal page layout too before deciding the photo is turned */
+        return recog(w,o.b,3).then(function(r3){
+          var q3=quality(r3.data.text,r3.data.confidence,known);o.r3=r3;
+          if(Math.max(q0,q3)>=300)return o;
+          step('Prøver at dreje billedet…');
+          var best={q:Math.max(q0,q3),o:o},rots=[90,270,180],i=0;
+          var next=function(){
+            if(i>=rots.length)return best.o;
+            var rot=rots[i++];stop();
+            return prep(f,rot).then(function(b){return recog(w,b,6).then(function(r){var q=quality(r.data.text,r.data.confidence,known);if(q>=300&&q>best.q+150)best={q:q,o:{b:b,r:r}};return next()})});
+          };
+          return next();
         });
-      });
+      }).then(function(o){
+        mine.push(o.r.data.text);stop();
+        step('Læser igen med anden opsætning…');
+        /* 3 = normal page layout with columns; 11 = scattered text. Each finds lines the others miss; the parser merges them. */
+        return (o.r3?Promise.resolve(o.r3):recog(w,o.b,3)).then(function(r){mine.push(r.data.text);
+          if(parseMulti(mine,known).ingredients.length>=8)return;
+          stop();return recog(w,o.b,11).then(function(r2){mine.push(r2.data.text)},function(){});
+        },function(){});
+      }).then(function(){texts=texts.concat(mine)});
     });
     return chain;
   }).then(function(){
     var out=parseMulti(texts,known);out.raw=texts.join('\n----\n');return out;
   });
 }
-var api={readRecipe:readRecipe,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
+var api={readRecipe:readRecipe,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

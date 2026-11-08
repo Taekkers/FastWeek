@@ -8,9 +8,15 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 8)
+
+- **Normalpris pr. vare:** hver vare på indkøbslisten viser sin normalpris (fx *Normalpris 13 kr/1 l*). Tryk på den og skriv den pris, du plejer at betale. Den gemmes, bruges i alle butikker og i alle beregninger fremover (vises som *Din pris*). *Brug skønnet* tager appens skøn tilbage. Prisen kan også rettes under Lager.
+- **Billeder af selve retten:** fotos findes ved billedsøgning på rettens fulde navn (+ "opskrift"), ikke længere på Wikipedia. Søgningen kører hver time i GitHub Actions (`scripts/dish-photos.js`), så en ny ret får sit foto inden for en time. Retsiden viser kilden med link, *Find et andet* og *Brug tegning*.
+- **Billedlæsning af ingredienslister i to kolonner** (mængder til venstre, varer til højre) og billeder taget på skrå eller på siden: appen læser nu først hele listen som én blok, drejer billedet, hvis det ligger forkert, og læser derefter igen med sideopsætning. *Vis den læste tekst* viser præcis, hvad appen læste.
+
 ## Det kan appen (version 7)
 
-- **Billeder af retterne:** appen leder selv efter et frit foto af hver ret på Wikipedia/Wikimedia Commons og viser fotograf og licens. Kun når navnet tydeligt er en kendt ret (fx chili con carne, lasagne, tacos), ellers bruges tegningen. Du kan vælge *Brug tegning* eller tilføje dit eget foto, som gemmes i en lille udgave på retten.
+- **Eget foto af retten** gemmes i en lille udgave på retten.
 - **Bedre billedlæsning:** billedet læses i højere opløsning og to gange (almindelig opsætning og spredt tekst), og resultaterne slås sammen. Linjer, hvor tallet mangler, og ingredienser uden mængde i ingredienslisten tages med, og fejllæste ord rettes mod en liste over almindelige madvarer og dine egne varer.
 - **Økologi for frugt og grønt** vælges for sig under Indstillinger, uafhængigt af kød, fisk og æg. Uden kendt økologisk hyldepris regnes med normalpris + 40 %, og kun økologiske tilbud tæller.
 - **Butikker billigste først** overalt på Indkøb. Mærket på den anbefalede løsning hedder nu *Nemmest*.
@@ -107,7 +113,7 @@ Teksten læses på telefonen (gratis, ingen billeder sendes nogen steder). Førs
 - **Navne er delt:** to personer kan ikke have det samme navn. Brug en kode på mindst 8 tegn, så den er svær at gætte.
 - **Som ejer af Firebase-projektet kan du teknisk set se alles data** i konsollen. Sig det til dem, der bruger appen.
 - **Gratis grænser:** Firestore giver ca. 50.000 læsninger og 20.000 skrivninger om dagen. Det rækker til en god håndfuld ugentlige brugere, men ikke til tusindvis. Går grænsen, stopper appen til næste dag. Der kommer aldrig en regning, så længe du holder dig på gratisplanen (Spark).
-- **Madbilleder:** fotos fra Wikimedia Commons hentes direkte derfra (der sendes kun retnavnet). Eget foto gemmes i en lille udgave (max 640 px) i retten i Firebase.
+- **Madbilleder:** fotos fundet ved billedsøgning vises direkte fra den side, de kommer fra (link vises på retten). Fotoet tilhører den side. Eget foto gemmes i en lille udgave (max 640 px) i retten i Firebase.
 - Appen er testet med en simuleret Firebase, ikke med dit rigtige projekt. Hvis noget driller, så se herunder.
 
 ## Fejlfinding
