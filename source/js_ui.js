@@ -445,8 +445,9 @@ function readRecipe(){
     if(!rows.length){rfSt('bad','Fandt ingen ingredienser','Prøv et skarpere billede.');addRaw();return}
     if(!$('#rf-name').value&&res.name)$('#rf-name').value=res.name;
     if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
+    if(res.page&&$('#rf-page')&&!$('#rf-page').value)$('#rf-page').value=Math.round(num(res.page));
     $('#rf-ings').innerHTML=rows.map(ingRow).join('');
-    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat'),'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');addRaw();
+    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat')+(res.via==='gemini'?' (læst med Gemini)':''),(res.warn?'Gemini kunne ikke nås, så den indbyggede læser blev brugt. ':'')+'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');addRaw();
     var ing=$('#rf-ings');if(ing&&ing.scrollIntoView)ing.scrollIntoView({block:'nearest'});
   }).catch(function(e){
     var c=e&&e.code;
@@ -748,7 +749,12 @@ function openSettings(){
 /* only in the web app: notifications and log out */
 function webBlock(){
   var W=window.UGEKURV_WEB;if(!W)return '';
-  return '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
+  var hasK=!!(S.keys&&S.keys.gemini);
+  return '<div class="field"><label for="ai-k">Billedlæsning med AI (Google Gemini)</label>'+
+    '<p class="hint" id="ai-st">'+(hasK?'Aktiv. Kogebogsbilleder læses af Gemini.':'Ikke sat op. Hent en gratis nøgle på aistudio.google.com/apikey (Create API key), og indsæt den her.')+'</p>'+
+    '<div class="np-in"><input id="ai-k" type="password" autocomplete="off" spellcheck="false" placeholder="'+(hasK?'••••••••'+esc(String(S.keys.gemini).slice(-4)):'AIza…')+'" aria-label="Gemini-nøgle"></div>'+
+    '<div class="btnrow"><button class="btn sm" data-act="aisave">Gem og afprøv</button>'+(hasK?'<button class="btn ghost sm" data-act="aidel">Fjern nøgle</button>':'')+'</div></div>'+
+    '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
     '<div class="field"><label>Bruger</label><p class="hint">Logget ind som <b>'+esc(W.name||'')+'</b>. Koden kan ikke nulstilles, så husk den.</p><button class="btn ghost sm" data-act="logout">Log ud</button></div>';
 }
 function pnSwitch(on,dis,sub){return '<button class="lowcard pn" role="switch" aria-checked="'+(!!on)+'" data-act="pushtog"'+(dis?' disabled aria-disabled="true"':'')+'><span class="lc"><b>Ugentlig påmindelse</b><span>'+esc(sub||'Fredag aften, når ugens tilbud er klar.')+'</span></span><span class="sw" aria-hidden="true"></span></button>'}
@@ -1083,6 +1089,13 @@ var ACT={
     var x=box.querySelector('.lb-x');if(x)x.focus();
   },
   zoomclose:function(){var b=$('#lb');if(b)b.remove();if(!$('#sheet').innerHTML)document.body.classList.remove('lock');if(S.lbBack&&S.lbBack.focus){try{S.lbBack.focus()}catch(e){}}S.lbBack=null},
+  aisave:function(){var i=$('#ai-k'),st=$('#ai-st'),k=i?i.value.trim():'';if(!k){if(st)st.textContent='Indsæt nøglen først.';return}
+    if(!/^[A-Za-z0-9_\-]{20,}$/.test(k)){if(st)st.textContent='Det ligner ikke en nøgle. Den starter typisk med AIza.';return}
+    if(st)st.textContent='Afprøver nøglen…';
+    var test=window.UgekurvOCR?Promise.resolve():new Promise(function(r,j){var s=document.createElement('script');s.src='ocr.js?v=12';s.onload=r;s.onerror=j;document.head.appendChild(s)});
+    test.then(function(){return window.UgekurvOCR.testGemini(k)}).then(function(){return udoc('store/keys').set({gemini:k,at:Date.now()},{merge:true})}).then(function(){S.keys=Object.assign({},S.keys,{gemini:k});if(st)st.textContent='Aktiv. Nøglen virker, og kogebogsbilleder læses nu af Gemini.';if(i)i.value='';toast('Billedlæsning med AI er slået til')},
+      function(e){if(st)st.textContent=(e&&e.code)==='bad_key'?'Nøglen virker ikke. Tjek, at hele nøglen er kopieret.':(e&&e.code)==='rate_limited'?'Nøglen virker, men dagens kvote er brugt. Prøv igen i morgen.':'Kunne ikke nå Gemini. Tjek nettet og prøv igen.'})},
+  aidel:function(){save(function(){return udoc('store/keys').set({gemini:'',at:Date.now()},{merge:true}).then(function(){S.keys=Object.assign({},S.keys,{gemini:''});toast('Nøglen er fjernet');ACT.gear({})})})},
   copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
@@ -1222,6 +1235,7 @@ function boot(){
       if(!id){S.nodb=true;draw();return}
       S.uid=id;UB='data/users/'+id+'/u/';
       sub(udoc('store/pantry'),function(s){S.hasPantry=!!s.exists;var d=s.exists?s.data():{};S.praw=d.items||{};applyRef();ready('pantry')});
+      sub(udoc('store/keys'),function(s){S.keys=s.exists?s.data():{}});
       sub(udoc('store/prices'),function(s){var d=s.exists?s.data():{};S.sp=d.items||{};S.spAt=d.at||'';render()});
       sub(udoc('store/brands'),function(s){var d=s.exists?s.data():{};S.brands=d.b||{};S.bnames=d.n||{};render()});
       sub(udoc('store/settings'),function(s){S.hasSettings=!!s.exists;S.settings=normSettings(s.exists?s.data():{});ready('settings')});
@@ -1241,6 +1255,7 @@ function boot(){
     S.sample=sm;if(sm&&sm.limits)return sm.limits().then(function(l){S.imgOK=!!(l&&l.images)}).catch(function(){})
   }).catch(function(){});
 }
+if(window.UGEKURV_WEB)window.UGEKURV_WEB.aiKey=function(){return (S.keys&&S.keys.gemini)||''};
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
 if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();

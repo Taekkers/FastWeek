@@ -271,7 +271,72 @@ function readRecipe(files,signal,known,onStep){
     var out=parseMulti(texts,known);out.raw=texts.join('\n----\n');return out;
   });
 }
-var api={readRecipe:readRecipe,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
+/* ---------- reading with Google Gemini (when the user has put in a key) ----------
+   The model sees the photo itself, so italics, fractions and two columns are no problem.
+   It returns every ingredient line as written; the same parser as above turns the lines into amounts in g / ml / stk. */
+var GMODELS=['gemini-flash-latest','gemini-2.5-flash','gemini-3.5-flash'];
+var GPROMPT='Billedet (eller billederne) viser en opskrift fra en dansk kogebog. Udtræk opskriftens titel, antal personer, tid i minutter, sidetal (hvis det står på siden) '+
+  'og ALLE ingredienser fra alle ingredienslister på siden, også under underoverskrifter som "Dressing" eller "Til servering". Spring intet over, heller ikke salt, peber og vand. '+
+  'Hver ingrediens: amount = mængden som tal (½ = 0.5, 1½ = 1.5, "2-3" = 2; null hvis der ingen mængde står), unit = enheden præcis som i bogen (g, kg, dl, l, ml, spsk, tsk, stk, fed, dåse, bundt, håndfuld, knivspids, skiver, pakke …; tom hvis ingen), '+
+  'name = varens navn uden tilberedning og uden mængde (fx "rødløg" for "1 rødløg, i både"; "citron" for "½ øko citron, saft og skal"). Bevar rækkefølgen fra bogen. Læs ikke fremgangsmåden.';
+var GSCHEMA={type:'OBJECT',properties:{title:{type:'STRING'},servings:{type:'NUMBER',nullable:true},minutes:{type:'NUMBER',nullable:true},page:{type:'NUMBER',nullable:true},
+  ingredients:{type:'ARRAY',items:{type:'OBJECT',properties:{amount:{type:'NUMBER',nullable:true},unit:{type:'STRING'},name:{type:'STRING'}},required:['name']}}},required:['ingredients']};
+function toB64(file,max){
+  return new Promise(function(res,rej){
+    var url=URL.createObjectURL(file),im=new Image();
+    im.onload=function(){var s=Math.min(1,max/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*s);c.height=Math.round(im.height*s);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',.88).split(',')[1])};
+    im.onerror=function(){URL.revokeObjectURL(url);rej({code:'image_rejected'})};im.src=url;
+  });
+}
+function geminiCall(key,parts,signal,mi){
+  mi=mi||0;var model=GMODELS[mi];
+  return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',signal:signal,
+    headers:{'Content-Type':'application/json','x-goog-api-key':key},
+    body:JSON.stringify({contents:[{role:'user',parts:parts}],generationConfig:{temperature:0,responseMimeType:'application/json',responseSchema:GSCHEMA}})})
+  .then(function(r){return r.json().catch(function(){return{}}).then(function(j){
+    if(r.status===404&&mi+1<GMODELS.length)return geminiCall(key,parts,signal,mi+1);   /* model name retired: try the next */
+    if(!r.ok){var m=(j&&j.error&&j.error.message)||('HTTP '+r.status);throw{code:r.status===429?'rate_limited':(r.status===400||r.status===401||r.status===403)?'bad_key':'unavailable',message:m}}
+    var c=j.candidates&&j.candidates[0],t=c&&c.content&&c.content.parts&&c.content.parts.map(function(p){return p.text||''}).join('');
+    if(!t)throw{code:'refused',message:'tomt svar'};
+    return JSON.parse(t);
+  })});
+}
+function readWithGemini(files,key,signal,known,onStep){
+  var step=function(t){if(onStep)try{onStep(t)}catch(e){}};
+  step('Sender billedet til Gemini…');
+  return Promise.all(files.map(function(f){return toB64(f,2000)})).then(function(b64s){
+    var parts=[{text:GPROMPT}].concat(b64s.map(function(b){return{inline_data:{mime_type:'image/jpeg',data:b}}}));
+    step('Gemini læser opskriften…');
+    return geminiCall(key,parts,signal);
+  }).then(function(j){
+    var ing=(j.ingredients||[]).filter(function(g){return g&&g.name}),list=[],lines=[];
+    /* "salt og peber" is two things to have at home */
+    ing=[].concat.apply([],ing.map(function(g){return /^\s*salt\s+og\s+(friskkværnet\s+)?peber\s*$/i.test(g.name)?[{name:'salt',amount:null,unit:''},{name:'peber',amount:null,unit:''}]:[g]}));
+    /* the model's lines are clean: convert units directly (no OCR repairs, no guessing of names) */
+    ing.forEach(function(g){
+      var q=typeof g.amount==='number'?g.amount:parseFloat(String(g.amount||'').replace(',','.')),u=String(g.unit||'').toLowerCase().replace(/\.$/,'').trim();
+      var n=cleanName(String(g.name));if(!n||n.length<2)return;
+      lines.push(((q>0?String(q).replace('.',','):'')+' '+(g.unit||'')+' '+g.name).replace(/\s+/g,' ').trim());
+      if(/^vand$/.test(n))return;                                   /* water from the tap is not bought */
+      var conv=Object.prototype.hasOwnProperty.call(UNIT,u)?UNIT[u]:null;
+      if(!(q>0)){q=1;conv=/^(salt|peber|.*peber$)$/.test(n)&&!/peberfrugt/.test(n)?['g',1]:['stk',1]}
+      else if(!conv){conv=/^(knivspids|knsp|nip)$/.test(u)?['g',.5]:['stk',1]}
+      var qq=q*conv[1],o={n:n,q:conv[0]==='stk'?Math.max(.5,Math.round(qq*2)/2):Math.round(qq*10)/10,u:conv[0],known:true};
+      /* the same ingredient twice ("sukker" in the dough and in the topping): one line with the total. "rørsukker" stays its own */
+      var same=list.filter(function(x){return x.n===o.n&&x.u===o.u})[0];
+      if(same)same.q=Math.round((same.q+o.q)*10)/10;else list.push(o);
+    });
+    var out={ingredients:list,name:'',servings:0,minutes:null,page:0};
+    out.name=String(j.title||'').trim();
+    if(out.name&&out.name===out.name.toUpperCase())out.name=out.name.charAt(0)+out.name.slice(1).toLowerCase();
+    out.servings=j.servings>0?Math.round(j.servings):0;out.minutes=j.minutes>0?Math.round(j.minutes):null;out.page=j.page>0?Math.round(j.page):0;
+    out.raw='Læst af Gemini:\n'+lines.join('\n');out.via='gemini';
+    return out;
+  });
+}
+function testGemini(key){return geminiCall(key,[{text:'Svar med JSON: {"ingredients":[{"name":"test"}]}'}]).then(function(){return true})}
+var api={readRecipe:readRecipe,readWithGemini:readWithGemini,testGemini:testGemini,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

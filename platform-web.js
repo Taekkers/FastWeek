@@ -157,9 +157,17 @@ var sample={
   limits:function(){return Promise.resolve({images:true})},
   json:function(prompt,opts){
     opts=opts||{};var files=[].slice.call(opts.images||[]),sig=opts.signal;
-    return (window.UgekurvOCR?Promise.resolve():loadScript('ocr.js?v=11')).then(function(){
+    return (window.UgekurvOCR?Promise.resolve():loadScript('ocr.js?v=12')).then(function(){
       if(sig&&sig.aborted)throw{code:'cancelled'};
-      return window.UgekurvOCR.readRecipe(files,sig,window.UGEKURV_WEB&&window.UGEKURV_WEB.known?window.UGEKURV_WEB.known():[],opts.onStep);
+      var W=window.UGEKURV_WEB,known=W&&W.known?W.known():[],key=W&&W.aiKey?W.aiKey():'';
+      var tess=function(){return window.UgekurvOCR.readRecipe(files,sig,known,opts.onStep)};
+      if(!key)return tess();
+      /* AI reading first; if Gemini cannot be reached or the key is wrong, the built-in reader takes over */
+      return window.UgekurvOCR.readWithGemini(files,key,sig,known,opts.onStep).catch(function(e){
+        if(e&&(e.code==='cancelled'||e.name==='AbortError'))throw{code:'cancelled'};
+        if(opts.onStep)opts.onStep('Gemini svarede ikke ('+((e&&e.code)==='bad_key'?'nøglen virker ikke':(e&&e.code)==='rate_limited'?'dagens kvote er brugt':'ingen forbindelse')+'). Bruger den indbyggede læser…');
+        return tess().then(function(o){o.warn=(e&&e.code)||'unavailable';return o});
+      });
     });
   }
 };

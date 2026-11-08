@@ -8,6 +8,18 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 12)
+
+- **Billedlæsning med AI (Google Gemini):** med en gratis nøgle fra Google læser Gemini selve billedet af kogebogssiden: titel, side, antal personer, tid og **alle** ingredienser fra alle lister på siden (også *Dressing* og *Til servering*), med mængde og enhed som i bogen. Kursiv, ½, to kolonner og skæve billeder er ikke længere et problem. Mængderne regnes om som før (dl/spsk/tsk til liter/gram, samme vare to gange lægges sammen, rørsukker står for sig, vand fra hanen kommer ikke på listen).
+- Uden nøgle, uden net, eller hvis Google afviser (fx brugt dagskvote), læser appen med den indbyggede tekstlæser som før, og skriver det i beskeden.
+- Nøglen gemmes kun på din egen konto (`store/keys`), sendes i en header direkte til Google og står aldrig i en adresse. Billedet sendes til Google; på gratisniveauet må Google bruge det til at forbedre deres tjenester.
+
+### Sådan slår du AI-læsning til (én gang, ca. 2 minutter)
+1. Åbn **aistudio.google.com/apikey** og log ind med din Google-konto. Godkend vilkårene, hvis du bliver spurgt.
+2. Tryk **Create API key** (vælg evt. et projekt eller *Create project*). Der kræves intet betalingskort.
+3. Kopiér nøglen (den starter med `AIza`).
+4. I FastWeek: **Menu > Indstillinger > Billedlæsning med AI**. Indsæt nøglen og tryk **Gem og afprøv**. Står der *Aktiv*, er det slået til.
+
 ## Det kan appen (version 11)
 
 - **Forstør billedet af retten:** tryk på billedet (foto eller tegning) på retsiden. Luk med ×, Escape eller et tryk på billedet.
