@@ -9,7 +9,7 @@ window.UGEKURV_CONFIG = {
   },
   /* Adressen på FastWeek-serveren, der læser kogebogsbilleder (Cloudflare Worker, se README.md "Billedlæsning").
      Tom = den enkle læser bruges. Adressen er ikke hemmelig; nøglen ligger kun på serveren. */
-  aiProxy: "",
+  aiProxy: "https://rough-sea-5acffastweek-ai.fredefrederik.workers.dev",
   /* Offentlig VAPID-nøgle til notifikationer. Valgfri, se README.md, del 3. */
   vapidPublicKey: "BGwmt0-W_8Vur-ZzghpM7Cf0idvGslRwX1qc1Mk-MWMhohLAFs-zwdLDXkyD8KFKZD05VSH2x-ErU9qXQJX9LWk"
 };
