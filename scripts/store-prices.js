@@ -2,6 +2,10 @@
 'use strict';
 var UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 async function get(u){var r=await fetch(u,{headers:{'User-Agent':UA,'Accept-Language':'da-DK,da;q=0.9'},redirect:'follow'});return{status:r.status,url:r.url,ct:r.headers.get('content-type'),text:await r.text()}}
+async function probe3(){
+  var a=await get('https://prej.dk/api');var t=a.text.slice(a.text.indexOf('<main'));t=t.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');console.log('#### API-SIDE '+a.status+'\n'+t.slice(0,4000));
+  var q=await get('https://prej.dk/?q=hakket%20oksek%C3%B8d');var b=q.text.slice(q.text.indexOf('<main'));b=b.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<svg[\s\S]*?<\/svg>/g,'').replace(/\s(class|style|data-astro-cid-[a-z0-9]+)="[^"]*"/g,'').replace(/data-astro-cid-[a-z0-9]+/g,'');console.log('#### SOEG\n'+b.slice(0,6000));
+}
 async function probe2(){
   var r=await get('https://prej.dk/produkt/lurpak-smoer-saltet-9'),t=r.text;
   var body=t.slice(t.indexOf('<body'));
@@ -26,4 +30,4 @@ async function probe(){
     }catch(e){console.log('#### '+u+' FEJL '+e.message)}
   }
 }
-if(require.main===module)(process.env.MODE==='probe'?probe2():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
+if(require.main===module)(process.env.MODE==='probe'?probe3():Promise.reject(new Error('kun probe endnu'))).catch(function(e){console.error(e);process.exit(1)});
