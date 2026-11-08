@@ -1,0 +1,21 @@
+name: Tjek af billedlæsning
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --no-save --no-audit --no-fund playwright@1.47.2
+      - run: npx playwright install --with-deps chromium webkit
+      - name: Tesseract (kommandolinje) til sammenligning
+        run: |
+          sudo apt-get install -y -qq tesseract-ocr tesseract-ocr-dan >/dev/null
+          tesseract source/ocr-lab/browser-check/look_2048.jpg - -l dan --psm 3 | head -40
+      - run: node source/ocr-lab/browser-check/run.js
