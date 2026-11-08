@@ -514,3 +514,7 @@ body.cns-on{overflow:hidden}
 .sw-del{position:absolute;right:0;width:88px;z-index:0;border:0;margin:0;padding:0;background:#C62828;color:#fff;font:600 15px var(--f-body);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .sw-del:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
 .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--pine);text-decoration:underline;cursor:pointer;min-height:24px}
+
+.share-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:4px 0 14px}
+.share-row .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-right:6px}
+.share-row .fine{flex:1 1 200px;min-width:0;margin:0}

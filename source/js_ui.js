@@ -204,6 +204,12 @@ function viewShop(){
     });
     return g;
   };
+  /* text for sharing (fx to Notes): one line per item still to buy */
+  var shareL=items.filter(function(it){return !chk[it.k+'_'+it.unit]}).map(function(it){var so=storeOf(it),qt=it.pack>0?it.packs+' pk. ('+fq(it.qty,it.unit)+')':fq(it.qty,it.unit);
+      return {s:combo?so:'',t:it.name.charAt(0).toUpperCase()+it.name.slice(1)+', '+qt+(combo&&so?' · '+so:'')}}).sort(function(a,b){return a.s.localeCompare(b.s,'da')}).map(function(x){return x.t})
+    .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){return x.name.charAt(0).toUpperCase()+x.name.slice(1)}));
+  S.shareTxt=shareL.length?{title:'Indkøb uge '+isoWeek(S.mon)[1]+(sel&&!combo?' · '+sel:''),lines:shareL}:null;
+  if(S.shareTxt)h+='<div class="share-row"><button class="btn ghost sm" data-act="shareshop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Del listen</button><span class="fine">Til Noter: markér varerne i noten, og tryk på tjeklisteknappen, så kan de krydses af.</span></div>';
   if(combo){
     h+='<p class="legend"><span class="cc min">kr</span> billigste butik <span class="cc off">kr</span> tilbud'+(SPON?' <span class="cc est">≈kr</span> skøn':'')+'</p>';
     combo.stores.forEach(function(s){
@@ -1094,6 +1100,9 @@ var ACT={
   cnsno:function(){S.consentNo=true;consentDraw()},
   cnsback:function(){S.consentNo=false;consentDraw()},
   cnsout:function(){if(window.UGEKURV_WEB&&window.UGEKURV_WEB.signOut)window.UGEKURV_WEB.signOut()},
+  shareshop:function(){var s=S.shareTxt;if(!s)return;var txt=s.title+'\n\n'+s.lines.join('\n');
+    var copy=function(){try{navigator.clipboard.writeText(txt).then(function(){toast('Listen er kopieret. Sæt den ind i Noter.')},function(){toast('Kunne ikke kopiere listen')})}catch(e){toast('Kunne ikke kopiere listen')}};
+    if(navigator.share){navigator.share({title:s.title,text:txt}).catch(function(e){if(!e||e.name!=='AbortError')copy()})}else copy()},
   copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;

@@ -11,6 +11,8 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 ## Det kan appen (version 14)
 
 - **Slet ved at glide til venstre:** glid fingeren mod venstre på en række, så står **Slet** med rødt i højre side. Tryk på det for at slette. Et kort glid, et lodret træk eller et tryk et andet sted lukker igen uden at slette, og et almindeligt tryk åbner rækken som før.
+- **Del indkøbslisten:** knappen *Del listen* på indkøbslisten åbner telefonens del-menu (fx Noter, Beskeder). Teksten er en titel ("Indkøb uge 46 · Lidl") og én linje pr. vare, der mangler at blive købt (med mængde og evt. butik), plus ekstra varer. I Noter: markér varerne og tryk på tjeklisteknappen, så kan de krydses af. Findes del-menuen ikke, kopieres listen.
+- **To personer:** log ind med samme navn og kode på begge telefoner. I ser og retter den samme ugeplan, det samme lager og den samme indkøbsliste, og ændringer vises med det samme hos den anden.
 - Virker på: Mine retter, udkast fra scanning, Lager, Indkøbslisten (varen fjernes fra ugens liste; *Vis igen* henter den tilbage), ekstra varer og foretrukne mærker.
 
 ## Det kan appen (version 13)
