@@ -517,6 +517,15 @@ details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;ove
 #lb .lb-cap{color:#fff;text-align:center;padding-top:12px;display:flex;flex-direction:column;gap:2px;font-size:15px}
 #lb .lb-cap span{font-size:12.5px;opacity:.75}
 
+/* acceptance box at start: covers everything until accepted */
+#consent{position:fixed;inset:0;z-index:80;background:var(--scrim);display:flex;align-items:center;justify-content:center;padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
+#consent .cns-card{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:22px;box-shadow:var(--sh);max-width:480px;width:100%;padding:22px 20px;display:flex;flex-direction:column;gap:12px}
+#consent h2{margin:0;font-size:22px;line-height:1.2;text-wrap:balance}
+#consent p,#consent li{margin:0;line-height:1.5}
+#consent ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+#consent .cns-btns{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+body.cns-on{overflow:hidden}
+
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 #login[hidden]{display:none!important}
 .lg-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(21,35,28,.08)}
@@ -1911,7 +1920,7 @@ function readRecipe(){
   if(!S.sample||!S.imgOK){rfSt('bad','Fotolæsning er ikke tilgængelig her','Skriv ingredienserne ind selv.');return}
   if(S.ctl){rfSt('run','Læser stadig','Vent, til den er færdig.');return}
   var n=files.length;S.ctl=new AbortController();if(rb)rb.disabled=true;
-  rfSt('run',(n===1?'Billedet er modtaget. Læser…':n+' billeder er modtaget. Læser…'),window.UGEKURV_WEB&&!window.UgekurvOCR?'Første gang hentes tekstlæseren.':'',true);
+  rfSt('run',(n===1?'Billedet er modtaget. Læser…':n+' billeder er modtaget. Læser…'),window.UGEKURV_WEB&&!window.UgekurvOCR?'Første gang tager det lidt længere.':'',true);
   var t0=Date.now();S.sample.json(RECIPE_PROMPT,{images:files,signal:S.ctl.signal,onStep:function(m){rfSt('run',m,'Det kan tage op til et minut.',true)}}).then(function(res){
     var rows=rowsFromRes(res);
     var addRaw=function(){var st=$('#rf-st');if(st&&res&&res.raw)st.insertAdjacentHTML('beforeend',rawHtml(res.raw))};
@@ -1920,7 +1929,7 @@ function readRecipe(){
     if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
     if(res.page&&$('#rf-page')&&!$('#rf-page').value)$('#rf-page').value=Math.round(num(res.page));
     $('#rf-ings').innerHTML=rows.map(ingRow).join('');
-    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat')+(res.via==='gemini'?' (læst med Gemini)':''),(res.warn?'Gemini kunne ikke nås, så den indbyggede læser blev brugt. ':'')+'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');addRaw();
+    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat')+'',(res.warn?'Billedet blev læst med den enkle læser, så tjek ingredienserne ekstra grundigt. ':'')+'Billedet gemmes ikke. Tjek mængderne nedenfor, og tryk Gem ret.');addRaw();
     var ing=$('#rf-ings');if(ing&&ing.scrollIntoView)ing.scrollIntoView({block:'nearest'});
   }).catch(function(e){
     var c=e&&e.code;
@@ -1973,7 +1982,7 @@ function scSum(){
   var Q=S.sq,s=$('#sc-st');if(!Q||!s)return;
   var c={queue:0,run:0,ok:0,bad:0,stop:0};Q.q.forEach(function(x){c[x.state]++});
   var n=Q.q.length,fail=c.bad+c.stop,h;var ft=(c.bad?c.bad+' fejlede':'')+(c.bad&&c.stop?' · ':'')+(c.stop?c.stop+' ikke læst':'');
-  if(c.queue+c.run>0)h='<div class="up-sum run"><span class="spin"></span><span><b>Læser billede '+(c.ok+fail+1)+' af '+n+'</b>'+(window.UGEKURV_WEB&&!window.UgekurvOCR?'<span>Første gang hentes tekstlæseren.</span>':'')+'</span><button class="btn ghost sm" data-act="stopread">Stop</button></div>';
+  if(c.queue+c.run>0)h='<div class="up-sum run"><span class="spin"></span><span><b>Læser billede '+(c.ok+fail+1)+' af '+n+'</b>'+(window.UGEKURV_WEB&&!window.UgekurvOCR?'<span>Første gang tager det lidt længeren.</span>':'')+'</span><button class="btn ghost sm" data-act="stopread">Stop</button></div>';
   else if(c.ok)h='<div class="up-sum ok">'+CHECK+'<span><b>'+c.ok+' udkast gemt'+(fail?' · '+ft:'')+'</b><span>Find dem under Mine retter › Til gennemsyn.</span></span><button class="btn sm" data-act="scanreview">Gennemse</button></div>';
   else if(c.stop&&!c.bad)h='<div class="up-sum"><span><b>Læsning stoppet</b><span>Tryk Prøv igen på et billede for at læse det.</span></span></div>';
   else h='<div class="up-sum bad"><span><b>Ingen udkast gemt</b><span>Prøv et skarpere billede, hvor ingredienslisten fylder godt.</span></span></div>';
@@ -2222,12 +2231,7 @@ function openSettings(){
 /* only in the web app: notifications and log out */
 function webBlock(){
   var W=window.UGEKURV_WEB;if(!W)return '';
-  var hasK=!!(S.keys&&S.keys.gemini);
-  return '<div class="field"><label for="ai-k">Billedlæsning med AI (Google Gemini)</label>'+
-    '<p class="hint" id="ai-st">'+(hasK?'Aktiv. Kogebogsbilleder læses af Gemini.':'Ikke sat op. Hent en gratis nøgle på aistudio.google.com/apikey (Create API key), og indsæt den her.')+'</p>'+
-    '<div class="np-in"><input id="ai-k" type="password" autocomplete="off" spellcheck="false" placeholder="'+(hasK?'••••••••'+esc(String(S.keys.gemini).slice(-4)):'AQ.…')+'" aria-label="Gemini-nøgle"></div>'+
-    '<div class="btnrow"><button class="btn sm" data-act="aisave">Gem og afprøv</button>'+(hasK?'<button class="btn ghost sm" data-act="aidel">Fjern nøgle</button>':'')+'</div></div>'+
-    '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
+  return '<div class="field"><label>Notifikationer</label><div id="pn-b">'+pnSwitch(false,true,'Tjekker…')+'</div><p class="hint" id="pn-t" hidden></p></div>'+
     '<div class="field"><label>Bruger</label><p class="hint">Logget ind som <b>'+esc(W.name||'')+'</b>. Koden kan ikke nulstilles, så husk den.</p><button class="btn ghost sm" data-act="logout">Log ud</button></div>';
 }
 function pnSwitch(on,dis,sub){return '<button class="lowcard pn" role="switch" aria-checked="'+(!!on)+'" data-act="pushtog"'+(dis?' disabled aria-disabled="true"':'')+'><span class="lc"><b>Ugentlig påmindelse</b><span>'+esc(sub||'Fredag aften, når ugens tilbud er klar.')+'</span></span><span class="sw" aria-hidden="true"></span></button>'}
@@ -2562,13 +2566,10 @@ var ACT={
     var x=box.querySelector('.lb-x');if(x)x.focus();
   },
   zoomclose:function(){var b=$('#lb');if(b)b.remove();if(!$('#sheet').innerHTML)document.body.classList.remove('lock');if(S.lbBack&&S.lbBack.focus){try{S.lbBack.focus()}catch(e){}}S.lbBack=null},
-  aisave:function(){var i=$('#ai-k'),st=$('#ai-st'),k=i?i.value.replace(/\s+/g,''):'';if(!k){if(st)st.textContent='Indsæt nøglen først.';return}
-    if(!/^[A-Za-z0-9_.\-]{20,}$/.test(k)){if(st)st.textContent='Det ligner ikke en nøgle. Den starter med AQ. (ældre nøgler med AIza).';return}
-    if(st)st.textContent='Afprøver nøglen…';
-    var test=window.UgekurvOCR&&window.UgekurvOCR.testGemini?Promise.resolve():new Promise(function(r,j){var s=document.createElement('script');s.src='ocr.js?v=13';s.onload=r;s.onerror=function(){j({code:'network',message:'Kunne ikke hente ocr.js'})};document.head.appendChild(s)});
-    test.then(function(){return window.UgekurvOCR.testGemini(k)}).then(function(){return udoc('store/keys').set({gemini:k,at:Date.now()},{merge:true})}).then(function(){S.keys=Object.assign({},S.keys,{gemini:k});if(st)st.textContent='Aktiv. Nøglen virker, og kogebogsbilleder læses nu af Gemini.';if(i)i.value='';toast('Billedlæsning med AI er slået til')},
-      function(e){var c=e&&e.code,d=(e&&e.message)||String(e||'');if(st)st.innerHTML=esc(c==='bad_key'?'Google afviser nøglen. Tjek, at hele nøglen er kopieret.':c==='rate_limited'?'Nøglen virker, men kvoten er brugt lige nu. Prøv igen senere.':c==='network'?'Kunne ikke nå Google. Tjek nettet og prøv igen.':'Google svarede med en fejl. Prøv igen om lidt.')+'<br><small class="mono">Googles svar: '+esc(d.slice(0,300))+'</small>'})},
-  aidel:function(){save(function(){return udoc('store/keys').set({gemini:'',at:Date.now()},{merge:true}).then(function(){S.keys=Object.assign({},S.keys,{gemini:''});toast('Nøglen er fjernet');ACT.gear({})})})},
+  cnsok:function(){S.consentNo=false;save(function(){return udoc('store/consent').set({ai:1,v:1,at:Date.now()},{merge:true}).then(function(){S.consent={ai:1,v:1};consentDraw()})})},
+  cnsno:function(){S.consentNo=true;consentDraw()},
+  cnsback:function(){S.consentNo=false;consentDraw()},
+  cnsout:function(){if(window.UGEKURV_WEB&&window.UGEKURV_WEB.signOut)window.UGEKURV_WEB.signOut()},
   copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
@@ -2694,6 +2695,23 @@ document.addEventListener('error',function(e){
 },true);
 
 /* ---------- data ---------- */
+/* Before the app can be used: the user accepts that cookbook photos are read by Google Gemini (AI). */
+var CONSENT_V=1;
+function consentDraw(){
+  var box=document.getElementById('consent'),need=S.consentLoaded&&!(S.consent&&S.consent.ai>=CONSENT_V)&&!S.ro;
+  if(!need){if(box){box.remove();document.body.classList.remove('cns-on')}return}
+  if(!box){box=document.createElement('div');box.id='consent';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-labelledby','cns-h');document.body.appendChild(box);document.body.classList.add('cns-on')}
+  box.innerHTML='<div class="cns-card">'+(S.consentNo?
+    '<h2 id="cns-h">Appen kan ikke bruges uden accept</h2><p>FastWeek læser billeder af kogebøger med Google Gemini. Uden din accept kan appen ikke bruges.</p>'+
+    '<div class="cns-btns"><button class="btn" data-act="cnsback">Læs teksten igen</button><button class="btn ghost" data-act="cnsout">Log ud</button></div>':
+    '<h2 id="cns-h">Før du går i gang</h2>'+
+    '<p>Når du lægger et billede af en kogebogsside ind i FastWeek, bliver billedet læst af <b>Google Gemini</b>, som er kunstig intelligens (AI). Billedet sendes til Google for at blive læst.</p>'+
+    '<ul><li>Billedet gemmes ikke i FastWeek. Kun det, der læses (rettens navn, side og ingredienser), gemmes på din konto.</li>'+
+    '<li>Google kan gemme billedet og bruge det til at forbedre deres tjenester, og det kan blive set af Googles medarbejdere. Tag derfor kun billeder af selve opskriften, ikke af personer eller personlige oplysninger.</li>'+
+    '<li>Du skal acceptere dette for at kunne bruge appen.</li></ul>'+
+    '<div class="cns-btns"><button class="btn" data-act="cnsok">Jeg accepterer</button><button class="btn ghost" data-act="cnsno">Jeg accepterer ikke</button></div>')+'</div>';
+  var f=box.querySelector('button');if(f)try{f.focus({preventScroll:true})}catch(e){}
+}
 function ready(k){S.ready[k]=1;render();maybeOnboard();maybeWizard()}
 function fromCol(snap,key){var o={};snap.docs.forEach(function(d){o[d.id]=d.data()});S[key]=o;ready(key)}
 function sub(q,fn){q.onSnapshot(fn,function(e){console.error(e);if(e&&e.code==='revoked'){S.ro=true}render()})}
@@ -2708,7 +2726,9 @@ function boot(){
       if(!id){S.nodb=true;draw();return}
       S.uid=id;UB='data/users/'+id+'/u/';
       sub(udoc('store/pantry'),function(s){S.hasPantry=!!s.exists;var d=s.exists?s.data():{};S.praw=d.items||{};applyRef();ready('pantry')});
-      sub(udoc('store/keys'),function(s){S.keys=s.exists?s.data():{}});
+      /* an own key from an earlier version is no longer used: remove it */
+      sub(udoc('store/keys'),function(s){if(s.exists&&s.data().gemini)udoc('store/keys').delete().catch(function(){})});
+      sub(udoc('store/consent'),function(s){S.consent=s.exists?s.data():{};S.consentLoaded=true;consentDraw()});
       sub(udoc('store/prices'),function(s){var d=s.exists?s.data():{};S.sp=d.items||{};S.spAt=d.at||'';render()});
       sub(udoc('store/brands'),function(s){var d=s.exists?s.data():{};S.brands=d.b||{};S.bnames=d.n||{};render()});
       sub(udoc('store/settings'),function(s){S.hasSettings=!!s.exists;S.settings=normSettings(s.exists?s.data():{});ready('settings')});
@@ -2728,7 +2748,6 @@ function boot(){
     S.sample=sm;if(sm&&sm.limits)return sm.limits().then(function(l){S.imgOK=!!(l&&l.images)}).catch(function(){})
   }).catch(function(){});
 }
-if(window.UGEKURV_WEB)window.UGEKURV_WEB.aiKey=function(){return (S.keys&&S.keys.gemini)||''};
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
 if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();

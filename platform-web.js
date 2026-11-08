@@ -157,16 +157,17 @@ var sample={
   limits:function(){return Promise.resolve({images:true})},
   json:function(prompt,opts){
     opts=opts||{};var files=[].slice.call(opts.images||[]),sig=opts.signal;
-    return (window.UgekurvOCR?Promise.resolve():loadScript('ocr.js?v=13')).then(function(){
+    return (window.UgekurvOCR&&window.UgekurvOCR.readWithGemini?Promise.resolve():loadScript('ocr.js?v=14')).then(function(){
       if(sig&&sig.aborted)throw{code:'cancelled'};
-      var W=window.UGEKURV_WEB,known=W&&W.known?W.known():[],key=W&&W.aiKey?W.aiKey():'';
+      var W=window.UGEKURV_WEB,known=W&&W.known?W.known():[],proxy=(window.UGEKURV_CONFIG||{}).aiProxy,u=auth.currentUser;
       var tess=function(){return window.UgekurvOCR.readRecipe(files,sig,known,opts.onStep)};
-      if(!key)return tess();
-      /* AI reading first; if Gemini cannot be reached or the key is wrong, the built-in reader takes over */
-      return window.UgekurvOCR.readWithGemini(files,key,sig,known,opts.onStep).catch(function(e){
+      if(!proxy||!u||!u.getIdToken)return tess();
+      /* the FastWeek server reads the photo first (it holds the key and checks the login); if it cannot, the built-in reader takes over */
+      return u.getIdToken().then(function(tok){return window.UgekurvOCR.readWithGemini(files,{proxy:proxy,token:tok},sig,known,opts.onStep)}).catch(function(e){
         if(e&&(e.code==='cancelled'||e.name==='AbortError'))throw{code:'cancelled'};
-        if(opts.onStep)opts.onStep('Gemini svarede ikke ('+((e&&e.code)==='bad_key'?'nøglen afvises':(e&&e.code)==='rate_limited'?'kvoten er brugt':(e&&e.code)==='network'?'ingen forbindelse':'fejl hos Google')+'). Bruger den indbyggede læser…');
-        return tess().then(function(o){o.warn=(e&&e.code)||'unavailable';o.raw='Gemini: '+((e&&e.message)||'')+'\n\n'+(o.raw||'');return o});
+        try{console.warn('FastWeek billedlæsning:',e&&(e.message||e.code)||e)}catch(x){}
+        if(opts.onStep)opts.onStep('Læser med den enkle læser…');
+        return tess().then(function(o){o.warn=(e&&e.code)||'unavailable';return o});
       });
     });
   }

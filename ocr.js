@@ -1,5 +1,5 @@
-/* Free cookbook reading: OCR in the browser (Tesseract.js, Danish) + a simple ingredient parser.
-   Nothing is uploaded: the photo is read on the phone. Results always need a quick check. */
+/* Cookbook reading: Google Gemini through the FastWeek server (readWithGemini), and as a fallback
+   OCR in the browser (Tesseract.js, Danish) + a simple ingredient parser. Results always need a quick check. */
 (function(root){
 'use strict';
 var UNIT={kg:['g',1000],g:['g',1],gr:['g',1],gram:['g',1],l:['ml',1000],liter:['ml',1000],dl:['ml',100],cl:['ml',10],ml:['ml',1],di:['ml',100],mi:['ml',1],spsk:['ml',15],tsk:['ml',5],
@@ -271,7 +271,7 @@ function readRecipe(files,signal,known,onStep){
     var out=parseMulti(texts,known);out.raw=texts.join('\n----\n');return out;
   });
 }
-/* ---------- reading with Google Gemini (when the user has put in a key) ----------
+/* ---------- reading with Google Gemini through the FastWeek server (worker/fastweek-ai.js holds the key) ----------
    The model sees the photo itself, so italics, fractions and two columns are no problem.
    It returns every ingredient line as written; the same parser as above turns the lines into amounts in g / ml / stk. */
 var GMODELS=['gemini-flash-latest','gemini-2.5-flash','gemini-flash-lite-latest','gemini-2.5-flash-lite','gemini-3.5-flash'];
@@ -289,11 +289,11 @@ function toB64(file,max){
     im.onerror=function(){URL.revokeObjectURL(url);rej({code:'image_rejected'})};im.src=url;
   });
 }
-function geminiCall(key,parts,signal,mi,plain){
+function geminiCall(via,parts,signal,mi,plain){
   mi=mi||0;var model=GMODELS[mi],cfg=plain?{temperature:0}:{temperature:0,responseMimeType:'application/json',responseSchema:GSCHEMA};
-  var next=function(e){if(mi+1<GMODELS.length&&!(signal&&signal.aborted))return geminiCall(key,parts,signal,mi+1,plain);throw e};
-  return fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent',{method:'POST',signal:signal,
-    headers:{'Content-Type':'application/json','x-goog-api-key':key},
+  var next=function(e){if(mi+1<GMODELS.length&&!(signal&&signal.aborted))return geminiCall(via,parts,signal,mi+1,plain);throw e};
+  return fetch(String(via.proxy).replace(/\/+$/,'')+'/models/'+model+':generateContent',{method:'POST',signal:signal,
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+via.token},
     body:JSON.stringify({contents:[{role:'user',parts:parts}],generationConfig:cfg})})
   .then(function(r){return r.text().then(function(txt){
     var j={};try{j=JSON.parse(txt)}catch(x){}
@@ -302,7 +302,7 @@ function geminiCall(key,parts,signal,mi,plain){
     if(!r.ok){
       if(r.status===400||r.status===401||r.status===403){
         /* a key Google does not know at all: no point trying other models */
-        if(/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED|ACCESS_TOKEN|SERVICE_DISABLED|has not been used|disabled/i.test(gm+why)||r.status===401)throw{code:'bad_key',message:info};
+        if(r.status===401||/API key|API_KEY|UNAUTHENTICATED|PERMISSION_DENIED|ACCESS_TOKEN|SERVICE_DISABLED|has not been used|disabled|Ukendt adresse/i.test(gm+why))throw{code:'denied',message:info};
         return next({code:'unavailable',message:info});
       }
       if(r.status===429)return next({code:'rate_limited',message:info});          /* quota is per model: try the next */
@@ -315,13 +315,13 @@ function geminiCall(key,parts,signal,mi,plain){
     try{return JSON.parse(t)}catch(x){return next({code:'unavailable',message:info+': svaret var ikke JSON'})}
   })},function(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};return next({code:'network',message:'Ingen forbindelse ('+model+'): '+((e&&e.message)||e)})});
 }
-function readWithGemini(files,key,signal,known,onStep){
+function readWithGemini(files,via,signal,known,onStep){
   var step=function(t){if(onStep)try{onStep(t)}catch(e){}};
-  step('Sender billedet til Gemini…');
+  step('Læser billedet…');
   return Promise.all(files.map(function(f){return toB64(f,2000)})).then(function(b64s){
     var parts=[{text:GPROMPT}].concat(b64s.map(function(b){return{inline_data:{mime_type:'image/jpeg',data:b}}}));
-    step('Gemini læser opskriften…');
-    return geminiCall(key,parts,signal);
+    step('Læser opskriften…');
+    return geminiCall(via,parts,signal);
   }).then(function(j){
     var ing=(j.ingredients||[]).filter(function(g){return g&&g.name}),list=[],lines=[];
     /* "salt og peber" is two things to have at home */
@@ -344,12 +344,11 @@ function readWithGemini(files,key,signal,known,onStep){
     out.name=String(j.title||'').trim();
     if(out.name&&out.name===out.name.toUpperCase())out.name=out.name.charAt(0)+out.name.slice(1).toLowerCase();
     out.servings=j.servings>0?Math.round(j.servings):0;out.minutes=j.minutes>0?Math.round(j.minutes):null;out.page=j.page>0?Math.round(j.page):0;
-    out.raw='Læst af Gemini:\n'+lines.join('\n');out.via='gemini';
+    out.raw=lines.join('\n');out.via='ai';
     return out;
   });
 }
-function testGemini(key){return geminiCall(key,[{text:'Svar kun: ok'}],null,0,true)}
-var api={readRecipe:readRecipe,readWithGemini:readWithGemini,testGemini:testGemini,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
+var api={readRecipe:readRecipe,readWithGemini:readWithGemini,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

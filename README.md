@@ -8,17 +8,23 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
-## Det kan appen (version 12)
+## Det kan appen (version 13)
 
-- **Billedlæsning med AI (Google Gemini):** med en gratis nøgle fra Google læser Gemini selve billedet af kogebogssiden: titel, side, antal personer, tid og **alle** ingredienser fra alle lister på siden (også *Dressing* og *Til servering*), med mængde og enhed som i bogen. Kursiv, ½, to kolonner og skæve billeder er ikke længere et problem. Mængderne regnes om som før (dl/spsk/tsk til liter/gram, samme vare to gange lægges sammen, rørsukker står for sig, vand fra hanen kommer ikke på listen).
-- Uden nøgle, uden net, eller hvis Google afviser (fx brugt dagskvote), læser appen med den indbyggede tekstlæser som før, og skriver det i beskeden.
-- Nøglen gemmes kun på din egen konto (`store/keys`), sendes i en header direkte til Google og står aldrig i en adresse. Billedet sendes til Google; på gratisniveauet må Google bruge det til at forbedre deres tjenester.
+- **Boks ved start:** første gang en bruger åbner appen (efter login), vises en boks om, at kogebogsbilleder læses af Google Gemini (AI), at billedet sendes til Google, og hvad Google må bruge det til. Uden accept kan appen ikke bruges (kun *Læs teksten igen* eller *Log ud*). Accepten gemmes på brugerens konto (`store/consent`).
+- **Alle brugere læser billeder med din Gemini-nøgle, men nøglen er skjult:** appen sender billedet til en lille server (Cloudflare Worker, `worker/fastweek-ai.js`), som har nøglen og sender det videre til Google. Serveren tager kun imod forespørgsler fra appens adresse og fra brugere, der er logget ind i FastWeek (Firebase-login tjekkes). Nøglen findes ikke i appen eller i Firestore.
+- Resten af appen nævner ikke AI eller Gemini. Kan serveren ikke bruges, læser appen med den enkle læser (Tesseract) og beder brugeren tjekke ingredienserne ekstra grundigt.
+- Feltet til egen nøgle i Indstillinger er fjernet, og en tidligere gemt nøgle slettes fra kontoen.
+- **Kvote (gratis):** reglerne gælder for hele Google-projektet, ikke pr. bruger. Appen prøver Gemini Flash først (ca. 20 billeder om dagen) og derefter Gemini Flash-Lite (ca. 500 om dagen). Kvoten nulstilles kl. 9 dansk tid. Se forbruget på **aistudio.google.com/rate-limit**.
 
-### Sådan slår du AI-læsning til (én gang, ca. 2 minutter)
-1. Åbn **aistudio.google.com/apikey** og log ind med din Google-konto. Godkend vilkårene, hvis du bliver spurgt.
-2. Tryk **Create API key** (vælg evt. et projekt eller *Create project*). Der kræves intet betalingskort.
-3. Kopiér nøglen. Nye nøgler starter med `AQ.` (ældre nøgler med `AIza`; begge virker i appen).
-4. I FastWeek: **Menu > Indstillinger > Billedlæsning med AI**. Indsæt nøglen og tryk **Gem og afprøv**. Står der *Aktiv*, er det slået til.
+### Billedlæsning: sådan sættes serveren op (én gang, ca. 10 minutter)
+1. Opret en gratis konto på **dash.cloudflare.com/sign-up**, og bekræft din e-mail.
+2. I menuen til venstre: **Compute (Workers) > Workers & Pages > Create** (eller *Create application*) > **Start with Hello World!**. Kald den `fastweek-ai`, og tryk **Deploy**.
+3. Tryk **Edit code**. Slet al koden i editoren. Åbn **github.com/Taekkers/FastWeek/blob/main/worker/fastweek-ai.js**, tryk på knappen *Copy raw file* (to firkanter), og indsæt i Cloudflare-editoren. Tryk **Deploy**.
+4. Gå tilbage til workeren > **Settings > Variables and Secrets > Add**. *Type*: **Secret**. *Variable name*: `GEMINI_KEY`. *Value*: din nøgle fra aistudio.google.com/apikey (starter med `AQ.`). Tryk **Deploy** (eller *Save*).
+5. Kopiér workerens adresse (fx `https://fastweek-ai.dit-navn.workers.dev`), og åbn den i browseren. Der skal stå *FastWeek billedlæsning kører*.
+6. Sæt adressen ind i `config.js` som `aiProxy: "https://fastweek-ai.dit-navn.workers.dev"` (eller send den til Claude).
+
+Test af serveren: `node worker/test.mjs` (login, adresse, nøglen kommer aldrig retur).
 
 ## Det kan appen (version 11)
 
