@@ -364,7 +364,7 @@ function ingRow(g){
 }
 function heroHtml(id,r){
   var canUp=!!S.assets||!!window.UGEKURV_WEB,own=ownImg(r),ph=!own&&!r.noweb&&r.photo&&r.photo.u?r.photo:null,h='';
-  h+='<div class="hero-img"><span class="art wide">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(own?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>';
+  h+='<div class="hero-img"><span class="art wide" role="button" tabindex="0" data-act="zoom" data-id="'+esc(id)+'" aria-label="Forstør billedet af '+esc(r.name||'retten')+'">'+artHtml(r,id,true)+'</span>'+(canUp?'<button class="cam" data-act="photo" data-id="'+esc(id)+'">'+CAM+(own?'Skift foto':'Tilføj foto')+'</button>':'')+'</div>';
   if(canUp)h+='<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">';
   h+='<div id="ph-st" aria-live="polite"></div>';
   if(own)h+='<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>';
@@ -1074,6 +1074,15 @@ var ACT={
   findimg:function(d){var r=S.recipes[d.id];if(!r)return;save(function(){return up(udoc('recipes/'+d.id),{noweb:false}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{noweb:false});openRecipe(d.id);draw()})})},
   nextimg:function(d){var r=S.recipes[d.id];if(!r||!r.photo)return;var sk=(Array.isArray(r.photoSkip)?r.photoSkip:[]).concat(r.photo.u).slice(-20);
     save(function(){return up(udoc('recipes/'+d.id),{photoReq:true,photoSkip:sk,noweb:false}).then(function(){S.recipes[d.id]=Object.assign({},S.recipes[d.id],{photoReq:true,photoSkip:sk});toast('Et andet foto hentes inden for en time');openRecipe(d.id)})})},
+  zoom:function(d,el){
+    var src=el&&el.querySelector('img'),art=el&&el.querySelector('svg'),r=S.recipes[d.id]||{},ph=r.photo&&r.photo.u&&!r.noweb&&!ownImg(r)?r.photo:null;
+    var box=document.createElement('div');box.id='lb';box.setAttribute('role','dialog');box.setAttribute('aria-modal','true');box.setAttribute('aria-label',r.name||'Billede');
+    box.innerHTML='<button class="lb-x" data-act="zoomclose" aria-label="Luk">×</button><div class="lb-in" data-act="zoomclose">'+(src?'<img src="'+esc(src.getAttribute('src'))+'" alt="'+esc(r.name||'')+'" referrerpolicy="no-referrer">':art?art.outerHTML:'')+'</div>'+
+      '<div class="lb-cap"><b>'+esc(r.name||'')+'</b>'+(ph&&src?'<span>Foto: '+esc(ph.h||'')+'</span>':'')+'</div>';
+    document.body.appendChild(box);document.body.classList.add('lock');S.lbBack=el;
+    var x=box.querySelector('.lb-x');if(x)x.focus();
+  },
+  zoomclose:function(){var b=$('#lb');if(b)b.remove();if(!$('#sheet').innerHTML)document.body.classList.remove('lock');if(S.lbBack&&S.lbBack.focus){try{S.lbBack.focus()}catch(e){}}S.lbBack=null},
   copyraw:function(d,el){var pre=el&&el.parentNode&&el.parentNode.querySelector('pre'),tx=pre?pre.textContent:'';try{navigator.clipboard.writeText(tx).then(function(){toast('Teksten er kopieret')},function(){toast('Markér teksten og kopiér den')})}catch(e){toast('Markér teksten og kopiér den')}},
   rmphoto:function(d){
     var r=S.recipes[d.id];if(!r||!r.img)return;var old=r.img,o=Object.assign({},r);delete o.img;
@@ -1186,6 +1195,8 @@ document.addEventListener('input',function(e){
   else if(/^(st|ob)-(a|k)$/.test(t.id||'')){hhUpdate(t.id.slice(0,2))}
 });
 document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'&&$('#lb')){ACT.zoomclose();return}
+  if((e.key==='Enter'||e.key===' ')&&e.target&&e.target.matches&&e.target.matches('[data-act="zoom"]')){e.preventDefault();ACT.zoom(e.target.dataset,e.target);return}
   if(e.key==='Escape'&&menuIsOpen()){closeMenu();var mb=$('#menubtn');if(mb)mb.focus();return}
   if(e.key==='Escape'&&$('#sheet').firstChild){if(S.wz)ACT.wzclose();else closeSheet()}
   if(e.key==='Enter'&&e.target.id==='xin'){e.preventDefault();ACT.addx()}

@@ -17,13 +17,13 @@ function normFractions(s){
   return s.replace(/(\d)\s*½/g,'$1.5').replace(/(\d)\s*¼/g,'$1.25').replace(/(\d)\s*¾/g,'$1.75').replace(/½/g,'0.5').replace(/¼/g,'0.25').replace(/¾/g,'0.75').replace(/⅓/g,'0.33').replace(/⅔/g,'0.67');
 }
 function cleanName(n){
-  n=n.replace(/^[^A-Za-zÆØÅæøåÄÖÜäöü]+/,'').replace(/^(øko|oko|økologisk[e]?|okologisk[e]?)\s+/i,'').replace(/\s+til\s+(stegning|servering|pynt|anretning|vending)\b.*$/i,'').replace(/\([^)]*\)/g,' ').replace(/\s[–—-]\s.*$/,'').replace(/,.*$/,'').replace(/[.;:]+$/,'').replace(/^(af|evt\.?|ca\.?)\s+/i,'').replace(/\s+/g,' ').trim().toLowerCase();
+  n=n.replace(/\s+(\+|eller)\s.*$/,'').replace(/^[^A-Za-zÆØÅæøåÄÖÜäöü]+/,'').replace(/^(øko|oko|økologisk[e]?|okologisk[e]?)\s+/i,'').replace(/\s+til\s+(stegning|servering|pynt|anretning|vending)\b.*$/i,'').replace(/\([^)]*\)/g,' ').replace(/\s[–—-]\s.*$/,'').replace(/,.*$/,'').replace(/[.;:]+$/,'').replace(/^(af|evt\.?|ca\.?)\s+/i,'').replace(/\s+/g,' ').trim().toLowerCase();
   return n;
 }
 var STOP=/^(og|en|et|i|med|til|af|fint|groft|evt|eller|ca|lidt|gerne|samt)(\s|$)/;
 var UNITW=/^(spsk|tsk|sk|dl|di|cl|ml|kg|g|gr|dåse|dase|daase|fed|bdt|bundt|stk|pk|pakke|skiver?)\.?\s+(?=[A-Za-zæøåÆØÅ])/i;
 function parseLine(line,inSec){
-  var s=line.replace(/^[\s•·*▪●○\-–—|]+/,'').trim();
+  var s=line.replace(/^[\s•·*▪●○\-–—|]+/,'').trim().replace(/^(ca\.?|cirka|evt\.?|eventuelt|gerne)\s+(?=[\d½¼¾])/i,'');
   /* OCR misreads in the amount: "l" or "I" for 1, "O" for 0 */
   s=s.replace(/^([0-9oOsSlI]{1,3})(?=\s*g\s+[a-zæøå])/,function(x){return /\d/.test(x)||x.length>1?x.replace(/[oO]/g,'0').replace(/[sS]/g,'5').replace(/[lI]/g,'1'):x}).replace(/^[lI|](?=\s*(?:\d|[½¼¾]|dl|di|cl|ml|kg|g|spsk|tsk|dåse|dase|fed|stk|bdt)\b)/,'1').replace(/^(\d+)[oO](?=\d|\s|g\b)/,'$10');
   /* italic g read as £/€ or 8/9/q after the number ("400 £g pasta", "150 8 sorte oliven"); ½ read as %, f, 72, Y2 */
@@ -69,7 +69,7 @@ function parseLine(line,inSec){
   name=name.replace(/(\D)\d(\D)/g,'$1$2').trim();
   name=name.replace(/(\s+[a-zæøå])+$/,'').trim();
   var junk=/[^a-zæøåäöüé\s-]/.test(name);if(junk)name=name.replace(/[^a-zæøåäöüé\s-]+/g,' ').replace(/\s+/g,' ').trim();   /* stray signs: kept only if it then matches a known food */
-  if(name.length<3||name.length>40||/^\d+$/.test(name)||STOP.test(name))return null;
+  if((name.length<3&&!/^(æg|is)$/.test(name))||name.length>40||/^\d+$/.test(name)||STOP.test(name))return null;
   if(SKIP.test(name))return null;
   if(/^(personer|person|pers|portioner|portion|port|minutter|minut|min|timer|time)$/.test(name))return null;
   /* step text in the method section: long sentence */
@@ -141,7 +141,7 @@ function mergeIngs(lists){
   var out=[];
   lists.forEach(function(list,pi){list.forEach(function(g){
     var l=loose(g.n),hit=null;
-    for(var i=0;i<out.length;i++){var o=loose(out[i].n);if(o===l||(l.length>=5&&o.length>=5&&lev(o,l)<=1)||(l.length>=6&&o.length>=6&&(o.indexOf(l)>-1||l.indexOf(o)>-1))){hit=i;break}}
+    for(var i=0;i<out.length;i++){var o=loose(out[i].n),sh=Math.min(o.length,l.length)/Math.max(o.length,l.length);if(o===l||(l.length>=5&&o.length>=5&&lev(o,l)<=1)||(l.length>=6&&o.length>=6&&sh>=.8&&(o.indexOf(l)>-1||l.indexOf(o)>-1))){hit=i;break}}
     if(hit===null){if(pi>0&&g.guess)return;out.push(g)}
     else if((out[hit].guess&&!g.guess)||(/[^a-zæøåäöü\s-]/.test(out[hit].n)&&!/[^a-zæøåäöü\s-]/.test(g.n))||(out[hit].u==='stk'&&g.u!=='stk'&&!g.guess&&out[hit].q===g.q))out[hit]=g;
   })});
@@ -161,6 +161,10 @@ function parseText(text,known){
   var body=iStart>=0?lines.slice(iStart+1,iEnd):lines;
   var ings=[],seen={};
   body.forEach(function(l){var g=parseLine(l,iStart>=0);if(g&&!seen[g.n]){seen[g.n]=1;ings.push(g)}});
+  /* "salt og peber" without an amount: still part of the dish, listed with a pinch so the list is complete */
+  body.forEach(function(l){var w=l.toLowerCase();if(w.split(/\s+/).length>6||/^\s*[\d½¼¾]/.test(w))return;
+    if(/\bsalt\b/.test(w)&&!seen.salt){seen.salt=1;ings.push({n:'salt',q:1,u:'g',guess:true,known:true})}
+    if(/\bpeber\b(?!frugt)/.test(w)&&!/peberfrugt/.test(w)&&!seen.peber){seen.peber=1;ings.push({n:'peber',q:1,u:'g',guess:true,known:true})}});
   var head=iStart>=0?lines.slice(0,iStart):lines.slice(0,6),title='';
   for(var k=0;k<head.length;k++){
     var h=head[k];
@@ -177,7 +181,7 @@ function parseText(text,known){
   return{name:title,minutes:minutes,servings:servings||0,page:findPage(lines),ingredients:fixNames(ings,known)};
 }
 /* common Danish ingredients: used to correct misread words */
-var COMMON='bulgur,fetaost,græskarkerner,cherrytomater,oliven,sorte oliven,agurk,ananas,appelsin,asparges,aubergine,avocado,bacon,bagepulver,balsamico,banan,basilikum,bladselleri,blomkål,blåbær,bouillon,broccoli,brød,bulgur,butterdej,citron,chili,chiliflager,cremefraiche,dild,eddike,estragon,feta,fløde,forårsløg,frikadellefars,gær,grønkål,gulerødder,gulerod,hakket oksekød,hakket svinekød,hakket kalkun,hakkede tomater,havregryn,hasselnødder,honning,hvedemel,hvidløg,hvidvin,hytteost,ingefær,kanel,kapers,karry,kartofler,kidneybønner,kikærter,kokosmælk,koriander,kyllingebryst,kyllingelår,kylling,laks,laksfilet,lime,linser,løg,majs,mango,mel,mozzarella,muskatnød,mælk,mynte,nudler,oksekød,oksefond,olie,olivenolie,oregano,ost,paprika,parmesan,pasta,peberfrugt,persille,pinjekerner,piskefløde,porre,purløg,radiser,rejer,ris,rosmarin,rucola,rugbrød,rødbeder,rødløg,rødvin,rørsukker,sennep,selleri,skinke,smør,sojasauce,spidskål,spidskommen,spinat,squash,sukker,svinekød,tomater,tomatpuré,timian,torsk,tortillas,tun,valnødder,vaniljesukker,yoghurt,æble,æg,ærter'.split(',');
+var COMMON='salt,peber,bulgur,fetaost,græskarkerner,cherrytomater,oliven,sorte oliven,agurk,ananas,appelsin,asparges,aubergine,avocado,bacon,bagepulver,balsamico,banan,basilikum,bladselleri,blomkål,blåbær,bouillon,broccoli,brød,bulgur,butterdej,citron,chili,chiliflager,cremefraiche,dild,eddike,estragon,feta,fløde,forårsløg,frikadellefars,gær,grønkål,gulerødder,gulerod,hakket oksekød,hakket svinekød,hakket kalkun,hakkede tomater,havregryn,hasselnødder,honning,hvedemel,hvidløg,hvidvin,hytteost,ingefær,kanel,kapers,karry,kartofler,kidneybønner,kikærter,kokosmælk,koriander,kyllingebryst,kyllingelår,kylling,laks,laksfilet,lime,linser,løg,majs,mango,mel,mozzarella,muskatnød,mælk,mynte,nudler,oksekød,oksefond,olie,olivenolie,oregano,ost,paprika,parmesan,pasta,peberfrugt,persille,pinjekerner,piskefløde,porre,purløg,radiser,rejer,ris,rosmarin,rucola,rugbrød,rødbeder,rødløg,rødvin,rørsukker,sennep,selleri,skinke,smør,sojasauce,spidskål,spidskommen,spinat,squash,sukker,svinekød,tomater,tomatpuré,timian,torsk,tortillas,tun,valnødder,vaniljesukker,yoghurt,æble,æg,ærter'.split(',');
 function commonKnown(k){var seen={},out=[];(k||[]).concat(COMMON).forEach(function(n){n=String(n||'').trim();var l=n.toLowerCase();if(n&&!seen[l]){seen[l]=1;out.push(n)}});return out}
 /* ---- browser part ---- */
 function loadScript(src){return new Promise(function(res,rej){var s=document.createElement('script');s.src=src;s.onload=res;s.onerror=function(){rej({code:'unavailable'})};document.head.appendChild(s)})}

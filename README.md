@@ -8,6 +8,11 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 11)
+
+- **Forstør billedet af retten:** tryk på billedet (foto eller tegning) på retsiden. Luk med ×, Escape eller et tryk på billedet.
+- **Færre manglende ingredienser ved billedlæsning:** æg kom ikke med (navnet var for kort), linjer med *ca.* eller *evt.* foran mængden blev sprunget over, *+ til servering* og *eller …* forstyrrede navnet, og to forskellige varer kunne blive slået sammen (fx sukker og rørsukker, tomater og cherrytomater). *Salt og peber* kommer nu med på listen (1 g hver, efter smag).
+
 ## Det kan appen (version 10)
 
 - **Køkkenmål:** opskrifter kan skrives med l, dl, spsk, tsk (og kg). 1 l = 10 dl = 1000 ml, 1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 knsp ≈ 0,5 ml. Tørvarer regnes om til gram med en vægtfylde (fx sukker 0,85 g/ml: 2 spsk ≈ 26 g; hvedemel 0,6 g/ml: 1 dl = 60 g; ris 0,85; havregryn 0,4; salt 1,2; krydderier 0,5), væske til liter. Retten viser fx *26 g (2 spsk)* og *0,15 l (1½ dl)*.
