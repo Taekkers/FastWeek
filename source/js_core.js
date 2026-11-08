@@ -350,7 +350,9 @@ function buyCalc(stock,min,pack,need,unit){
   else{packs=1;qty=unit==='stk'?Math.ceil(buy-1e-9):Math.ceil(buy/50-1e-9)*50}
   return{buy:buy,packs:packs,qty:qty,excess:qty-buy};
 }
-function computeList(w){
+/* items swiped away on the shopping list are hidden for that week */
+function computeList(w){var sk=(S.lists[w]||{}).skip;sk=Array.isArray(sk)?sk:[];return computeAll(w).filter(function(it){return sk.indexOf(it.k+'_'+it.unit)<0})}
+function computeAll(w){
   var needs=aggNeeds(planIds(w,false)),out=[],seen={};
   Object.keys(needs).forEach(function(key){
     var n=needs[key],p=pan(n.k),same=p&&p.unit===n.unit;

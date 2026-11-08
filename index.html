@@ -526,6 +526,14 @@ details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;ove
 #consent .cns-btns{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 body.cns-on{overflow:hidden}
 
+/* swipe to delete */
+[data-sw]{touch-action:pan-y;position:relative;z-index:1}
+[data-sw].sw-on{background:var(--surface)}
+.list,.group{position:relative}
+.sw-del{position:absolute;right:0;width:88px;z-index:0;border:0;margin:0;padding:0;background:#C62828;color:#fff;font:600 15px var(--f-body);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sw-del:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--pine);text-decoration:underline;cursor:pointer;min-height:24px}
+
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 #login[hidden]{display:none!important}
 .lg-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(21,35,28,.08)}
@@ -908,7 +916,9 @@ function buyCalc(stock,min,pack,need,unit){
   else{packs=1;qty=unit==='stk'?Math.ceil(buy-1e-9):Math.ceil(buy/50-1e-9)*50}
   return{buy:buy,packs:packs,qty:qty,excess:qty-buy};
 }
-function computeList(w){
+/* items swiped away on the shopping list are hidden for that week */
+function computeList(w){var sk=(S.lists[w]||{}).skip;sk=Array.isArray(sk)?sk:[];return computeAll(w).filter(function(it){return sk.indexOf(it.k+'_'+it.unit)<0})}
+function computeAll(w){
   var needs=aggNeeds(planIds(w,false)),out=[],seen={};
   Object.keys(needs).forEach(function(key){
     var n=needs[key],p=pan(n.k),same=p&&p.unit===n.unit;
@@ -1679,7 +1689,7 @@ function viewShop(){
         var cells=combo?'<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>':'';
         var price=ln?'<span class="pr'+(via?' off':'')+'">ca. '+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':''):'';
         var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>':'';
-        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
+        var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'" data-sw="skipit" data-k="'+esc(key)+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
         if(on){doneRows.push(rh);return ''}openN++;return rh}).filter(Boolean);
       var lb=combo?'<div class="lbl cmp-l"><span>'+esc(c)+'</span><span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){return '<span>'+esc(stShort(s2))+'</span>'}).join('')+'</span></div>':'<div class="lbl">'+esc(c)+'</div>';
       if(rows.length)g+='<div class="sec">'+lb+'<div class="group">'+rows.join('')+'</div></div>';
@@ -1701,11 +1711,13 @@ function viewShop(){
     var rest=items.filter(function(it){return !storeOf(it)});if(rest.length)h+=groupsHtml(rest);
   }else h+=groupsHtml(items);
   h+='<div class="sec"><div class="lbl">Ekstra</div><div class="group">'+extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
-    var rh='<label class="it'+(on?' on':'')+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span><span></span></label>';
+    var rh='<label class="it'+(on?' on':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span><span></span></label>';
     if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div>'+
     '<div class="add-row"><input id="xin" type="text" placeholder="Tilføj vare, fx slik eller brød" aria-label="Ny ekstra vare"><button class="btn" data-act="addx">Tilføj</button></div></div>';
   if(items.length&&!openN&&doneRows.length)h+='<p class="hint">Alt fra madplanen er krydset af.</p>';
   if(doneRows.length)h+='<div class="sec bought"><div class="lbl">Købt ('+doneRows.length+')</div><div class="group">'+doneRows.join('')+'</div></div>';
+  var nsk=Array.isArray(L.skip)?L.skip.length:0;
+  if(nsk)h+='<p class="hint skipped">'+nsk+(nsk===1?' vare er slettet':' varer er slettet')+' fra ugens liste. <button class="linkbtn" data-act="unskip">Vis igen</button></p>';
   if(nchk)h+='<button class="btn block" data-act="tostock">Læg afkrydsede på lageret</button>';
   if(sc.norm>0){
     var od=S.offers[w],fine=SPON?'Normalpriser fra kædernes egne kataloger. ≈ er et skøn, hvor kæden ikke viser sin hyldepris (Coop-kæderne og Løvbjerg).':'Priserne er overslag.';
@@ -1726,7 +1738,7 @@ function stockListHtml(){
   var row=function(p){
     var cq=curQty(p),low=isLow(p),soon=p.expires&&cq>0&&daysBetween(t,p.expires)<=4;
     var sub=(low?'<span class="chip off">'+((p.rule||'under')==='out'?'Brugt op':'Snart tom')+'</span>':'')+(soon?'<span class="chip warn">Udløber snart</span>':'')+(p.leftover&&p.frozen?'<span>frosset '+fmtDate(p.frozen)+'</span>':'');
-    return '<button class="li" data-act="editstock" data-k="'+esc(p.k)+'"><span><span class="nm">'+esc(p.name)+'</span>'+(sub?'<span class="sub">'+sub+'</span>':'')+'</span><span class="qt">'+pq(p,cq)+'</span></button>';
+    return '<button class="li" data-act="editstock" data-sw="delstock" data-k="'+esc(p.k)+'"><span><span class="nm">'+esc(p.name)+'</span>'+(sub?'<span class="sub">'+sub+'</span>':'')+'</span><span class="qt">'+pq(p,cq)+'</span></button>';
   };
   CATS.forEach(function(c){
     var g=have.filter(function(p){return grp(p)===c}).sort(byName);
@@ -1815,7 +1827,7 @@ function openRecipes(){
   Object.keys(books).sort(function(a,b){return a==='Egne retter'?1:b==='Egne retter'?-1:a.localeCompare(b,'da')}).forEach(function(b){
     h+='<div class="sec"><div class="lbl">'+esc(b)+'</div><div class="list">'+books[b].sort(function(a,c){return (S.recipes[a].page||0)-(S.recipes[c].page||0)||S.recipes[a].name.localeCompare(S.recipes[c].name,'da')}).map(function(id){
       var r=S.recipes[id],kt=kcTxt(r);
-      return '<button class="li rec" data-act="editrec" data-id="'+id+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.fav?'<span class="hrt">♥</span>':'')+(r.page?'<span class="mono">s. '+r.page+'</span>':'')+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(kt?'<span>'+kt+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.prot==='vegetar'||r.prot==='aeg'?'<span class="chip">Vegetar</span>':'')+'</span></span><span></span></button>'}).join('')+'</div></div>';
+      return '<button class="li rec" data-act="editrec" data-sw="delrec" data-id="'+id+'">'+artBox(r,id)+'<span><span class="nm">'+esc(r.name)+'</span><span class="sub">'+(r.fav?'<span class="hrt">♥</span>':'')+(r.page?'<span class="mono">s. '+r.page+'</span>':'')+(r.minutes?'<span>'+r.minutes+' min</span>':'')+(kt?'<span>'+kt+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.prot==='vegetar'||r.prot==='aeg'?'<span class="chip">Vegetar</span>':'')+'</span></span><span></span></button>'}).join('')+'</div></div>';
   });
   openSheet('Mine retter',h);
 }
@@ -1964,7 +1976,7 @@ function draftList(){
 function draftsHtml(){
   var ids=draftList();if(!ids.length)return '';
   return '<div class="sec"><div class="lbl">Til gennemsyn ('+ids.length+')</div><div class="list">'+ids.map(function(id){var d=S.scans[id],n=(d.ing||[]).length;
-    return '<button class="li rec" data-act="editdraft" data-id="'+esc(id)+'"><span class="art plate">'+PLATE+'</span><span><span class="nm">'+esc(d.name||'Uden navn')+'</span><span class="sub"><span>'+esc(d.book||'')+'</span>'+(d.page?'<span class="mono">s. '+d.page+'</span>':'')+'<span>'+n+(n===1?' ingrediens':' ingredienser')+'</span><span class="chip warn">Udkast</span></span></span><span></span></button>'}).join('')+'</div></div>';
+    return '<button class="li rec" data-act="editdraft" data-sw="deldraft" data-id="'+esc(id)+'"><span class="art plate">'+PLATE+'</span><span><span class="nm">'+esc(d.name||'Uden navn')+'</span><span class="sub"><span>'+esc(d.book||'')+'</span>'+(d.page?'<span class="mono">s. '+d.page+'</span>':'')+'<span>'+n+(n===1?' ingrediens':' ingredienser')+'</span><span class="chip warn">Udkast</span></span></span><span></span></button>'}).join('')+'</div></div>';
 }
 function upSize(f){return f.size>=1048576?nf(f.size/1048576,1)+' MB':Math.max(1,Math.round(f.size/1024))+' kB'}
 var UPS={queue:'I kø',run:'Læser…',ok:'Gemt som udkast',bad:'Kunne ikke læses',stop:'Stoppet'};
@@ -2149,7 +2161,7 @@ function openBrand(k,nm){
 }
 function openBrands(){
   var ks=Object.keys(S.brands||{}).filter(function(k){return brandsOf(k).length}).sort(function(a,b){return brandName(a).localeCompare(brandName(b),'da')});
-  var h=ks.length?'<div class="list">'+ks.map(function(k){return '<button class="li" data-act="brand" data-k="'+esc(k)+'" data-n="'+esc(brandName(k))+'"><span><span class="nm">'+esc(brandName(k))+'</span><span class="sub">'+esc(brandsOf(k).join(', '))+'</span></span><span class="qt">Ret</span></button>'}).join('')+'</div>':'<p class="muted">Ingen mærker valgt. Tryk &quot;+ Mærke&quot; ved en vare på indkøbslisten.</p>';
+  var h=ks.length?'<div class="list">'+ks.map(function(k){return '<button class="li" data-act="brand" data-sw="brdelsw" data-k="'+esc(k)+'" data-n="'+esc(brandName(k))+'"><span><span class="nm">'+esc(brandName(k))+'</span><span class="sub">'+esc(brandsOf(k).join(', '))+'</span></span><span class="qt">Ret</span></button>'}).join('')+'</div>':'<p class="muted">Ingen mærker valgt. Tryk &quot;+ Mærke&quot; ved en vare på indkøbslisten.</p>';
   openSheet('Mine foretrukne mærker',h);
 }
 function addFreezer(){
@@ -2566,6 +2578,10 @@ var ACT={
     var x=box.querySelector('.lb-x');if(x)x.focus();
   },
   zoomclose:function(){var b=$('#lb');if(b)b.remove();if(!$('#sheet').innerHTML)document.body.classList.remove('lock');if(S.lbBack&&S.lbBack.focus){try{S.lbBack.focus()}catch(e){}}S.lbBack=null},
+  skipit:function(d){var w=wid(),sk=(S.lists[w]||{}).skip;sk=Array.isArray(sk)?sk.slice():[];if(sk.indexOf(d.k)<0)sk.push(d.k);
+    save(function(){return udoc('lists/'+w).set({skip:sk},{merge:true}).then(function(){toast('Slettet fra ugens liste')})})},
+  unskip:function(){var w=wid();save(function(){return udoc('lists/'+w).set({skip:[]},{merge:true})})},
+  brdelsw:function(d){save(function(){return setBrands(d.k,[]).then(function(){openBrands();toast('Mærke fjernet')})})},
   cnsok:function(){S.consentNo=false;save(function(){return udoc('store/consent').set({ai:1,v:1,at:Date.now()},{merge:true}).then(function(){S.consent={ai:1,v:1};consentDraw()})})},
   cnsno:function(){S.consentNo=true;consentDraw()},
   cnsback:function(){S.consentNo=false;consentDraw()},
@@ -2657,6 +2673,41 @@ document.addEventListener('click',function(e){var sm=e.target.closest&&e.target.
 var _sx=null;
 document.addEventListener('touchstart',function(e){var d=e.target.closest&&e.target.closest('.dr');_sx=d&&e.touches[0]?e.touches[0].clientX:null},{passive:true});
 document.addEventListener('touchend',function(e){if(_sx===null)return;var t=e.changedTouches[0];var dx=t?t.clientX-_sx:0;_sx=null;if(dx<-60)closeMenu()},{passive:true});
+/* Swipe to delete: drag a row (data-sw="<action>") to the left; a red "Slet" shows at the right edge. Tap it to delete. */
+var SW={row:null,x:0,y:0,dx:0,on:false,open:null,eat:false,W:88};
+function swBtn(row){
+  var p=row.parentNode,b=p.querySelector(':scope>.sw-del');
+  if(!b){b=document.createElement('button');b.type='button';b.className='sw-del';b.textContent='Slet';p.insertBefore(b,p.firstChild)}
+  b.style.top=row.offsetTop+'px';b.style.height=row.offsetHeight+'px';b._row=row;
+  b.setAttribute('aria-label','Slet '+((row.querySelector('.nm,.it-n')||row).textContent||'').trim());
+  return b;
+}
+function swSet(row,x,anim){row.style.transition=anim?'transform .18s ease':'none';row.style.transform=x?'translateX('+x+'px)':'';row.classList.add('sw-on')}
+function swClose(anim){var r=SW.open;SW.open=null;if(!r)return;swSet(r,0,anim!==false);setTimeout(function(){if(SW.open!==r&&SW.row!==r){r.classList.remove('sw-on');var b=r.parentNode&&r.parentNode.querySelector(':scope>.sw-del');if(b&&b._row===r)b.remove()}},200)}
+document.addEventListener('pointerdown',function(e){
+  if(e.button>0)return;var row=e.target.closest&&e.target.closest('[data-sw]');
+  if(SW.open&&!(e.target.closest&&e.target.closest('.sw-del'))&&row!==SW.open){swClose();SW.eat=true;SW.row=null;return}
+  SW.row=row;SW.on=false;SW.dx=0;if(!row)return;SW.x=e.clientX;SW.y=e.clientY;SW.base=row===SW.open?-SW.W:0;
+},true);
+document.addEventListener('pointermove',function(e){
+  var row=SW.row;if(!row)return;var dx=e.clientX-SW.x,dy=e.clientY-SW.y;
+  if(!SW.on){if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){SW.row=null;return}if(Math.abs(dx)<10||Math.abs(dx)<Math.abs(dy))return;
+    if(dx>0&&SW.base===0){SW.row=null;return}
+    SW.on=true;if(SW.open&&SW.open!==row)swClose();swBtn(row);try{row.setPointerCapture(e.pointerId)}catch(x){}}
+  var x=Math.min(0,Math.max(-SW.W*1.6,SW.base+dx));SW.dx=x;swSet(row,x,false);e.preventDefault();
+},{passive:false});
+function swEnd(){
+  var row=SW.row;SW.row=null;if(!row||!SW.on)return;SW.on=false;SW.eat=true;
+  if(SW.dx<-SW.W/2){swSet(row,-SW.W,true);SW.open=row;swBtn(row)}
+  else{SW.open=row;swClose()}
+}
+document.addEventListener('pointerup',swEnd);document.addEventListener('pointercancel',swEnd);
+document.addEventListener('click',function(e){
+  var b=e.target.closest&&e.target.closest('.sw-del');
+  if(b){e.preventDefault();e.stopPropagation();SW.eat=false;var row=b._row,f=row&&ACT[row.dataset.sw];SW.open=null;b.remove();if(f)f(row.dataset,row,e);return}
+  if(SW.eat){SW.eat=false;e.preventDefault();e.stopPropagation()}
+},true);
+document.addEventListener('keydown',function(e){if(e.key==='Escape'&&SW.open)swClose()});
 document.addEventListener('click',function(e){var el=e.target.closest('[data-act]');if(!el)return;var f=ACT[el.dataset.act];if(f)f(el.dataset,el,e)});
 document.addEventListener('change',function(e){
   var t=e.target;if(!t.matches)return;

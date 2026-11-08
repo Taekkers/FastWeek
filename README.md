@@ -8,6 +8,11 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 14)
+
+- **Slet ved at glide til venstre:** glid fingeren mod venstre på en række, så står **Slet** med rødt i højre side. Tryk på det for at slette. Et kort glid, et lodret træk eller et tryk et andet sted lukker igen uden at slette, og et almindeligt tryk åbner rækken som før.
+- Virker på: Mine retter, udkast fra scanning, Lager, Indkøbslisten (varen fjernes fra ugens liste; *Vis igen* henter den tilbage), ekstra varer og foretrukne mærker.
+
 ## Det kan appen (version 13)
 
 - **Boks ved start:** første gang en bruger åbner appen (efter login), vises en boks om, at kogebogsbilleder læses af Google Gemini (AI), at billedet sendes til Google, og hvad Google må bruge det til. Uden accept kan appen ikke bruges (kun *Læs teksten igen* eller *Log ud*). Accepten gemmes på brugerens konto (`store/consent`).

@@ -506,3 +506,11 @@ details.raw pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;ove
 #consent ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
 #consent .cns-btns{display:flex;flex-direction:column;gap:8px;margin-top:4px}
 body.cns-on{overflow:hidden}
+
+/* swipe to delete */
+[data-sw]{touch-action:pan-y;position:relative;z-index:1}
+[data-sw].sw-on{background:var(--surface)}
+.list,.group{position:relative}
+.sw-del{position:absolute;right:0;width:88px;z-index:0;border:0;margin:0;padding:0;background:#C62828;color:#fff;font:600 15px var(--f-body);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.sw-del:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--pine);text-decoration:underline;cursor:pointer;min-height:24px}
