@@ -1,0 +1,576 @@
+[
+ {
+  "id": "asiatisk-kyllingesalat",
+  "name": "Asiatisk kyllingesalat",
+  "photo": {
+   "u": "https://mkuniverset.dk/wp-content/uploads/2025/12/asiatisk-kyllingesalat-app-720.jpg",
+   "p": "https://mkuniverset.dk/opskrifter/asiatisk-kyllingesalat/",
+   "h": "mkuniverset.dk",
+   "t": "Asiatisk kyllingesalat - MK Universet",
+   "w": 720,
+   "hh": 720,
+   "ct": "image/jpeg",
+   "q": "Asiatisk kyllingesalat opskrift"
+  }
+ },
+ {
+  "id": "bagt-kylling",
+  "name": "Bagt kylling med kartofler og krydderurter",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2019/03/loerdagskylling.jpg",
+   "p": "https://www.valdemarsro.dk/bagt-kylling/",
+   "h": "valdemarsro.dk",
+   "t": "Bagt kylling med kartofler og krydderurter - lørdagskylling opskrift",
+   "w": 900,
+   "hh": 610,
+   "ct": "image/jpeg",
+   "q": "Bagt kylling med kartofler og krydderurter opskrift"
+  }
+ },
+ {
+  "id": "boller-i-karry",
+  "name": "Boller i karry",
+  "photo": {
+   "u": "https://www.madformadelskere.dk/wp-content/uploads/2019/01/Boller-i-karry-2022-5-1024x683.jpg",
+   "p": "https://www.madformadelskere.dk/boller-i-karry/",
+   "h": "madformadelskere.dk",
+   "t": "Boller i Karry - Opskrift på klassisk dansk børnevenlig hverdagsmad",
+   "w": 1024,
+   "hh": 683,
+   "ct": "image/jpeg",
+   "q": "Boller i karry opskrift"
+  }
+ },
+ {
+  "id": "chili-con-carne-ris",
+  "name": "Chili con carne med ris",
+  "photo": {
+   "u": "https://minmadopskrift.dk/oostuwhy/Chili-con-carne-med-ris.jpg",
+   "p": "https://minmadopskrift.dk/gryderetter/chili-con-carne-texas-style-umami.html/",
+   "h": "minmadopskrift.dk",
+   "t": "Chili con carne Texas style - Chili con carne med ris - Min Madopskrift",
+   "w": 2400,
+   "hh": 1800,
+   "ct": "image/jpeg",
+   "q": "Chili con carne med ris opskrift"
+  }
+ },
+ {
+  "id": "enchiladas-kylling",
+  "name": "Enchiladas med kylling",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2015/10/enchiladas-2.jpg",
+   "p": "https://www.valdemarsro.dk/den-bedste-enchiladas/",
+   "h": "valdemarsro.dk",
+   "t": "Enchiladas med kylling - bedste opskrift på den skønne tex mex ret",
+   "w": 1000,
+   "hh": 695,
+   "ct": "image/jpeg",
+   "q": "Enchiladas med kylling opskrift"
+  }
+ },
+ {
+  "id": "frikadeller-agurkesalat",
+  "name": "Frikadeller med kartofler og agurkesalat",
+  "photo": {
+   "u": "https://voresmad.dk/media/zzgna5sk/frikadeller-med-sommerkartoffelsalat-og-agurkesalat.jpg?width=1080&height=566&v=1db04f135004080",
+   "p": "https://www.voresmad.dk/opskrifter/frikadeller-med-sommer-kartoffelsalat-og-agurkesalat",
+   "h": "voresmad.dk",
+   "t": "Frikadeller med sommer kartoffelsalat og agurkesalat",
+   "w": 1080,
+   "hh": 566,
+   "ct": "image/jpeg",
+   "q": "Frikadeller med kartofler og agurkesalat opskrift"
+  }
+ },
+ {
+  "id": "groentsagsgryde-kikaerter",
+  "name": "Grøntsagsgryde med kikærter",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2016/03/groentsagsgryde_opskrift.jpg",
+   "p": "https://www.valdemarsro.dk/groentsagsgryde-med-kikaerter/",
+   "h": "valdemarsro.dk",
+   "t": "Grøntsagsgryde med kikærter - nem, varmende og sund",
+   "w": 1000,
+   "hh": 667,
+   "ct": "image/jpeg",
+   "q": "Grøntsagsgryde med kikærter opskrift"
+  }
+ },
+ {
+  "id": "groentslasagne-spinat",
+  "name": "Grøntsagslasagne med spinat og mozzarella",
+  "photo": {
+   "u": "https://madplan.ai/wp-content/uploads/2025/12/cremet-grontsagslasagne-med-squash-spinat-og-tre-slags-ost-4826.jpg",
+   "p": "https://madplan.ai/opskrift/cremet-groentsagslasagne-med-squash-spinat-og-tre-slags-ost/",
+   "h": "madplan.ai",
+   "t": "Cremet grøntsagslasagne med squash, spinat og tre slags ost",
+   "w": 1024,
+   "hh": 1024,
+   "ct": "image/jpeg",
+   "q": "Grøntsagslasagne med spinat og mozzarella opskrift"
+  }
+ },
+ {
+  "id": "indisk-dahl",
+  "name": "Indisk dahl",
+  "photo": {
+   "u": "https://www.louisesmadblog.dk/wp-content/uploads/2021/06/Dahl-3.jpg",
+   "p": "https://www.louisesmadblog.dk/indisk-dahl/",
+   "h": "louisesmadblog.dk",
+   "t": "Indisk dahl | Opskrift på den lækreste indiske dhal med røde linser (daal)",
+   "w": 683,
+   "hh": 1024,
+   "ct": "image/jpeg",
+   "q": "Indisk dahl opskrift"
+  }
+ },
+ {
+  "id": "kaalfad-oksekoed",
+  "name": "Kålfad med hakket oksekød og grøntsager",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/10/kaalfad-opskrift.jpg",
+   "p": "https://www.valdemarsro.dk/kaalfad-med-hakket-oksekoed/",
+   "h": "valdemarsro.dk",
+   "t": "Kålfad med hakket oksekød og grøntsager",
+   "w": 1000,
+   "hh": 1400,
+   "ct": "image/jpeg",
+   "q": "Kålfad med hakket oksekød og grøntsager opskrift"
+  }
+ },
+ {
+  "id": "kartoffel-porresuppe",
+  "name": "Kartoffel- og porresuppe med rugbrødscroutoner",
+  "photo": {
+   "u": "https://www.madformadelskere.dk/wp-content/uploads/2024/09/Kartoffel-porre-suppe.jpg",
+   "p": "https://www.madformadelskere.dk/kartoffel-porre-suppe/",
+   "h": "madformadelskere.dk",
+   "t": "Kartoffel/porre suppe - Nem opskrift på cremet suppe",
+   "w": 1200,
+   "hh": 800,
+   "ct": "image/jpeg",
+   "q": "Kartoffel- og porresuppe med rugbrødscroutoner opskrift"
+  }
+ },
+ {
+  "id": "kikaertegryde",
+  "name": "Kikærtegryde med linser og kokosmælk",
+  "photo": {
+   "u": "https://stinna.dk/wp-content/uploads/2015/01/Kikærtegryde-med-kokosmælk-768x1154.jpg",
+   "p": "https://stinna.dk/kikaertegryde-med-kokosmaelk/",
+   "h": "stinna.dk",
+   "t": "Kikærtegryde - opskrift på vegetarisk gryderet med kikærter - Stinna.dk",
+   "w": 768,
+   "hh": 1154,
+   "ct": "image/jpeg",
+   "q": "Kikærtegryde med linser og kokosmælk opskrift"
+  }
+ },
+ {
+  "id": "kokos-groentswok",
+  "name": "Kokoswok med broccoli, pak choi og ris",
+  "photo": {
+   "u": "https://cdn.kronfagel.se/app/uploads/2022/08/31154545/VSS_Strimlad_larfile_parika_ingfara_wok_1000x1000.jpg",
+   "p": "https://www.kronfagel.se/recipe/wokad-kyckling-med-broccoli-och-pak-choi/",
+   "h": "kronfagel.se",
+   "t": "Wokad kyckling, broccoli och pak choi med asiatisk touch",
+   "w": 1000,
+   "hh": 1000,
+   "ct": "image/jpeg",
+   "q": "Kokoswok med broccoli, pak choi og ris opskrift"
+  }
+ },
+ {
+  "id": "kokosris",
+  "name": "Kokosris med grønt og spejlæg",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/02/kokosris-groent-opskrift.jpg",
+   "p": "https://www.valdemarsro.dk/kokosris-med-groent-og-spejlaeg/",
+   "h": "valdemarsro.dk",
+   "t": "Kokosris med grønt og spejlæg - Valdemarsro",
+   "w": 1000,
+   "hh": 1400,
+   "ct": "image/jpeg",
+   "q": "Kokosris med grønt og spejlæg opskrift"
+  }
+ },
+ {
+  "id": "kylling-karry-groent",
+  "name": "Kylling i karry med grøntsager",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2023/06/sundere-kylling-i-karry-1536x1536.jpg",
+   "p": "https://mummum.dk/kylling-i-karry-med-groentsager/",
+   "h": "mummum.dk",
+   "t": "Kylling i karry med grøntsager - Sund og fedtfattig opskrift - Mummum.dk",
+   "w": 1536,
+   "hh": 1536,
+   "ct": "image/jpeg",
+   "q": "Kylling i karry med grøntsager opskrift"
+  }
+ },
+ {
+  "id": "kylling-pastasuppe",
+  "name": "Kylling pastasuppe med grøntsager",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/06/kyllinge-pastasuppe.jpg",
+   "p": "https://www.valdemarsro.dk/kylling-pastasuppe-med-groentsager/",
+   "h": "valdemarsro.dk",
+   "t": "Kylling pastasuppe med grøntsager",
+   "w": 1000,
+   "hh": 714,
+   "ct": "image/jpeg",
+   "q": "Kylling pastasuppe med grøntsager opskrift"
+  }
+ },
+ {
+  "id": "kylling-porre-floede",
+  "name": "Kylling i flødesauce med porre og ris",
+  "photo": {
+   "u": "https://christinaskoekken.dk/wp-content/uploads/2020/08/kyllingmedestragon1.jpg",
+   "p": "https://christinaskoekken.dk/kylling-med-estragon-og-porre-i-floedesauce/",
+   "h": "christinaskoekken.dk",
+   "t": "Kylling med estragon og porre i flødesauce – Christinas Køkken",
+   "w": 1920,
+   "hh": 2560,
+   "ct": "image/jpeg",
+   "q": "Kylling i flødesauce med porre og ris opskrift"
+  }
+ },
+ {
+  "id": "laks-dildkartofler",
+  "name": "Ovnbagt laks med citron og dildkartofler",
+  "photo": {
+   "u": "https://snillesfisk.dk/sites/default/files/2024-10/Lag 0-5.png",
+   "p": "https://snillesfisk.dk/galleri/ovnbagt-laks-med-citron-og-dild",
+   "h": "snillesfisk.dk",
+   "t": "Ovnbagt laks med citron og dild | Snilles Fisk Strandby",
+   "w": 1024,
+   "hh": 1024,
+   "ct": "image/png",
+   "q": "Ovnbagt laks med citron og dildkartofler opskrift"
+  }
+ },
+ {
+  "id": "laks-i-fad",
+  "name": "Laks i fad med kartofler og grøntsager",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/11/laks-fad-kartofler-groent-app.jpg",
+   "p": "https://www.valdemarsro.dk/laks-i-fad-med-kartofler-og-groentsager/",
+   "h": "valdemarsro.dk",
+   "t": "Laks i fad med kartofler og grøntsager",
+   "w": 1300,
+   "hh": 929,
+   "ct": "image/jpeg",
+   "q": "Laks i fad med kartofler og grøntsager opskrift"
+  }
+ },
+ {
+  "id": "laks-spinat-fad",
+  "name": "Laks med spinat og grønt i fad",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/02/laks_med_spinat-opskrift-768x1075.jpg",
+   "p": "https://www.valdemarsro.dk/laks-med-spinat/",
+   "h": "valdemarsro.dk",
+   "t": "Laks med spinat og grønt i fad - nemt og lækkert",
+   "w": 768,
+   "hh": 1075,
+   "ct": "image/jpeg",
+   "q": "Laks med spinat og grønt i fad opskrift"
+  }
+ },
+ {
+  "id": "lasagne",
+  "name": "Lasagne",
+  "photo": {
+   "u": "https://micadeli.dk/wp-content/uploads/2018/07/vegansk-lasagne-nem-opskrift.jpg",
+   "p": "https://micadeli.dk/vegansk-lasagne/",
+   "h": "micadeli.dk",
+   "t": "Vegansk Lasagne - Italiensk opskrift på grøntsagslasagne",
+   "w": 1100,
+   "hh": 1423,
+   "ct": "image/jpeg",
+   "q": "Lasagne opskrift"
+  }
+ },
+ {
+  "id": "linsebolognese",
+  "name": "Linsebolognese med spaghetti",
+  "photo": {
+   "u": "https://madplan.ai/wp-content/uploads/2026/02/vegansk-spaghetti-med-linsebolognese-3847.jpg",
+   "p": "https://madplan.ai/opskrift/vegansk-spaghetti-med-linsebolognese/",
+   "h": "madplan.ai",
+   "t": "Vegansk spaghetti med linsebolognese",
+   "w": 1024,
+   "hh": 1024,
+   "ct": "image/jpeg",
+   "q": "Linsebolognese med spaghetti opskrift"
+  }
+ },
+ {
+  "id": "linsekarry",
+  "name": "Linsekarry med ris",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/05/linsekarry-med-ris-opskrift.jpg",
+   "p": "https://www.valdemarsro.dk/linsekarry-med-ris/",
+   "h": "valdemarsro.dk",
+   "t": "Linsekarry med ris og grøntsager",
+   "w": 1000,
+   "hh": 1400,
+   "ct": "image/jpeg",
+   "q": "Linsekarry med ris opskrift"
+  }
+ },
+ {
+  "id": "linsesuppe-rugbroed",
+  "name": "Linsesuppe med rugbrødscroutoner",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2022/01/4Y7A0631-min-scaled.jpg",
+   "p": "https://mummum.dk/linsesuppe-med-rugbroedscroutoner/",
+   "h": "mummum.dk",
+   "t": "Linsesuppe med rugbrødscroutoner - Nem Opskrift - Mummum.dk",
+   "w": 2048,
+   "hh": 1793,
+   "ct": "image/jpeg",
+   "q": "Linsesuppe med rugbrødscroutoner opskrift"
+  }
+ },
+ {
+  "id": "majs-squashfritter",
+  "name": "Majs- og squashfritter med yoghurtdip",
+  "photo": {
+   "u": "https://www.nemlig.com/scommerce/images/850x478_Svampeboef-squashfritter-og-yoghurtdip-98003479.jpg?i={1FC2AB22-873E-4A92-8519-820BD0D5D166}&v=AHPI-akl",
+   "p": "https://www.nemlig.com/opskrifter/svampeboef-squashfritter-og-yoghurtdip-98003479",
+   "h": "nemlig.com",
+   "t": "Svampebøf med squashfritter og yoghurtdip | Vegetarisk |Se opskriften her!",
+   "w": 850,
+   "hh": 478,
+   "ct": "image/jpeg",
+   "q": "Majs- og squashfritter med yoghurtdip opskrift"
+  }
+ },
+ {
+  "id": "marry-me-chicken",
+  "name": "Marry Me Chicken",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2026/02/bagt-marry-me-chicken-med-havreris-1200x1200.jpg",
+   "p": "https://mummum.dk/bagt-marry-me-chicken-med-havreris/",
+   "h": "mummum.dk",
+   "t": "Bagt marry me chicken med havreris - Nem opskrift - Mummum.dk",
+   "w": 1200,
+   "hh": 1200,
+   "ct": "image/jpeg",
+   "q": "Marry Me Chicken opskrift"
+  }
+ },
+ {
+  "id": "mexicansk-burger",
+  "name": "Mexicansk burger med guacamole",
+  "photo": {
+   "u": "https://www.madformadelskere.dk/wp-content/uploads/2021/04/Mexicansk-burger-1.jpg",
+   "p": "https://www.madformadelskere.dk/mexicansk-burger/",
+   "h": "madformadelskere.dk",
+   "t": "Mexicansk burger - Nem opskrift på saftig taco-burger",
+   "w": 1200,
+   "hh": 800,
+   "ct": "image/jpeg",
+   "q": "Mexicansk burger med guacamole opskrift"
+  }
+ },
+ {
+  "id": "moerbrad-tomatfloede",
+  "name": "Pasta med mørbrad i tomatflødesauce",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2025/09/pasta-moerbrad-tomatfloedesauce.jpg",
+   "p": "https://www.valdemarsro.dk/pasta-med-moerbrad-i-tomatfloedesauce/",
+   "h": "valdemarsro.dk",
+   "t": "Pasta med mørbrad i tomatflødesauce",
+   "w": 1000,
+   "hh": 714,
+   "ct": "image/jpeg",
+   "q": "Pasta med mørbrad i tomatflødesauce opskrift"
+  }
+ },
+ {
+  "id": "one-pot-kylling-karry",
+  "name": "One pot kylling i karry",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2025/10/one-pot-kylling-i-roed-karry-1200x1200.jpg",
+   "p": "https://mummum.dk/one-pot-kylling-i-roed-karry/",
+   "h": "mummum.dk",
+   "t": "One pot kylling i rød karry med grøntsager og ris - Nem opskrift - Mummum.dk",
+   "w": 1200,
+   "hh": 1200,
+   "ct": "image/jpeg",
+   "q": "One pot kylling i karry opskrift"
+  }
+ },
+ {
+  "id": "ovnbagt-blomkaal-kikaerter",
+  "name": "Ovnbagt blomkål med kikærter og yoghurtsauce",
+  "photo": {
+   "u": "https://i.pinimg.com/736x/fa/9a/3b/fa9a3b74bbb7a10c72dd3eacda68058e.jpg",
+   "p": "https://dk.pinterest.com/pin/547820742186994818/",
+   "h": "dk.pinterest.com",
+   "t": "Blomkål og kikærter i ovn - grønt alternativ til pasta og ris | Opskrift | Vegetaropskrifter ...",
+   "w": 653,
+   "hh": 980,
+   "ct": "image/jpeg",
+   "q": "Ovnbagt blomkål med kikærter og yoghurtsauce opskrift"
+  }
+ },
+ {
+  "id": "pasta-cherrytomater-mozzarella",
+  "name": "Pasta med ovnbagte cherrytomater og mozzarella",
+  "photo": {
+   "u": "https://galbani.dk/wp-content/uploads/2014/11/Pasta-med-cherrytomater-og-mozzarella_600x600px.jpg",
+   "p": "https://galbani.dk/opskrifter/pasta-med-cherrytomater-og-mozzarella/",
+   "h": "galbani.dk",
+   "t": "Pasta med cherrytomater og mozzarella - Galbani",
+   "w": 600,
+   "hh": 600,
+   "ct": "image/jpeg",
+   "q": "Pasta med ovnbagte cherrytomater og mozzarella opskrift"
+  }
+ },
+ {
+  "id": "pytt-roedbeder-spejlaeg",
+  "name": "Pytt i panden med rødbeder og spejlæg",
+  "photo": {
+   "u": "https://www.obs.no/cdn-cgi/image/width=768,format=auto/contentassets/c29159a14a1e44a7bdd434b81598f63a/pytt-i-panne-med-polse-rodbeter-og-sot-sennep2.jpg?ref=6CF33CAF20",
+   "p": "https://www.obs.no/oppskrifter/enkel-middag/pytt-i-panne-med-polse-rodbeter-og-sot-sennep",
+   "h": "obs.no",
+   "t": "Pytt i panne med pølse, rødbeter og søt sennep | Obs.no",
+   "w": 768,
+   "hh": 511,
+   "ct": "image/jpeg",
+   "q": "Pytt i panden med rødbeder og spejlæg opskrift"
+  }
+ },
+ {
+  "id": "quesadillas-bonner-majs",
+  "name": "Quesadillas med bønner, majs og ost",
+  "photo": {
+   "u": "https://myshopping-eun.azurewebsites.net/storage/images/content-post-37251f0c-187b-4eac-95f1-77d16837ada6.png",
+   "p": "https://www.tilbudsugen.dk/post/sproede-quesadillas-med-boenner-54",
+   "h": "tilbudsugen.dk",
+   "t": "Sprøde quesadillas med bønner",
+   "w": 1408,
+   "hh": 768,
+   "ct": "image/png",
+   "q": "Quesadillas med bønner, majs og ost opskrift"
+  }
+ },
+ {
+  "id": "salsiccia-pasta",
+  "name": "Salsiccia pasta",
+  "photo": {
+   "u": "https://opskrift.org/wp-content/uploads/2025/03/salsiccia-pasta-opskrift-1741481001.jpg",
+   "p": "https://opskrift.org/salsiccia-fars-opskrift/",
+   "h": "opskrift.org",
+   "t": "Salsiccia Fars Opskrift | Opskrift.org",
+   "w": 1980,
+   "hh": 1303,
+   "ct": "image/jpeg",
+   "q": "Salsiccia pasta opskrift"
+  }
+ },
+ {
+  "id": "shakshuka",
+  "name": "Shakshuka med brød",
+  "photo": {
+   "u": "https://i.pinimg.com/originals/29/6c/09/296c091294c5548b2cfb8159277574ae.jpg",
+   "p": "https://www.pinterest.com/pin/810929476632734670/",
+   "h": "pinterest.com",
+   "t": "Grydebrød - verdens bedste og nemmeste brød - Anna-mad.dk | Recipe | Shakshuka, Vegetarian ...",
+   "w": 640,
+   "hh": 640,
+   "ct": "image/jpeg",
+   "q": "Shakshuka med brød opskrift"
+  }
+ },
+ {
+  "id": "smashed-tacos-kylling",
+  "name": "Mexi smashed tacos med kylling",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2026/02/smashed-tacos-1536x1536.jpg",
+   "p": "https://mummum.dk/mexi-smashed-tacos-med-kylling/",
+   "h": "mummum.dk",
+   "t": "Mexi smashed tacos med kylling - Nem opskrift - Mummum.dk",
+   "w": 1536,
+   "hh": 1536,
+   "ct": "image/jpeg",
+   "q": "Mexi smashed tacos med kylling opskrift"
+  }
+ },
+ {
+  "id": "spaghetti-bolognese",
+  "name": "Spaghetti bolognese",
+  "photo": {
+   "u": "https://opskrift.org/wp-content/uploads/2025/03/spaghetti-bolognese-opskrift-1741482124.jpg",
+   "p": "https://opskrift.org/spaghetti-bolognese-opskrift/",
+   "h": "opskrift.org",
+   "t": "Spaghetti Bolognese Opskrift | Opskrift.org",
+   "w": 3000,
+   "hh": 2000,
+   "ct": "image/jpeg",
+   "q": "Spaghetti bolognese opskrift"
+  }
+ },
+ {
+  "id": "svampepasta-bacon",
+  "name": "Svampepasta med bacon",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2025/09/svampepasta-med-bacon-1536x1536.jpg",
+   "p": "https://mummum.dk/pasta-med-bacon-og-svampe/",
+   "h": "mummum.dk",
+   "t": "Svampepasta med bacon - Nem opskrift - Mummum.dk",
+   "w": 1536,
+   "hh": 1536,
+   "ct": "image/jpeg",
+   "q": "Svampepasta med bacon opskrift"
+  }
+ },
+ {
+  "id": "teriyaki-laks",
+  "name": "Teriyaki laks med sesam og grønt",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/02/teriyaki-laks.jpg",
+   "p": "https://www.valdemarsro.dk/teriyaki-laks-med-sesam-og-groent/",
+   "h": "valdemarsro.dk",
+   "t": "Teriyaki Laks med sesam og lynstegte grøntsager",
+   "w": 1000,
+   "hh": 714,
+   "ct": "image/jpeg",
+   "q": "Teriyaki laks med sesam og grønt opskrift"
+  }
+ },
+ {
+  "id": "torsk-pakker",
+  "name": "Torsk i pakker med grønt og kartofler",
+  "photo": {
+   "u": "https://www.valdemarsro.dk/wp-content/2023/11/bagt-torskepakker-opskrift-768x1075.jpg",
+   "p": "https://www.valdemarsro.dk/torsk-pakker/",
+   "h": "valdemarsro.dk",
+   "t": "Torsk i pakker med grønt og kartofler",
+   "w": 768,
+   "hh": 1075,
+   "ct": "image/jpeg",
+   "q": "Torsk i pakker med grønt og kartofler opskrift"
+  }
+ },
+ {
+  "id": "vegetarburger",
+  "name": "Vegetarburger med rødbedebøffer",
+  "photo": {
+   "u": "https://mummum.dk/wp-content/uploads/2020/08/IMG_0514-1536x1324.jpg",
+   "p": "https://mummum.dk/vegetarburger-med-roedbedeboeffer/",
+   "h": "mummum.dk",
+   "t": "Vegetarburger med rødbedebøffer - Nemme vegetarburgere - Mummum.dk",
+   "w": 1536,
+   "hh": 1324,
+   "ct": "image/jpeg",
+   "q": "Vegetarburger med rødbedebøffer opskrift"
+  }
+ }
+]
