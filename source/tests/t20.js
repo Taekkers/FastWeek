@@ -21,5 +21,15 @@ const T=require('./pw9.js');const {launch,ok,owner}=T;
  ok(chip===0,'Normalpris-knappen er fjernet');
  await pg.screenshot({path:'/tmp/claude-0/shot_20.png',fullPage:false});
  ok(errs.length===0,'ingen JS-fejl '+errs.slice(0,2).join('|'));
- await b.close();T.done();
+ await b.close();
+ // private per-user price document written by the nightly job
+ const D2=owner('uA');D2[P0+'store/settings']=Object.assign({},D2[P0+'store/settings'],{stores:['Netto','Rema 1000','SuperBrugsen']});
+ D2[P0+'store/prices']={items:{loeg:{u:'stk',v:{Netto:3.4,'Rema 1000':0.85}},maelk:{u:'g',v:{Netto:99}}},at:'2026-11-09'};
+ const L2=await launch({uid:'uA',docs:D2,wait:1500});
+ const r2=await L2.pg.evaluate(()=>{const A=__TEST__.api,S=A.S;const p=A.pan('loeg'),it={k:'loeg',unit:'stk',qty:6,name:'løg'};const c0=A.lineCost(it);
+   return{sp:Object.keys(S.sp||{}).length,net:A.spOf('loeg','Netto'),rema:A.spOf('loeg','Rema 1000'),sb:A.spOf('loeg','SuperBrugsen'),wrongUnit:A.spOf('maelk','Netto'),real:A.realP('loeg','Netto')}});
+ console.log(JSON.stringify(r2));
+ ok(r2.sp===2&&r2.net===3.4&&r2.rema===0.85&&r2.sb===0&&r2.real,'Brugerens egne butikspriser (store/prices) bruges');
+ ok(r2.wrongUnit===0,'  en pris med en anden enhed end varen ignoreres');
+ await L2.b.close();T.done();
 })();

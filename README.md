@@ -10,8 +10,16 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ## Det kan appen (version 9)
 
-- **Normalpris pr. butik:** appen sammenligner nu ikke kun tilbud, men også hver kædes almindelige hyldepris på varen. Priserne kommer fra kædernes egne kataloger via Prej (api.prej.app) og hentes hver nat af GitHub Actions (`scripts/store-prices.js`, op til 24 varer pr. nat med den gratis nøgle). Coop-kæderne (Coop 365, SuperBrugsen, Kvickly) og Løvbjerg udgiver ikke hyldepriser online; for dem bruges kædens prisniveau som skøn, vist med ≈.
-- **Kræver en gratis nøgle:** hent den på prej.dk/api og læg den i GitHub under Settings > Secrets and variables > Actions som `PREJ_API_KEY`. Uden nøgle bruger appen skøn som før.
+- **Normalpris pr. butik for alle dine varer:** appen sammenligner både tilbud og hver kædes almindelige hyldepris. Jobbet `scripts/store-prices.js` (GitHub Actions, hver nat) samler alle varer, brugerne har (lager + retternes ingredienser + standardvarerne), søger hver vare op én gang hos Prej (api.prej.app, kædernes egne kataloger) og opdaterer derefter priserne på **alle** kendte varer hver nat med få kald (op til 500 produkter pr. kald). Med den gratis nøgle (25 kald i døgnet) søges ca. 23 nye varer pr. nat; varer, du faktisk bruger, kommer først. Priserne gemmes privat hos hver bruger (`store/prices`).
+- Coop-kæderne (Coop 365, SuperBrugsen, Kvickly) og Løvbjerg udgiver ikke hyldepriser online; for dem bruges kædens prisniveau som skøn, vist med ≈.
+
+### Sådan sætter du normalpriserne i gang (én gang)
+1. Gå til **prej.dk/api**, rul ned til *Hent en gratis nøgle*, skriv din e-mail, sæt kryds ved vilkårene og tryk *Send mig et link*.
+2. Åbn mailen fra Prej og tryk på linket. Nøglen vises (den starter med `prej_dev_`). Kopiér den.
+3. Åbn **github.com/Taekkers/FastWeek** (helst på computer; på telefon: vælg *Desktop site*). Tryk **Settings** > **Secrets and variables** > **Actions** > **New repository secret**.
+4. *Name*: `PREJ_API_KEY`. *Secret*: indsæt nøglen. Tryk **Add secret**.
+5. Gå til fanen **Actions** > **Normalpriser pr. butik** > **Run workflow** > **Run workflow**. Efter et par minutter står priserne i appen. Derefter kører det selv hver nat.
+
 - **Normalpris-knappen på indkøbslisten er fjernet igen.** Prisen kan stadig rettes under Lager > vare > Flere indstillinger.
 - **Billedlæsning:** testet på et rigtigt kogebogsfoto (13 af 13 ingredienser med mængder). Kursivt "g" læst som 3/£/8, ½ læst som 74/14/%/få, overskrifter i versaler og tekst fra fremgangsmåden ved siden af listen håndteres. Er billedet for stort til telefonens hukommelse, prøves en mindre kopi.
 

@@ -199,10 +199,10 @@ function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
 /* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
 /* Normal shelf price in each chain (data/ref.json items[k].sp, kr per kg / l / stk, from the chains' own catalogues).
    Where a chain has no published shelf price (Coop chains, Løvbjerg) the chain's price level (pidx) is used: an estimate. */
-function spOf(k,s){var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
+function spOf(k,s){var e=S.sp&&S.sp[k],p=pan(k);if(e&&e.v&&e.v[s]>0&&p&&e.u===p.unit)return e.v[s];var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
 function realP(k,s){var p=pan(k);return !!(p&&!qbest(p)&&spOf(k,s)>0&&ppu(p)>0)}
 function pfac(k,s){return realP(k,s)?spOf(k,s)/ppu(pan(k)):pidx(s)}
-function hasSP(){var it=(S.ref&&S.ref.items)||{};for(var k in it){if(it[k]&&it[k].sp&&Object.keys(it[k].sp).length)return true}return false}
+function hasSP(){if(S.sp&&Object.keys(S.sp).length)return true;var it=(S.ref&&S.ref.items)||{};for(var k in it){if(it[k]&&it[k].sp&&Object.keys(it[k].sp).length)return true}return false}
 function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
 function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
 function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
