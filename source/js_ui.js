@@ -350,11 +350,16 @@ function readRule(el){var g=function(c){return el.querySelector(c)};return{rule:
 function syncRule(el){var m=el.querySelector('.r-mode').value;el.querySelector('.r-f-under').hidden=m!=='under';el.querySelector('.r-f-days').hidden=m!=='days';el.querySelector('.r-f-use').hidden=m==='never'}
 function refreshSummary(row){
   if(!row)return;var s=row.querySelector('summary'),rule=row.querySelector('.rule'),u=row.querySelector('.i-u');
-  if(s&&rule)s.textContent=ruleSummary(readRule(rule),u?u.value:'g');
+  if(s&&rule)s.textContent=ruleSummary(readRule(rule),u?baseQU(1,u.value).u:'g');
 }
+var IUNITS=['g','kg','ml','l','dl','spsk','tsk','stk'];
+/* a measure from the form in the units the app stores: kg -> g, l/dl/spsk/tsk -> ml */
+function baseQU(q,u){if(u==='kg')return{q:q*1000,u:'g'};if(MEAS[u]&&u!=='ml')return{q:Math.round(q*MEAS[u]*100)/100,u:'ml'};return{q:q,u:u}}
 function ingRow(g){
-  g=g||{};var p=g.n?pan(slug(g.n)):null,u=g.u||(p&&p.unit)||'g',rp=p||{unit:u};
-  return '<div class="ingw"><div class="ing"><input class="i-n" list="pl" placeholder="Ingrediens" aria-label="Ingrediens" value="'+esc(g.n||'')+'"><input class="i-q" inputmode="decimal" placeholder="Mængde" aria-label="Mængde" value="'+(g.q?esc(nf(g.q,2)):'')+'"><select class="i-u" aria-label="Enhed">'+opt(UNITS,u)+'</select><button class="x" data-act="ingdel" aria-label="Fjern ingrediens">×</button></div>'+
+  g=g||{};var p=g.n?pan(slug(g.n)):null,u=g.u||(p&&p.unit)||'g',rp=p||{unit:u},q=g.q;
+  /* a stored volume is shown in the recipe's own measure: 30 ml -> 2 spsk, 150 ml -> 1,5 dl */
+  if(u==='ml'&&q>0){var mm=String(measureOf(q)).match(/^([\d½¼¾,]+)\s(dl|spsk|tsk|l)$/);if(mm){var mq=num(mm[1].replace('½',',5').replace('¼',',25').replace('¾',',75').replace(/^,/,'0,'));if(mq>0){q=mq;u=mm[2]}}}
+  return '<div class="ingw"><div class="ing"><input class="i-n" list="pl" placeholder="Ingrediens" aria-label="Ingrediens" value="'+esc(g.n||'')+'"><input class="i-q" inputmode="decimal" placeholder="Mængde" aria-label="Mængde" value="'+(q?esc(nf(q,2)):'')+'"><select class="i-u" aria-label="Enhed">'+opt(IUNITS,u)+'</select><button class="x" data-act="ingdel" aria-label="Fjern ingrediens">×</button></div>'+
     '<details class="rl"><summary>'+esc(ruleSummary(ruleOf(rp),u))+'</summary>'+ruleHtml(rp)+'</details></div>';
 }
 function heroHtml(id,r){
@@ -399,7 +404,7 @@ function openRecipe(id,did){
 }
 function kalc(r){var k=kcalOf(r);return k.k>KALLOW+5?'ca. '+k.k+' kcal pr. portion':''}
 function collectIng(){
-  return Array.prototype.map.call(document.querySelectorAll('#rf-ings .ingw'),function(row){return{n:row.querySelector('.i-n').value.trim().toLowerCase(),q:num(row.querySelector('.i-q').value),u:row.querySelector('.i-u').value,rule:readRule(row.querySelector('.rule'))}}).filter(function(g){return g.n&&g.q>0});
+  return Array.prototype.map.call(document.querySelectorAll('#rf-ings .ingw'),function(row){var b=baseQU(num(row.querySelector('.i-q').value),row.querySelector('.i-u').value);return{n:row.querySelector('.i-n').value.trim().toLowerCase(),q:b.q,u:b.u,rule:readRule(row.querySelector('.rule'))}}).filter(function(g){return g.n&&g.q>0});
 }
 function saveRecipe(id,did){
   var name=$('#rf-name').value.trim(),rows=collectIng();
@@ -410,7 +415,7 @@ function saveRecipe(id,did){
   save(function(){
     var patch={},items=S.praw||{};
     rows.forEach(function(g){var k=slug(g.n),o=items[k],r=g.rule;
-      if(!o){var rf=(S.ref.items||{})[k];patch[k]=Object.assign({name:g.n,unit:g.u,qty:0,price:0,perish:!!(rf&&rf.perish&&rf.unit===g.u),cat:(rf&&rf.cat)||'Andet',expires:'',at:t},r)}
+      if(!o){var rf=(S.ref.items||{})[k];patch[k]=Object.assign({name:g.n,unit:(g.u==='ml'&&dens(g.n)!=null)?'g':g.u,qty:0,price:0,perish:!!(rf&&rf.perish&&rf.unit===g.u),cat:(rf&&rf.cat)||'Andet',expires:'',at:t},r)}
       else patch[k]=Object.assign({},r,(r.use>0&&!o.at)?{at:t}:{});
     });
     return up(udoc('store/pantry'),{items:patch}).then(function(){return udoc('recipes/'+rid).set(doc)}).then(function(){return did?udoc('scans/'+did).delete().catch(function(){}):null}).then(function(){if(did&&S.scans)delete S.scans[did];openRecipes();toast('Ret gemt')});
@@ -690,7 +695,7 @@ function openCook(id){
   var r=S.recipes[id];if(!r)return;
   var pn=S.settings.persons||2,f=pn/2,k=kalc(r),al=recAlg(r);
   var h='<div class="stat">'+(r.minutes?'<span class="chip">'+r.minutes+' min</span>':'')+(k?'<span class="chip">'+k+'</span>':'')+(r.kind==='weekend'?'<span class="chip wk">Weekend</span>':'')+(r.fav?'<span class="hrt">♥</span>':'')+dietChip(r)+'</div>';
-  h+='<div class="sec"><div class="lbl">Ingredienser til '+esc(hhLabel())+'</div><div class="list cookl">'+(r.ing||[]).map(function(g){return '<div class="ci"><span>'+esc(g.n)+'</span><span class="mono">'+esc(fq(g.q*f,g.u))+'</span></div>'}).join('')+'</div></div>';
+  h+='<div class="sec"><div class="lbl">Ingredienser til '+esc(hhLabel())+'</div><div class="list cookl">'+(r.ing||[]).map(function(g){return '<div class="ci"><span>'+esc(g.n)+'</span><span class="mono">'+esc(amtTxt(g.n,g.q*f,g.u))+'</span></div>'}).join('')+'</div></div>';
   var st=String(r.method||'').split(/\n+/).map(function(x){return x.trim().replace(/^\d+[.)]\s*/,'')}).filter(Boolean);
   if(st.length)h+='<div class="sec"><div class="lbl">Fremgangsmåde</div><ol class="steps">'+st.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol><p class="hint">Salt, peber, olie og krydderier står ikke på indkøbslisten.</p></div>';
   if(al.length)h+='<p class="hint">Kan indeholde (skøn): '+esc(al.map(function(k){return ALG[k].n.toLowerCase()}).join(', '))+'. Tjek varedeklarationen.</p>';
@@ -800,7 +805,7 @@ function favNote(){var n=favCount(),e=$('#fv-n');if(e)e.textContent=n?n+(n===1?'
 function missingItems(recs){
   var patch={},t=todayStr();
   recs.forEach(function(r){(r.ing||[]).forEach(function(g){var k=slug(g.n);if((S.praw&&S.praw[k])||patch[k])return;var rf=(S.ref.items||{})[k];
-    patch[k]=rf?Object.assign({},rf,{qty:0,at:t,rule:'never',min:0,use:0,days:2,expires:'',ex:false,price:0}):{name:g.n,unit:g.u,qty:0,price:0,perish:false,cat:'Andet',expires:'',at:t,rule:'never',min:0}})});
+    patch[k]=rf?Object.assign({},rf,{qty:0,at:t,rule:'never',min:0,use:0,days:2,expires:'',ex:false,price:0}):{name:g.n,unit:(g.u==='ml'&&dens(g.n)!=null)?'g':g.u,qty:0,price:0,perish:false,cat:'Andet',expires:'',at:t,rule:'never',min:0}})});
   return patch;
 }
 function freshRecipe(r){var o=Object.assign({},r);delete o.img;o.example=false;o.rating=0;o.made={count:0,last:'',wd:[0,0,0,0,0,0,0]};return o}
@@ -1004,7 +1009,7 @@ var ACT={
         if(day.f){var fp=pan(day.f);if(fp){var cq=curQty(fp);used.push({k:day.f,q:Math.min(1,cq)});patch[day.f]=qpatch(cq-1)}}
         else{
           if(!r)return;
-          (r.ing||[]).forEach(function(g){var k=slug(g.n),p=pan(k);if(p&&p.unit===g.u){var cq=curQty(p),amt=Math.min(cq,g.q*sc*mult);used.push({k:k,q:r1(amt)});patch[k]=qpatch(cq-amt)}});
+          (r.ing||[]).forEach(function(g){var gi=ingIn(g),k=gi.k,p=pan(k);if(p&&p.unit===gi.u){var cq=curQty(p),amt=Math.min(cq,gi.q*sc*mult);used.push({k:k,q:r1(amt)});patch[k]=qpatch(cq-amt)}});
           var m=Object.assign({count:0,last:'',wd:[0,0,0,0,0,0,0]},r.made||{});m.wd=(m.wd||[0,0,0,0,0,0,0]).slice();m.wd[i]=(m.wd[i]||0)+1;m.count=(m.count||0)+1;m.last=addDays(S.mon,i);
           ps.push(udoc('recipes/'+day.r).set(Object.assign({},r,{made:m})));
         }
@@ -1226,6 +1231,6 @@ function boot(){
   }).catch(function(){});
 }
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();

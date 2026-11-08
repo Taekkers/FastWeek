@@ -9,8 +9,8 @@
 'use strict';
 var fs=require('fs'),path=require('path');
 var CHAIN={netto:'Netto',rema1000:'Rema 1000',fotex:'Føtex',bilka:'Bilka',bilkatogo:'Bilka',meny:'Meny',spar:'Spar',lidl:'Lidl','365discount':'Coop 365',superbrugsen:'SuperBrugsen',kvickly:'Kvickly'};
-var BUDGET=Number(process.env.DAILY_CALLS||24);
-function norm(s){return String(s||'').toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'oe').replace(/å/g,'aa').replace(/é/g,'e').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
+var BUDGET=Number(process.env.DAILY_CALLS||24),VER=2;   /* VER: raise when the matching improves, so items not found are searched again */
+function norm(s){return String(s||'').toLowerCase().replace(/æ/g,'ae').replace(/ø/g,'oe').replace(/å/g,'aa').replace(/[éèêë]/g,'e').replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim()}
 /* same as the app's slug() */
 function slug(s){return String(s||'').toLowerCase().trim().replace(/æ/g,'ae').replace(/ø/g,'oe').replace(/å/g,'aa').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'x'}
 var NOT=/\b(chips|snack|sauce|dressing|marinade|pesto|suppe|pulver|krydderi|drik|juice|saft|is|kage|kager|slik|chokolade|dip|spread|fyld|paalaeg|toast|pizza|wrap|burger|nuggets|paneret|frossen|frosne|syltet|mos|kids|baby|hund|kat|shampoo|saebe|creme|olie til|aroma|essens|smagt|smag)\b/;
@@ -18,24 +18,27 @@ var EXTRA={maelk:{q:'letmælk',must:['maelk']},floede:{q:'piskefløde',must:['fl
   pasta:{q:'spaghetti',must:[]},ris:{q:'jasminris',must:['ris']},mel:{q:'hvedemel',must:['mel']},
   'hakket-oksekoed':{must:['hakket','okse']},'hakket-kylling':{must:['hakket','kylling']},'hakket-svine-og-kalvekoed':{q:'hakket svine kalvekød',must:['hakket','svin','kalv']},
   'hel-kylling':{must:['hel','kylling']},laksfilet:{q:'laksefilet',must:['laks']},torskefilet:{must:['torsk']},aeg:{q:'æg 10 stk',must:['aeg']},
-  'hakkede-tomater':{must:['hakkede','tomat']},tomatpur:{q:'tomatpuré',must:['tomatpur']},kidneyboenner:{must:['kidney']},kikaerter:{must:['kikaert']}};
+  'hakkede-tomater':{must:['hakkede','tomat']},cremefraiche:{q:'creme fraiche',must:['creme','fraiche'],ok:1},'blandet-salat':{q:'salatblanding',must:['salat']},
+  bouillonterning:{q:'bouillon terninger',must:['bouillon'],ok:1},fishsauce:{q:'fiskesauce',must:['fisk','sauce'],ok:1},burgerboller:{q:'burgerboller',must:['burgerbolle']},tomatpur:{q:'tomatpuré',must:['tomatpur']},kidneyboenner:{must:['kidney']},kikaerter:{must:['kikaert']}};
 function want(u){return u==='g'?'kg':u==='ml'?'l':'stk'}
 /* Products that are this item, and per chain the cheapest shelf price in kr per kg / l / stk */
 function pick(item,key,products){
-  var ex=EXTRA[key]||{},must=(ex.must?ex.must:norm(item.name).split(' ').filter(function(w){return w.length>2}));
+  var ex=EXTRA[key]||{},nsp=function(x){return x.replace(/ /g,'')},must=(ex.must?ex.must:norm(item.name).split(' ').filter(function(w){return w.length>2}));
   if(!must.length)must=[norm(item.name)];
   var w=want(item.unit),out={},ids=[];
   (products||[]).forEach(function(pr){
     var n=norm(pr.name);
-    if(!must.every(function(m){return (' '+n+' ').indexOf(m)>-1}))return;
-    if(NOT.test(n)&&!NOT.test(norm(item.name)))return;
+    if(!must.every(function(m){return (' '+n+' ').indexOf(m)>-1||nsp(n).indexOf(nsp(m))>-1}))return;
+    if(!ex.ok&&NOT.test(n)&&!NOT.test(norm(item.name)))return;
     if(/\b(oeko|okologisk|oekologisk|frilands)\b/.test(n)&&!/\b(oeko|oekologisk|frilands)\b/.test(norm(item.name)))return;
     var hit=false;
     (pr.prices||[]).forEach(function(p){
       var st=CHAIN[p.chain_slug];if(!st||p.is_offer||p.source==='flyer'||p.ai_matched||!(p.unit_price>0))return;
       var lab=String(p.unit_price_label||'').toLowerCase(),u=/kr\/kg/.test(lab)?'kg':/kr\/(l|liter)\b/.test(lab)?'l':/kr\/stk/.test(lab)?'stk':'';
-      if(u!==w)return;
       var v=p.unit_price/100;
+      /* a pack of pieces priced per kg (fx 4 burgerboller, 10 æg): price per piece from the pack */
+      if(u!==w&&w==='stk'){var cm=String(pr.quantity_label||pr.name||'').match(/(\d+)\s*(?:stk|x\b)/i);if(cm&&p.price>0){v=p.price/100/Number(cm[1]);u='stk'}}
+      if(u!==w)return;
       if(item.kp>0&&(v<item.kp*0.35||v>item.kp*3.2))return;
       hit=true;if(!(st in out)||v<out[st])out[st]=Math.round(v*100)/100;
     });
@@ -91,7 +94,7 @@ async function run(){
   known.forEach(function(k){var ps=cache[k].ids.map(function(id){return byId[id]}).filter(Boolean);if(!ps.length)return;var r=pick(g.items[k],k,ps);cache[k].sp=r.sp;cache[k].at=new Date().toISOString().slice(0,10);done[k]=1});
   console.log('Opdateret med batch: '+Object.keys(done).length+' varer ('+allIds.length+' produkter, '+calls+' kald)');
   /* 2) search new items (and ones not found for 30 days) with the calls that are left */
-  var todo=keys.filter(function(k){var c=cache[k];return !c||(!c.ids.length&&(!c.tried||Date.now()-c.tried>30*864e5))});
+  var todo=keys.filter(function(k){var c=cache[k];return !c||(!c.ids.length&&((c.v||1)<VER||!c.tried||Date.now()-c.tried>30*864e5))});
   var used={};g.users.forEach(function(u){Object.keys(u.mine).forEach(function(k){used[k]=(used[k]||0)+1})});
   todo.sort(function(a,b){return (used[b]||0)-(used[a]||0)||(ref.items[b]?1:0)-(ref.items[a]?1:0)});   /* what people actually use first */
   var found=0,tried=0;
@@ -100,7 +103,7 @@ async function run(){
     try{var j2=await api('/v1/products?q='+encodeURIComponent(q)+'&limit=100&grocery=1&exclude_border_trade=1',key);}
     catch(e){if(e.quota)break;console.log('FEJL '+it.name+': '+e.message);continue}
     tried++;var r=pick(it,k,listOf(j2));
-    cache[k]={name:it.name,unit:it.unit,ids:r.ids,sp:r.sp,at:new Date().toISOString().slice(0,10),tried:Date.now()};
+    cache[k]={name:it.name,unit:it.unit,ids:r.ids,sp:r.sp,at:new Date().toISOString().slice(0,10),tried:Date.now(),v:VER};
     if(Object.keys(r.sp).length){found++;done[k]=1}
     console.log((Object.keys(r.sp).length?'NY   ':'INGEN')+' '+it.name+'  '+Object.keys(r.sp).map(function(s){return s+' '+r.sp[s]}).join(' · '));
     await new Promise(function(res){setTimeout(res,600)});

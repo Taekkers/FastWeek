@@ -28,7 +28,45 @@ var kr=function(n){n=Number(n)||0;return n.toLocaleString('da-DK',{minimumFracti
 var num=function(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));return isFinite(n)?n:0};
 var r1=function(n){return Math.round(n*10)/10};
 var dec=function(n){return String(n).replace('.',',')};
-function fq(q,u){q=Number(q)||0;if(u==='g'&&q>=1000)return nf(q/1000,2)+' kg';if(u==='ml'&&q>=1000)return nf(q/1000,2)+' l';return nf(q,1)+' '+u}
+function fq(q,u){q=Number(q)||0;if(u==='g'&&q>=1000)return nf(q/1000,2)+' kg';if(u==='ml')return nf(q/1000,3)+' l';return nf(q,1)+' '+u}
+/* ---------- kitchen measures ----------
+   1 l = 10 dl = 1000 ml, 1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 knsp ≈ 0,5 ml.
+   Recipes keep the volume (ml). Dry goods are turned into grams with a density (g per ml), liquids are shown in litres. */
+var MEAS={l:1000,liter:1000,dl:100,cl:10,ml:1,spsk:15,tsk:5,knsp:.5};
+var DENS=[[/flormelis/,.55],[/farin|rørsukker|sukker/,.85],[/kartoffelmel/,.7],[/maizena|majsstivelse|majsmel/,.6],[/mel$|mel\b|hvedemel|speltmel|rugmel|grahamsmel/,.6],
+  [/havregryn|havrefras/,.4],[/bulgur|couscous/,.75],[/quinoa/,.8],[/(^|\s)ris\b|ris$|risottoris|jasminris|basmati/,.85],[/linser/,.85],[/flagesalt/,.5],[/salt\b|salt$/,1.2],
+  [/bagepulver|natron/,.9],[/kakao/,.45],[/smør|margarine/,.95],[/honning|sirup/,1.4],[/tomatpuré|tomatpure/,1.1],[/peanutbutter|jordnøddesmør/,1.05],
+  [/revet|parmesan|cheddar|pecorino/,.4],[/mandler|nødder|cashew|valnød|hasselnød|peanuts/,.6],[/sesam|græskarkerner|solsikkekerner|hørfrø|chiafrø/,.6],
+  [/rosiner/,.65],[/kokosmel/,.35],[/rasp/,.4],[/tørgær/,.6],
+  [/paprika|karry|spidskommen|kanel|chiliflager|chilipulver|oregano|timian|rosmarin|krydderi|kardemomme|gurkemeje|garam|muskat|stødt|nelliker|kommen|koriander tørret|peber$|peber\b(?!frugt)/,.5]];
+function dens(name){var n=String(name||'').toLowerCase();for(var i=0;i<DENS.length;i++){if(DENS[i][0].test(n))return DENS[i][1]}return null}
+/* the ingredient in the unit the stock uses: ml of sugar becomes g, g of a liquid becomes ml */
+function ingIn(g){
+  var k=slug(g.n),p=pan(k),q=Number(g.q)||0,u=g.u,d=dens(g.n);
+  if(p&&p.unit&&p.unit!==u){
+    if(u==='ml'&&p.unit==='g'){q=q*(d==null?1:d);u='g'}
+    else if(u==='g'&&p.unit==='ml'){q=q/(d==null?1:d);u='ml'}
+  }else if(!p&&u==='ml'&&d!=null){q=q*d;u='g'}
+  return{k:k,q:q,u:u};
+}
+/* a volume in the recipe's own words: 150 ml -> "1,5 dl", 30 ml -> "2 spsk", 5 ml -> "1 tsk" */
+function frac(x){var w=Math.floor(x+1e-9),r=x-w;if(Math.abs(r-.5)<.01)return (w?w:'')+'½';if(Math.abs(r-.25)<.01)return (w?w:'')+'¼';if(Math.abs(r-.75)<.01)return (w?w:'')+'¾';return nf(x,2)}
+function measureOf(ml){
+  ml=Number(ml)||0;if(!(ml>0))return '';
+  var near=function(a,b){return Math.abs(a-b)<1e-6*Math.max(1,b)};
+  if(ml>=1000&&near(ml%100,0))return nf(ml/1000,2)+' l';
+  if(ml>=50&&(near(ml%25,0)||near(ml%25,25)))return frac(ml/100)+' dl';
+  if(near(ml%7.5,0)||near(ml%7.5,7.5))return frac(ml/15)+' spsk';
+  if(near(ml%1.25,0)||near(ml%1.25,1.25))return frac(ml/5)+' tsk';
+  return nf(ml,1)+' ml';
+}
+/* how an ingredient is shown in a dish: "26 g (2 spsk)", "0,15 l (1,5 dl)", "400 g", "2 stk" */
+function amtTxt(name,q,u){
+  if(u!=='ml')return fq(q,u);
+  var i=ingIn({n:name,q:q,u:'ml'}),m=measureOf(q);
+  if(i.u==='g')return nf(Math.round(i.q*10)/10,i.q<10?1:0)+' g'+(m?' ('+m+')':'');
+  return fq(q,'ml')+(m&&!/ l$/.test(m)?' ('+m+')':'');
+}
 function pq(p,q){return p.leftover?nf(q,1)+' port.':fq(q,p.unit)}
 var uid=function(){return Math.random().toString(36).slice(2,9)};
 function parseYmd(s){var p=String(s).split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2]))}
@@ -143,7 +181,7 @@ function kcalOf(r){
   ((r&&r.ing)||[]).forEach(function(g){
     var p=pan(slug(g.n)),kc=p&&p.kc>=0&&p.kc!=null&&p.kc!==''?Number(p.kc):null;
     if(kc==null){miss++;return}
-    tot+=g.u==='stk'?g.q*kc:g.q*kc/100;
+    var gi=ingIn(g);tot+=gi.u==='stk'?gi.q*kc:gi.q*kc/100;
   });
   return{k:Math.round(tot/2+KALLOW),miss:miss};
 }
@@ -296,7 +334,7 @@ function applyRef(){
 /* ---------- needs, shopping list, waste, coverage ---------- */
 function aggNeeds(ids){
   var sc=(S.settings.persons||2)/2,m={};
-  ids.forEach(function(id){var r=S.recipes[id];if(!r)return;(r.ing||[]).forEach(function(g){var k=slug(g.n),key=k+'|'+g.u;m[key]=m[key]||{k:k,name:g.n,unit:g.u,need:0};m[key].need+=g.q*sc})});
+  ids.forEach(function(id){var r=S.recipes[id];if(!r)return;(r.ing||[]).forEach(function(g){var gi=ingIn(g),k=gi.k,key=k+'|'+gi.u;m[key]=m[key]||{k:k,name:g.n,unit:gi.u,need:0};m[key].need+=gi.q*sc})});
   return m;
 }
 /* A double-portion day counts twice; a leftover day counts nothing. */
@@ -362,7 +400,7 @@ function stockUse(ids,exp){
 }
 function recCov(r){
   var sc=(S.settings.persons||2)/2,ing=r.ing||[];if(!ing.length)return 0;var s=0;
-  ing.forEach(function(g){var p=pan(slug(g.n)),st=p&&p.unit===g.u?curQty(p):0;s+=Math.min(1,st/(g.q*sc))});
+  ing.forEach(function(g){var gi=ingIn(g),p=pan(gi.k),st=p&&p.unit===gi.u?curQty(p):0;s+=gi.q>0?Math.min(1,st/(gi.q*sc)):1});
   return s/ing.length;
 }
 

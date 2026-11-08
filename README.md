@@ -8,6 +8,12 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 10)
+
+- **Køkkenmål:** opskrifter kan skrives med l, dl, spsk, tsk (og kg). 1 l = 10 dl = 1000 ml, 1 dl = 100 ml, 1 spsk = 15 ml, 1 tsk = 5 ml, 1 knsp ≈ 0,5 ml. Tørvarer regnes om til gram med en vægtfylde (fx sukker 0,85 g/ml: 2 spsk ≈ 26 g; hvedemel 0,6 g/ml: 1 dl = 60 g; ris 0,85; havregryn 0,4; salt 1,2; krydderier 0,5), væske til liter. Retten viser fx *26 g (2 spsk)* og *0,15 l (1½ dl)*.
+- **Lager og indkøb:** behovet regnes om til lagerets enhed, før appen trækker fra. Har du 10 g sukker, og ugens retter skal bruge 2 spsk (26 g), kommer sukker på indkøbslisten. Det gælder også ældre retter; intet skal tastes om.
+- Indkøbslisten viser væske i liter (fx 0,25 l).
+
 ## Det kan appen (version 9)
 
 - **Normalpris pr. butik for alle dine varer:** appen sammenligner både tilbud og hver kædes almindelige hyldepris. Jobbet `scripts/store-prices.js` (GitHub Actions, hver nat) samler alle varer, brugerne har (lager + retternes ingredienser + standardvarerne), søger hver vare op én gang hos Prej (api.prej.app, kædernes egne kataloger) og opdaterer derefter priserne på **alle** kendte varer hver nat med få kald (op til 500 produkter pr. kald). Med den gratis nøgle (25 kald i døgnet) søges ca. 23 nye varer pr. nat; varer, du faktisk bruger, kommer først. Priserne gemmes privat hos hver bruger (`store/prices`).
