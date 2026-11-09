@@ -157,7 +157,7 @@ var sample={
   limits:function(){return Promise.resolve({images:true})},
   json:function(prompt,opts){
     opts=opts||{};var files=[].slice.call(opts.images||[]),sig=opts.signal;
-    return (window.UgekurvOCR&&window.UgekurvOCR.readWithGemini?Promise.resolve():loadScript('ocr.js?v=14')).then(function(){
+    return (window.UgekurvOCR&&window.UgekurvOCR.readWithGemini&&window.UgekurvOCR.readFromUrl?Promise.resolve():loadScript('ocr.js?v=15')).then(function(){
       if(sig&&sig.aborted)throw{code:'cancelled'};
       var W=window.UGEKURV_WEB,known=W&&W.known?W.known():[],proxy=(window.UGEKURV_CONFIG||{}).aiProxy,u=auth.currentUser;
       var tess=function(){return window.UgekurvOCR.readRecipe(files,sig,known,opts.onStep)};
@@ -174,6 +174,12 @@ var sample={
 };
 /* ---------- public ---------- */
 window.UGEKURV_WEB={
+  fetchRecipe:function(url,sig,onStep){
+    var proxy=(window.UGEKURV_CONFIG||{}).aiProxy,u=auth.currentUser;
+    if(!proxy||!u||!u.getIdToken)return Promise.reject({code:'not_ready'});
+    return (window.UgekurvOCR&&window.UgekurvOCR.readFromUrl?Promise.resolve():loadScript('ocr.js?v=15')).then(function(){return u.getIdToken()})
+      .then(function(tok){return window.UgekurvOCR.readFromUrl(url,{proxy:proxy,token:tok},sig,onStep)});
+  },
   get name(){var u=auth.currentUser;return (u&&u.displayName)||''},
   signOut:function(){
     /* remove this device from the user's push list first, so the next person on the same phone does not get their reminders */

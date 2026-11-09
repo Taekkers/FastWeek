@@ -8,6 +8,13 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 15)
+
+- **Tilføj retter** (hed før *Scan kogebog*) samler to måder: **Fra et link** og **Fra en kogebog** (billeder). I *Ny ret* findes også feltet *Hent fra et link*.
+- **Opskrift fra et link:** sæt linket ind og tryk *Hent opskrift*. FastWeek-serveren henter siden. De fleste opskriftssider beskriver opskriften i et standardformat (schema.org/Recipe), som læses direkte: navn, antal personer, tid og ingredienser (bruger ikke billedkvoten). Uden standardformat læses sidens tekst som et billede ville blive det. Mængderne omregnes til 2 personer og til g/ml/stk, underoverskrifter som "Sauce:" springes over, og samme vare to gange lægges sammen. Linket gemmes på retten, og sidens billede bruges som foto af retten.
+- Kan en side ikke hentes (fx fordi den blokerer automatiske besøg), står der det, med råd om at tage et skærmbillede og bruge *Læs fra billede*.
+- **Kræver den nye udgave af serveren** (`worker/fastweek-ai.js`, version 2). Læg den ind i Cloudflare som beskrevet under "Billedlæsning: sådan sættes serveren op", trin 3. Åbn serverens adresse bagefter: der skal stå *version 2: også links*.
+
 ## Det kan appen (version 14)
 
 - **Slet ved at glide til venstre:** glid fingeren mod venstre på en række, så står **Slet** med rødt i højre side. Tryk på det for at slette. Et kort glid, et lodret træk eller et tryk et andet sted lukker igen uden at slette, og et almindeligt tryk åbner rækken som før.

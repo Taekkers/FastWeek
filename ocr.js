@@ -4,7 +4,7 @@
 'use strict';
 var UNIT={kg:['g',1000],g:['g',1],gr:['g',1],gram:['g',1],l:['ml',1000],liter:['ml',1000],dl:['ml',100],cl:['ml',10],ml:['ml',1],di:['ml',100],mi:['ml',1],spsk:['ml',15],tsk:['ml',5],
   stk:['stk',1],fed:['stk',1],bdt:['stk',1],bundt:['stk',1],'dåse':['stk',1],'dåser':['stk',1],'dase':['stk',1],'daase':['stk',1],'däse':['stk',1],'dåsen':['stk',1],ds:['stk',1],pk:['stk',1],pakke:['stk',1],pakker:['stk',1],skive:['stk',1],skiver:['stk',1],
-  'håndfuld':['stk',1],'håndfulde':['stk',1],handfuld:['stk',1],'händfuld':['stk',1],drys:['stk',1],stilk:['stk',1],stilke:['stk',1],kvist:['stk',1],kviste:['stk',1],
+  'håndfuld':['stk',1],'håndfulde':['stk',1],handfuld:['stk',1],'händfuld':['stk',1],drys:['stk',1],stilk:['stk',1],stilke:['stk',1],'stængel':['stk',1],'stængler':['stk',1],'stang':['stk',1],'stænger':['stk',1],kvist:['stk',1],kviste:['stk',1],
   knivspids:null,knsp:null,nip:null};
 var SKIP=/^(vand|salt og peber|friskkværnet peber|friskkvaernet peber|salt og friskkværnet peber)\b/;
 function toNum(s){
@@ -322,33 +322,84 @@ function readWithGemini(files,via,signal,known,onStep){
     var parts=[{text:GPROMPT}].concat(b64s.map(function(b){return{inline_data:{mime_type:'image/jpeg',data:b}}}));
     step('Læser opskriften…');
     return geminiCall(via,parts,signal);
-  }).then(function(j){
-    var ing=(j.ingredients||[]).filter(function(g){return g&&g.name}),list=[],lines=[];
-    /* "salt og peber" is two things to have at home */
-    ing=[].concat.apply([],ing.map(function(g){return /^\s*salt\s+og\s+(friskkværnet\s+)?peber\s*$/i.test(g.name)?[{name:'salt',amount:null,unit:''},{name:'peber',amount:null,unit:''}]:[g]}));
-    /* the model's lines are clean: convert units directly (no OCR repairs, no guessing of names) */
-    ing.forEach(function(g){
-      var q=typeof g.amount==='number'?g.amount:parseFloat(String(g.amount||'').replace(',','.')),u=String(g.unit||'').toLowerCase().replace(/\.$/,'').trim();
-      var n=cleanName(String(g.name));if(!n||n.length<2)return;
-      lines.push(((q>0?String(q).replace('.',','):'')+' '+(g.unit||'')+' '+g.name).replace(/\s+/g,' ').trim());
-      if(/^vand$/.test(n))return;                                   /* water from the tap is not bought */
-      var conv=Object.prototype.hasOwnProperty.call(UNIT,u)?UNIT[u]:null;
-      if(!(q>0)){q=1;conv=/^(salt|peber|.*peber$)$/.test(n)&&!/peberfrugt/.test(n)?['g',1]:['stk',1]}
-      else if(!conv){conv=/^(knivspids|knsp|nip)$/.test(u)?['g',.5]:['stk',1]}
-      var qq=q*conv[1],o={n:n,q:conv[0]==='stk'?Math.max(.5,Math.round(qq*2)/2):Math.round(qq*10)/10,u:conv[0],known:true};
-      /* the same ingredient twice ("sukker" in the dough and in the topping): one line with the total. "rørsukker" stays its own */
-      var same=list.filter(function(x){return x.n===o.n&&x.u===o.u})[0];
-      if(same)same.q=Math.round((same.q+o.q)*10)/10;else list.push(o);
-    });
-    var out={ingredients:list,name:'',servings:0,minutes:null,page:0};
-    out.name=String(j.title||'').trim();
-    if(out.name&&out.name===out.name.toUpperCase())out.name=out.name.charAt(0)+out.name.slice(1).toLowerCase();
-    out.servings=j.servings>0?Math.round(j.servings):0;out.minutes=j.minutes>0?Math.round(j.minutes):null;out.page=j.page>0?Math.round(j.page):0;
-    out.raw=lines.join('\n');out.via='ai';
-    return out;
+  }).then(fromStruct);
+}
+/* structured lines {amount, unit, name} -> ingredients in g / ml / stk (used for photos read by the model and for recipes from the web) */
+function structIngs(ing){
+  var list=[],lines=[];
+  ing=(ing||[]).filter(function(g){return g&&g.name});
+  /* "salt og peber" is two things to have at home */
+  ing=[].concat.apply([],ing.map(function(g){return /^\s*salt\s+og\s+(friskkværnet\s+|frisk\s+|sort\s+)?peber\s*$/i.test(g.name)?[{name:'salt',amount:null,unit:''},{name:'peber',amount:null,unit:''}]:[g]}));
+  ing.forEach(function(g){
+    var q=typeof g.amount==='number'?g.amount:parseFloat(String(g.amount||'').replace(',','.')),u=String(g.unit||'').toLowerCase().replace(/\.$/,'').trim();
+    var n=cleanName(String(g.name)).replace(/^(stor|store|lille|små|smaa|mellemstor|mellemstore|stort|lidt)\s+/,'');if(!n||n.length<2)return;
+    lines.push(g.line||((q>0?String(Math.round(q*100)/100).replace('.',','):'')+' '+(g.unit||'')+' '+g.name).replace(/\s+/g,' ').trim());
+    if(/^(vand|koldt vand|kogende vand|lunkent vand|varmt vand)$/.test(n))return;                 /* water from the tap is not bought */
+    var conv=Object.prototype.hasOwnProperty.call(UNIT,u)?UNIT[u]:null;
+    if(!(q>0)){q=1;conv=/^(salt|peber|.*peber$|flagesalt|havsalt)$/.test(n)&&!/peberfrugt/.test(n)?['g',1]:['stk',1]}
+    else if(!conv){conv=/^(knivspids|knsp|nip)$/.test(u)?['g',.5]:['stk',1]}
+    if(g.w>0&&conv[0]==='stk'){q=q*g.w;conv=[g.wu||'g',1]}                                  /* "1 dåse hakkede tomater (400 g)" */
+    var qq=q*conv[1],o={n:n,q:conv[0]==='stk'?Math.max(.5,Math.round(qq*2)/2):Math.round(qq*10)/10,u:conv[0],known:true};
+    /* the same ingredient twice ("sukker" in the dough and in the topping): one line with the total. "rørsukker" stays its own */
+    var same=list.filter(function(x){return x.n===o.n&&x.u===o.u})[0];
+    if(same)same.q=Math.round((same.q+o.q)*10)/10;else list.push(o);
+  });
+  return {list:list,lines:lines};
+}
+function fromStruct(j){
+  var r=structIngs(j.ingredients);
+  var out={ingredients:r.list,name:'',servings:0,minutes:null,page:0};
+  out.name=String(j.title||j.name||'').trim();
+  if(out.name&&out.name===out.name.toUpperCase())out.name=out.name.charAt(0)+out.name.slice(1).toLowerCase();
+  out.servings=j.servings>0?Math.round(j.servings):0;out.minutes=j.minutes>0?Math.round(j.minutes):null;out.page=j.page>0?Math.round(j.page):0;
+  out.raw=r.lines.join('\n');out.via='ai';
+  return out;
+}
+/* one clean ingredient line from a web page: "1½ dl fløde", "2 fed hvidløg, presset", "1 dåse hakkede tomater (400 g)" */
+var FRAC={'½':.5,'¼':.25,'¾':.75,'⅓':1/3,'⅔':2/3,'⅛':.125};
+function parseCleanLine(s){
+  s=String(s||'').replace(/ /g,' ').replace(/\s+/g,' ').trim().replace(/^[•*·–-]\s*/,'').replace(/^(ca\.?|cirka|evt\.?)\s+/i,'');
+  if(!s)return null;
+  var q=null,m;
+  if((m=/^(\d+)\s+(\d+)\s*\/\s*(\d+)\s*/.exec(s))){q=+m[1]+m[2]/m[3];s=s.slice(m[0].length)}
+  else if((m=/^(\d+)\s*\/\s*(\d+)\s*/.exec(s))){q=m[1]/m[2];s=s.slice(m[0].length)}
+  else if((m=/^(\d+(?:[.,]\d+)?)?\s*([½¼¾⅓⅔⅛])?\s*/.exec(s))&&(m[1]||m[2])){q=(m[1]?parseFloat(m[1].replace(',','.')):0)+(m[2]?FRAC[m[2]]:0);s=s.slice(m[0].length)}
+  s=s.replace(/^(?:-|–|til)\s*[\d½¼¾.,\/]+\s*/,'');                                     /* "2-3": the first number */
+  var u='';m=/^([a-zA-ZæøåÆØÅ]+)\.?(?=\s|$)/.exec(s);
+  if(m&&(Object.prototype.hasOwnProperty.call(UNIT,m[1].toLowerCase())||/^(knivspids|knsp|nip)$/i.test(m[1]))&&s.slice(m[0].length).trim()){u=m[1].toLowerCase();s=s.slice(m[0].length).trim()}
+  var w=0,wu='';m=/\(\s*(?:ca\.?\s*)?(\d+(?:[.,]\d+)?)\s*(g|kg|ml|dl|l)\s*\)/i.exec(s);
+  if(m&&(/^(dåse|dåser|ds|pk|pakke|pakker|bdt|bundt)$/.test(u)||!u)){var k=UNIT[m[2].toLowerCase()];w=parseFloat(m[1].replace(',','.'))*k[1];wu=k[0]}
+  if(!s)return null;
+  /* a sub-heading in the list ("Sauce:", "Til servering") is not an ingredient */
+  if(q==null&&!u&&(/:\s*$/.test(s)||/^(til\s+\S+|derudover|tilbehør|pynt|.*(sauce|sovs|dressing|marinade|fyld|topping|dej|bund|glasur|creme|crumble))$/i.test(s.trim())))return null;
+  return {amount:q,unit:u,name:s,w:w,wu:wu};
+}
+/* a recipe from a link: the FastWeek server fetches the page; recipe sites describe the recipe in a standard format, otherwise the page text is read by the model */
+var UPROMPT='Teksten nedenfor er fra en webside med en opskrift. Udtræk opskriftens titel, antal personer, tid i minutter og ALLE ingredienser fra alle ingredienslister (også under underoverskrifter som "Sauce" eller "Til servering"). Underoverskrifterne er ikke ingredienser. '+
+  'Hver ingrediens: amount = mængden som tal (½ = 0.5, 1½ = 1.5, "2-3" = 2; null hvis der ingen mængde står), unit = enheden præcis som skrevet (g, kg, dl, l, ml, spsk, tsk, stk, fed, dåse, bundt, knivspids …; tom hvis ingen), '+
+  'name = varens navn uden tilberedning og uden mængde. Bevar rækkefølgen. Læs ikke fremgangsmåden, reklamer eller andre opskrifter på siden. page = null.\n\n';
+function readFromUrl(url,via,signal,onStep){
+  var step=function(t){if(onStep)try{onStep(t)}catch(e){}};
+  step('Henter siden…');
+  return fetch(String(via.proxy).replace(/\/+$/,'')+'/recipe-from-url',{method:'POST',signal:signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+via.token},body:JSON.stringify({url:url})})
+  .then(function(r){return r.text().then(function(t){var j={};try{j=JSON.parse(t)}catch(e){}
+    if(r.status===404&&!(j&&j.error&&j.error.site))throw{code:'not_ready',message:'HTTP 404'};
+    if(!r.ok)throw{code:(j&&j.error&&j.error.site)?'site':'unavailable',message:(j&&j.error&&j.error.message)||('HTTP '+r.status)};
+    return j})},function(e){if(e&&e.name==='AbortError')throw{code:'cancelled'};throw{code:'network',message:String(e&&e.message||e)}})
+  .then(function(j){
+    var photo=j.image&&/^https:\/\//.test(j.image)?{u:j.image,p:j.host||'',src:'link'}:null;
+    if(j.recipe&&j.recipe.ingredients&&j.recipe.ingredients.length){
+      var rec=j.recipe,ing=rec.ingredients.map(function(l){var p=parseCleanLine(l);if(p)p.line=l;return p}).filter(Boolean);
+      var out=fromStruct({title:rec.name,servings:rec.servings,minutes:rec.minutes,ingredients:ing});
+      out.photo=photo;out.via='link';
+      if(out.ingredients.length)return out;
+    }
+    if(!j.text)throw{code:'no_recipe',message:'ingen opskrift på siden'};
+    step('Læser opskriften…');
+    return geminiCall(via,[{text:UPROMPT+(j.title?'Sidens titel: '+j.title+'\n\n':'')+j.text}],signal).then(function(g){var out=fromStruct(g);out.photo=photo;out.via='link-ai';return out});
   });
 }
-var api={readRecipe:readRecipe,readWithGemini:readWithGemini,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
+var api={readRecipe:readRecipe,readWithGemini:readWithGemini,readFromUrl:readFromUrl,parseCleanLine:parseCleanLine,structIngs:structIngs,quality:quality,parseText:parseText,parseMulti:parseMulti,commonKnown:commonKnown,parseLine:parseLine,loose:loose,findPage:findPage,prep:prep};
 root.UgekurvOCR=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

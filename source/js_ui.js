@@ -282,7 +282,7 @@ var MENU=[
   {id:'shop',t:'Indkøb',tab:1,ic:'<path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>'},
   {sep:1},
   {id:'recs',t:'Mine retter',ic:'<path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3V4z"/><path d="M5 17a3 3 0 0 1 3-3h11M9 8h6"/>'},
-  {id:'scan',t:'Scan kogebog',ic:'<path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="12.5" r="3.4"/>'},
+  {id:'scan',t:'Tilføj retter',ic:'<path d="M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8z"/><circle cx="12" cy="12.5" r="3.4"/>'},
   {id:'favs',t:'Favoritter',ic:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.600-7 10-7 10z"/>'},
   {sep:1},
   {id:'gear',t:'Indstillinger',ic:'<circle cx="12" cy="12" r="3"/><path d="M12 3v2.500M12 18.500V21M3 12h2.500M18.500 12H21M5.600 5.600l1.800 1.800M16.600 16.600l1.800 1.800M5.600 18.400l1.800-1.800M16.600 7.400l1.800-1.800"/>'}
@@ -330,12 +330,12 @@ function openPick(i){
 
 /* recipes */
 function openRecipes(){
-  var ids=Object.keys(S.recipes),h='<div class="btnrow"><button class="btn" data-act="newrec">Ny ret</button><button class="btn ghost" data-act="scanbook">Scan kogebog</button>'+(ids.length?'<button class="btn ghost" data-act="favs">♥ Favoritter</button>':''),ns=Object.keys(S.starter).filter(function(id){return !S.recipes[id]}).length;
+  var ids=Object.keys(S.recipes),h='<div class="btnrow"><button class="btn" data-act="newrec">Ny ret</button><button class="btn ghost" data-act="scanbook">Tilføj retter</button>'+(ids.length?'<button class="btn ghost" data-act="favs">♥ Favoritter</button>':''),ns=Object.keys(S.starter).filter(function(id){return !S.recipes[id]}).length;
   if(ns)h+='<button class="btn ghost" data-act="getstarter">Hent '+ns+(ns===1?' startret':' startretter')+'</button>';
   h+='</div>';
   if(ids.length){var tm=tasteModel(),tl=tm.any?tasteLabels(tm):[];
     h+='<p class="hint">'+(tl.length?'Din smag lige nu: '+esc(tl.join(', '))+'. Retterne varieres fra uge til uge.':'Markér favoritter, så lærer appen din smag.')+'</p>'}
-  if(!ids.length)h+='<p class="muted">Ingen retter endnu. Scan en kogebog, eller tryk Ny ret.</p>';
+  if(!ids.length)h+='<p class="muted">Ingen retter endnu. Tryk Tilføj retter for at hente fra et link eller en kogebog, eller tryk Ny ret.</p>';
   h+=draftsHtml();
   var books={};ids.forEach(function(id){var r=S.recipes[id],b=r.book||'Egne retter';(books[b]=books[b]||[]).push(id)});
   Object.keys(books).sort(function(a,b){return a==='Egne retter'?1:b==='Egne retter'?-1:a.localeCompare(b,'da')}).forEach(function(b){
@@ -376,7 +376,7 @@ function heroHtml(id,r){
   if(canUp)h+='<input id="rf-photo" type="file" accept="image/*" hidden data-id="'+esc(id)+'">';
   h+='<div id="ph-st" aria-live="polite"></div>';
   if(own)h+='<button class="lnk" data-act="rmphoto" data-id="'+esc(id)+'">Fjern mit foto</button>';
-  else if(ph)h+='<p class="credit">Foto: '+(ph.p?'<a href="'+esc(safeUrl(ph.p))+'" target="_blank" rel="noopener noreferrer">'+esc(ph.h||'kilde')+'</a>':esc(ph.h||''))+'. Fundet ved søgning på rettens navn. <button class="lnk" data-act="nextimg" data-id="'+esc(id)+'">Find et andet</button> <button class="lnk" data-act="noweb" data-id="'+esc(id)+'">Brug tegning</button></p>';
+  else if(ph)h+='<p class="credit">Foto: '+(ph.p?'<a href="'+esc(safeUrl(ph.p))+'" target="_blank" rel="noopener noreferrer">'+esc(ph.h||'kilde')+'</a>':esc(ph.h||''))+(ph.src==='link'?'. Fra opskriftens side. ':'. Fundet ved søgning på rettens navn. ')+'<button class="lnk" data-act="nextimg" data-id="'+esc(id)+'">Find et andet</button> <button class="lnk" data-act="noweb" data-id="'+esc(id)+'">Brug tegning</button></p>';
   else if(r.photoReq&&!r.noweb)h+='<p class="hint">Et nyt foto af retten hentes automatisk inden for en time.</p>';
   else if(r.noweb)h+='<p class="hint">Tegningen bruges. <button class="lnk" data-act="findimg" data-id="'+esc(id)+'">Brug et foto af retten</button></p>';
   else if(r.photo&&r.photo.none)h+='<p class="hint">Der blev ikke fundet et foto af retten. Tilføj dit eget.</p>';
@@ -394,6 +394,8 @@ function openRecipe(id,did){
     if(k)h+='<p class="hint">Kalorier pr. portion er et overslag inkl. ca. '+KALLOW+' kcal til olie og krydderier.</p>';
   }
   if(dr)h+='<p class="hint">Udkast fra scanning af '+esc(dr.book)+'. Tjek oplysningerne, og tryk Gem ret.</p>'+(dr.raw?rawHtml(dr.raw):'');
+  if(!r&&!dr&&window.UGEKURV_WEB)h+='<div class="photo"><b>Hent fra et link</b><p class="muted sm">Sæt linket til en opskrift på nettet ind. Navn, tid og ingredienser udfyldes automatisk. Tjek mængderne.</p>'+
+    '<div class="imp-row"><input id="rf-imp" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://" aria-label="Link til opskrift"><button class="btn sm" data-act="impurl">Hent</button></div><div id="rf-ist" aria-live="polite"></div></div>';
   if(!r&&!dr)h+='<div class="photo"><b>Læs fra billede</b><p class="muted sm">'+(window.UGEKURV_WEB?'Vælg et billede af opskriften. Titel, tid og ingredienser udfyldes automatisk. Tjek mængderne.':'Vælg et billede af opskriften. Titel, tid og ingredienser udfyldes automatisk.')+'</p><input id="rf-file" type="file" accept="image/*" multiple aria-label="Billeder af opskrift"><div id="rf-th" class="ths"></div><div id="rf-st" aria-live="polite"></div><button class="btn ghost sm" data-act="readrec" id="rf-read" hidden>Læs igen</button></div>';
   h+='<div class="field"><label for="rf-name">Navn</label><input id="rf-name" type="text" value="'+esc(v?v.name||'':'')+'"></div>'+
     (r&&safeUrl(r.url)?'<a class="srcl" href="'+esc(safeUrl(r.url))+'" target="_blank" rel="noopener noreferrer">'+LINK+'<span>Åbn opskriften på '+esc(srcHost(r.url))+'</span></a>':'')+
@@ -418,8 +420,9 @@ function saveRecipe(id,did){
   var name=$('#rf-name').value.trim(),rows=collectIng();
   if(!name){toast('Giv retten et navn');return}
   if(!rows.length){toast('Tilføj mindst én ingrediens med mængde');return}
-  var old=id?S.recipes[id]:null,rid=id||uid(),t=todayStr();
+  var old=id?S.recipes[id]:null,rid=id||uid(),t=todayStr(),lk=S.rfLink;
   var doc=Object.assign({},old||{},{name:name,book:$('#rf-book').value.trim(),page:Math.round(num($('#rf-page').value))||0,kind:$('#rf-kind').value,minutes:Math.round(num($('#rf-min').value))||0,prot:$('#rf-prot').value,rest:$('#rf-rest').checked,fav:$('#rf-fav').checked,again:$('#rf-again').value,method:$('#rf-method').value.replace(/\r/g,'').trim(),ing:rows.map(function(g){return{n:g.n,q:g.q,u:g.u}}),example:false,url:safeUrl($('#rf-url').value),made:(old&&old.made)||{count:0,last:'',wd:[0,0,0,0,0,0,0]}});
+  if(!old&&lk&&lk.photo&&lk.photo.u&&doc.url===safeUrl(lk.url)&&!doc.photo){var hh='';try{hh=new URL(lk.url).hostname.replace(/^www\./,'')}catch(e){}doc.photo={u:lk.photo.u,p:lk.url,h:hh,src:'link',at:Date.now()}}
   save(function(){
     var patch={},items=S.praw||{};
     rows.forEach(function(g){var k=slug(g.n),o=items[k],r=g.rule;
@@ -432,13 +435,45 @@ function saveRecipe(id,did){
 var RFU=[];
 function rawHtml(t){return '<details class="raw"><summary>Vis den læste tekst</summary><pre>'+esc(String(t).slice(0,6000))+'</pre><button type="button" class="btn ghost sm" data-act="copyraw">Kopiér teksten</button></details>'}
 function rfDrop(){RFU.forEach(function(u){try{URL.revokeObjectURL(u)}catch(e){}});RFU=[]}
-function rfSt(kind,title,sub,stop){
-  var st=$('#rf-st');if(!st)return;
+function rfSt(kind,title,sub,stop,sel){
+  var st=$(sel||'#rf-st');if(!st)return;
   st.innerHTML='<div class="up-sum '+kind+'">'+(kind==='run'?'<span class="spin"></span>':kind==='ok'?CHECK:'')+'<span><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</span>'+(stop?'<button class="btn ghost sm" data-act="stopread">Stop</button>':'')+'</div>';
 }
 function rfPreview(files){
   rfDrop();var th=$('#rf-th');if(!th)return;
   th.innerHTML=[].slice.call(files||[]).map(function(f,i){var u=URL.createObjectURL(f);RFU.push(u);return '<figure><img src="'+u+'" alt="Billede '+(i+1)+'"><figcaption>'+upSize(f)+'</figcaption></figure>'}).join('');
+}
+/* a recipe from a link: the FastWeek server fetches the page and finds the recipe */
+function importUrl(){
+  var I='#rf-ist',i=$('#rf-imp'),url=i?i.value.trim():'';
+  if(!url){rfSt('bad','Sæt et link ind først','',false,I);return}
+  if(!/^https?:\/\//i.test(url))url='https://'+url.replace(/^\/+/,'');
+  if(!/^https?:\/\/[^\s\/]+\.[^\s\/]+/i.test(url)){rfSt('bad','Det ligner ikke et link','Kopiér adressen fra browseren, fx https://www.valdemarsro.dk/lasagne/',false,I);return}
+  var W=window.UGEKURV_WEB;if(!W||!W.fetchRecipe){rfSt('bad','Hent fra link virker kun i appen','',false,I);return}
+  if(S.ctl){rfSt('run','Arbejder stadig','Vent, til den er færdig.',false,I);return}
+  S.ctl=new AbortController();var b=$('[data-act="impurl"]');if(b)b.disabled=true;
+  rfSt('run','Henter opskriften…','',true,I);
+  W.fetchRecipe(url,S.ctl.signal,function(m){rfSt('run',m,'',true,I)}).then(function(res){
+    var rows=rowsFromRes(res),st=$(I);
+    if(!rows.length){rfSt('bad','Fandt ingen ingredienser på siden','Tag et skærmbillede af ingredienserne, og brug Læs fra billede.',false,I);return}
+    if(res.name)$('#rf-name').value=res.name;
+    if(res.minutes)$('#rf-min').value=Math.round(num(res.minutes));
+    $('#rf-ings').innerHTML=rows.map(ingRow).join('');
+    if($('#rf-url'))$('#rf-url').value=url;
+    S.rfLink={url:url,photo:res.photo||null};
+    var host='';try{host=new URL(url).hostname.replace(/^www\./,'')}catch(e){}
+    rfSt('ok',rows.length+(rows.length===1?' ingrediens indsat':' ingredienser indsat'),'Fra '+host+(res.servings&&res.servings!==2?', omregnet fra '+res.servings+' til 2 personer':'')+'. Tjek mængderne nedenfor, og tryk Gem ret.',false,I);
+    if(st&&res.raw)st.insertAdjacentHTML('beforeend',rawHtml(res.raw));
+    var ing=$('#rf-ings');if(ing&&ing.scrollIntoView)ing.scrollIntoView({block:'nearest'});
+  }).catch(function(e){
+    var c=e&&e.code;
+    if(c==='cancelled')rfSt('bad','Stoppet','',false,I);
+    else if(c==='site')rfSt('bad','Siden kunne ikke hentes',(e.message?e.message+'. ':'')+'Tag et skærmbillede af ingredienserne, og brug Læs fra billede.',false,I);
+    else if(c==='no_recipe')rfSt('bad','Fandt ingen opskrift på siden','Tag et skærmbillede af ingredienserne, og brug Læs fra billede.',false,I);
+    else if(c==='not_ready')rfSt('bad','Hent fra link er ikke klar endnu','Prøv igen senere, eller tag et skærmbillede og brug Læs fra billede.',false,I);
+    else if(c==='network')rfSt('bad','Ingen forbindelse','Tjek nettet, og prøv igen.',false,I);
+    else rfSt('bad','Siden kunne ikke læses','Prøv igen om lidt, eller tag et skærmbillede og brug Læs fra billede.',false,I);
+  }).then(function(){S.ctl=null;var b=$('[data-act="impurl"]');if(b)b.disabled=false});
 }
 function readRecipe(){
   var files=$('#rf-file').files,rb=$('#rf-read');
@@ -526,14 +561,17 @@ function openScan(){
   var books={};Object.keys(S.recipes).forEach(function(k){if(S.recipes[k].book)books[S.recipes[k].book]=1});Object.keys(S.scans||{}).forEach(function(k){if(S.scans[k].book)books[S.scans[k].book]=1});
   var n=draftList().length;
   var h='<datalist id="bl">'+Object.keys(books).map(function(b){return '<option value="'+esc(b)+'">'}).join('')+'</datalist>'+
+    (window.UGEKURV_WEB?'<section class="add-sec"><h3>Fra et link</h3><p class="muted sm">Sæt linket til en opskrift på nettet ind. Navn, tid og ingredienser udfyldes automatisk.</p>'+
+      '<div class="imp-row"><input id="sc-url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://" aria-label="Link til opskrift"><button class="btn sm" data-act="scurl">Hent opskrift</button></div></section>'+
+      '<section class="add-sec"><h3>Fra en kogebog</h3>':'<section class="add-sec">')+
     '<p class="muted sm">Ét billede pr. opskrift. Hver bliver et udkast, du tjekker bagefter.</p>'+
     '<div class="field"><label for="sc-book">Kogebog</label><input id="sc-book" list="bl" type="text" value="'+esc(S.lastBook||'')+'" placeholder="Fx titel på bogen"><p class="err" id="sc-bk-err" role="alert" hidden>Skriv kogebogens navn først.</p></div>'+
     '<div class="btnrow"><button class="btn" data-act="sccam">Tag billede</button><button class="btn ghost" data-act="scpick">Vælg billeder</button></div>'+
     '<input id="sc-cam" type="file" accept="image/*" capture="environment" hidden aria-label="Tag billede af opskrift"><input id="sc-files" type="file" accept="image/*" multiple hidden aria-label="Vælg billeder af opskrifter">'+
     '<div id="sc-st" aria-live="polite"></div><div id="sc-res" class="ups"></div>'+
     '<p class="hint">Luk ikke vinduet under læsning.</p>'+
-    '<div class="foot"><button class="btn ghost" id="sc-rev" data-act="scanreview">Gennemse udkast'+(n?' ('+n+')':'')+'</button></div>';
-  openSheet('Scan kogebog',h);
+    '</section><div class="foot"><button class="btn ghost" id="sc-rev" data-act="scanreview">Gennemse udkast'+(n?' ('+n+')':'')+'</button></div>';
+  openSheet('Tilføj retter',h);
 }
 function scanFiles(list){
   var files=[].slice.call(list||[]),st=$('#sc-st'),bk=$('#sc-book');
@@ -950,6 +988,8 @@ var ACT={
   },
   close:closeSheet,
   stopread:function(){if(S.ctl)S.ctl.abort()},
+  impurl:function(){importUrl()},
+  scurl:function(){var v=($('#sc-url')||{}).value||'';if(!v.trim()){var e=$('#sc-url');if(e)e.focus();return}S.rfLink=null;openRecipe('');var i=$('#rf-imp');if(i){i.value=v.trim();importUrl()}},
   gen:function(){makePlan(wid())},
   pickstore:function(d){S.sel=d.s;S.selSet=true;draw()},
   wizard:function(){openWizard(S.mon,false)},
@@ -1067,7 +1107,7 @@ var ACT={
     save(function(){return up(udoc('store/pantry'),{items:patch}).then(function(){closeSheet();toast('Gemt')})});
   },
   recs:openRecipes,
-  newrec:function(){openRecipe('')},
+  newrec:function(){S.rfLink=null;openRecipe('')},
   scanbook:openScan,
   sccam:function(){if(!scBook())return;var f=$('#sc-cam');if(f)f.click()},
   scpick:function(){if(!scBook())return;var f=$('#sc-files');if(f)f.click()},

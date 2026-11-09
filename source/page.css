@@ -189,7 +189,7 @@ h2{font:700 18px/1.25 var(--f-display);text-wrap:balance}
 .stat{display:flex;flex-wrap:wrap;gap:6px}
 
 /* forms + sheet */
-input[type=text],input[type=password],input[type=number],input[type=date],input:not([type]),select,textarea{width:100%;min-height:46px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px}
+input[type=text],input[type=password],input[type=url],input[type=number],input[type=date],input:not([type]),select,textarea{width:100%;min-height:46px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:16px}
 input[type=checkbox]{accent-color:var(--pine)}
 .field{display:flex;flex-direction:column;gap:4px}
 .field label{font-size:12.5px;font-weight:600;color:var(--ink2)}
@@ -518,3 +518,12 @@ body.cns-on{overflow:hidden}
 .share-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin:4px 0 14px}
 .share-row .btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-right:6px}
 .share-row .fine{flex:1 1 200px;min-width:0;margin:0}
+
+/* add recipes: from a link / from a cookbook */
+.add-sec{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.add-sec h3{margin:0;font-size:17px}
+.add-sec p{margin:0}
+.imp-row{display:flex;gap:8px;align-items:stretch}
+.imp-row input{flex:1 1 auto;min-width:0}
+.imp-row .btn{flex:0 0 auto}
+#rf-ist:not(:empty){margin-top:8px}
