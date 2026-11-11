@@ -177,7 +177,7 @@ function brandBtn(it){
 function viewShop(){
   SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
-  h+='<form class="add-row add-top"><input id="xin" type="text" enterkeyhint="done" autocomplete="off" placeholder="Tilføj vare, fx skyr eller kaffe" aria-label="Tilføj vare til indkøbslisten"><button class="btn" type="submit">Tilføj</button></form>';
+  h+='<form class="add-row add-top"><input id="xin" type="text" enterkeyhint="done" autocomplete="off" placeholder="Tilføj vare, fx skyr eller kaffe" aria-label="Tilføj vare til indkøbslisten"><button class="btn" type="submit">Tilføj</button></form><!--XTRA-->';
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
   var xs=xItems(w),xp=xs.filter(function(it){return lineCost(it)>0});
   var sc=storeCosts(items.concat(xp),w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
@@ -231,7 +231,8 @@ function viewShop(){
     if(none.length)h+='<p class="fine">Ingen varer er billigst i '+esc(none.join(' eller '))+'.</p>';
     var rest=items.filter(function(it){return !storeOf(it)});if(rest.length)h+=groupsHtml(rest);
   }else h+=groupsHtml(items);
-  h+='<div class="sec"><div class="lbl">Ekstra</div><div class="group">'+extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
+  /* own items: shown right under the add field, so you see what you added (and its offer) at once */
+  var xrows=extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
     /* own items: the best offer this week, and the price where the app knows one */
     var xi=xs.filter(function(it){return it.xid===x.id})[0],key=xi?xi.k+'_'+xi.unit:'',priced=!!xi&&xp.indexOf(xi)>-1,so=priced?storeOf(xi):'',ln=null,via=null,price='',ot='',cells='';
     if(priced&&so&&sc.stores[so]){ln=sc.stores[so].lines[key];via=ln&&ln.via;
@@ -244,7 +245,8 @@ function viewShop(){
       if(bo){via=bo;price='<span class="pr off">'+kr(Math.round(bo.cost))+'</span>'+(bo.o.was>bo.o.price?'<span class="was">'+kr(Math.round(bo.o.was*bo.f))+'</span>':'');
       ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'}}
     var rh='<label class="it'+(on?' on':'')+(cells?' cmp':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span>'+(via?'<span class="it-m"><span class="chip off">Tilbud</span></span>':'')+ot+'</span>'+(cells||'<span class="it-p">'+price+'</span>')+'</label>';
-    if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div></div>';
+    if(on){doneRows.push(rh);return ''}return rh}).join('');
+  h=h.replace('<!--XTRA-->',xrows?'<div class="sec xsec"><div class="lbl">Tilføjet af dig</div><div class="group">'+xrows+'</div></div>':'');
   if(items.length&&!openN&&doneRows.length)h+='<p class="hint">Alt fra madplanen er krydset af.</p>';
   if(doneRows.length)h+='<div class="sec bought"><div class="lbl">Købt ('+doneRows.length+')</div><div class="group">'+doneRows.join('')+'</div></div>';
   var nsk=Array.isArray(L.skip)?L.skip.length:0;

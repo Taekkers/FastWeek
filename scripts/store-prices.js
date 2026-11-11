@@ -5,7 +5,8 @@
      2) Derefter opdateres priserne for ALLE kendte varer hver nat med "batch"-kald (op til 500 produkter pr. kald).
    Resultat: data/users/<id>/u/store/prices = { items: { <vare>: { u: 'g'|'ml'|'stk', v: { Netto: kr pr. kg/l/stk, ... } } }, at }
    Egne varer på indkøbslisten (Ekstra, fx "kaffe") får u: 'pk' og v: { Netto: kr for en typisk pakke, ... } (q/qu: pakkens størrelse),
-   så appen kan sammenligne butikkerne for dem også.
+   så appen kan sammenligne butikkerne for dem også, og off: { Netto: { p: tilbudspris, n: varenavn, to: sidste dag, w: før-pris } }
+   med ugens tilbud på varen (søges igen hver uge, opdateres hver nat).
    Kun hyldepriser: tilbud (is_offer), tilbudsaviser (source=flyer) og AI-matchede priser springes over.
    Coop-kæderne og Løvbjerg udgiver ikke hyldepriser online; for dem bruger appen sit skøn. */
 'use strict';
@@ -63,13 +64,25 @@ function packQty(pr){
 }
 function pickPack(item,key,products){
   var must=norm(item.name).split(' ').filter(function(w){return w.length>1});if(!must.length)return{sp:{},ids:[]};
-  var rows=[],ids=[];
+  var rows=[],ids=[],off={},today=new Date().toISOString().slice(0,10);
   (products||[]).forEach(function(pr){
     var n=' '+norm(pr.name)+' ';
     if(!must.every(function(m){return new RegExp(' '+m+'(e|r|er|n|en|ne|s|et|erne)? ').test(n)}))return;   /* whole words: not "kaffefløde" for "kaffe" */
     if(NOT.test(n)&&!NOT.test(norm(item.name)))return;
     if(/\b(oeko|okologisk|oekologisk)\b/.test(n)&&!/\b(oeko|oekologisk)\b/.test(norm(item.name)))return;
-    var pq=packQty(pr),hit=false;
+    var pq=packQty(pr),hit=false,shelf={};
+    (pr.prices||[]).forEach(function(p){var st=CHAIN[p.chain_slug];if(st&&!p.is_offer&&p.source!=='flyer'&&p.price>0)shelf[st]=p.price/100});
+    /* this week's offers on the item (from the chains' flyers and web shops): the cheapest per chain */
+    (pr.prices||[]).forEach(function(p){
+      var st=CHAIN[p.chain_slug];if(!st||!p.is_offer||!(p.price>0))return;
+      var end=p.offer_ends?String(p.offer_ends).slice(0,10):'';if(end&&end<today)return;if(!end&&!p.multi_buy)return;
+      var pe=p.multi_buy&&p.multi_buy.price_each>0&&!(p.price>0)?p.multi_buy.price_each:p.price,kr=pe/100;
+      var nm=String(pr.name||'').trim(),ql=String(p.quantity_label||pr.quantity_label||'').trim();
+      if(ql&&nm.toLowerCase().indexOf(ql.toLowerCase())<0)nm+=', '+ql;
+      if(p.multi_buy&&p.multi_buy.quantity>1)nm+=' ('+p.multi_buy.quantity+' for '+Math.round(p.multi_buy.price/100)+' kr)';
+      if(!off[st]||kr<off[st].p)off[st]={p:Math.round(kr*100)/100,n:nm.slice(0,90),to:end,w:shelf[st]>kr?shelf[st]:0};
+      hit=true;
+    });
     (pr.prices||[]).forEach(function(p){
       var st=CHAIN[p.chain_slug];if(!st||p.is_offer||p.source==='flyer'||p.ai_matched)return;
       var lab=String(p.unit_price_label||'').toLowerCase(),u=/kr\/kg/.test(lab)?'kg':/kr\/(l|liter)\b/.test(lab)?'l':/kr\/stk/.test(lab)?'stk':'';
@@ -78,19 +91,19 @@ function pickPack(item,key,products){
       if(!u||!(v>0))return;
       hit=true;rows.push({st:st,u:u,v:v,q:pq&&pq.u===u?pq.q:0});
     });
-    if(hit&&ids.length<20)ids.push(pr.id);
+    if(hit&&ids.length<40)ids.push(pr.id);
   });
-  if(!rows.length)return{sp:{},ids:ids};
+  if(!rows.length)return{sp:{},ids:ids,off:off};
   var cnt={};rows.forEach(function(r){cnt[r.u]=(cnt[r.u]||0)+1});
   var du=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]})[0];
   var qs=rows.filter(function(r){return r.u===du&&r.q>0}).map(function(r){return r.q}).sort(function(a,b){return a-b});
-  if(!qs.length)return{sp:{},ids:ids};
+  if(!qs.length)return{sp:{},ids:ids,off:off};
   var tq=qs[Math.floor(qs.length/2)],per={};
   rows.forEach(function(r){if(r.u!==du)return;if(!(r.st in per)||r.v<per[r.st])per[r.st]=r.v});
   var out={};Object.keys(per).forEach(function(st){out[st]=Math.round(per[st]*tq*100)/100});
   var vs=Object.keys(out).map(function(s){return out[s]}).sort(function(a,b){return a-b});
   if(vs.length>=3){var med=vs[Math.floor(vs.length/2)];Object.keys(out).forEach(function(st){if(out[st]>med*2.5||out[st]<med/2.5)delete out[st]})}
-  return{sp:out,ids:ids,q:tq,qu:du};
+  return{sp:out,ids:ids,q:tq,qu:du,off:off};
 }
 var calls=0;
 async function api(q,key){
@@ -143,21 +156,21 @@ async function run(){
   var byId={};
   try{for(var i=0;i<allIds.length;i+=500){var j=await api('/v1/products/batch?ids='+allIds.slice(i,i+500).join(','),key);listOf(j).forEach(function(p){byId[p.id]=p})}}
   catch(e){console.log('Opdatering stoppet: '+e.message)}
-  known.forEach(function(k){var ps=cache[k].ids.map(function(id){return byId[id]}).filter(Boolean);if(!ps.length)return;var r=pick(g.items[k],k,ps);cache[k].sp=r.sp;if(r.q){cache[k].q=r.q;cache[k].qu=r.qu}cache[k].at=new Date().toISOString().slice(0,10);done[k]=1});
+  known.forEach(function(k){var ps=cache[k].ids.map(function(id){return byId[id]}).filter(Boolean);if(!ps.length)return;var r=pick(g.items[k],k,ps);cache[k].sp=r.sp;if(r.q){cache[k].q=r.q;cache[k].qu=r.qu}if(r.off)cache[k].off=r.off;cache[k].at=new Date().toISOString().slice(0,10);done[k]=1});
   console.log('Opdateret med batch: '+Object.keys(done).length+' varer ('+allIds.length+' produkter, '+calls+' kald)');
   /* 2) search new items (and ones not found for 30 days) with the calls that are left */
-  var todo=keys.filter(function(k){var c=cache[k];return !c||(!c.ids.length&&((c.v||1)<VER||!c.tried||Date.now()-c.tried>30*864e5))});
+  var todo=keys.filter(function(k){var c=cache[k];return !c||(c.unit==='pk'&&Date.now()-(c.tried||0)>6*864e5)||(!c.ids.length&&((c.v||1)<VER||!c.tried||Date.now()-c.tried>30*864e5))});
   var used={};g.users.forEach(function(u){Object.keys(u.mine).forEach(function(k){used[k]=(used[k]||0)+1})});
-  todo.sort(function(a,b){return (used[b]||0)-(used[a]||0)||(ref.items[b]?1:0)-(ref.items[a]?1:0)});   /* what people actually use first */
+  todo.sort(function(a,b){var pa=g.items[a]&&g.items[a].unit==='pk'?1:0,pb=g.items[b]&&g.items[b].unit==='pk'?1:0;return pb-pa||(used[b]||0)-(used[a]||0)||(ref.items[b]?1:0)-(ref.items[a]?1:0)});   /* what people actually use first */
   var found=0,tried=0;
   for(var k of todo){
     var it=g.items[k],q=(EXTRA[k]&&EXTRA[k].q)||it.name;
     try{var j2=await api('/v1/products?q='+encodeURIComponent(q)+'&limit=100&grocery=1&exclude_border_trade=1',key);}
     catch(e){if(e.quota)break;console.log('FEJL '+it.name+': '+e.message);continue}
     tried++;var r=pick(it,k,listOf(j2));
-    cache[k]={name:it.name,unit:it.unit,ids:r.ids,sp:r.sp,at:new Date().toISOString().slice(0,10),tried:Date.now(),v:VER};if(r.q){cache[k].q=r.q;cache[k].qu=r.qu}
+    cache[k]={name:it.name,unit:it.unit,ids:r.ids,sp:r.sp,at:new Date().toISOString().slice(0,10),tried:Date.now(),v:VER};if(r.q){cache[k].q=r.q;cache[k].qu=r.qu}if(r.off)cache[k].off=r.off;
     if(Object.keys(r.sp).length){found++;done[k]=1}
-    console.log((Object.keys(r.sp).length?'NY   ':'INGEN')+' '+it.name+'  '+Object.keys(r.sp).map(function(s){return s+' '+r.sp[s]}).join(' · '));
+    console.log((Object.keys(r.sp).length?'NY   ':'INGEN')+' '+it.name+'  '+Object.keys(r.sp).map(function(s){return s+' '+r.sp[s]}).join(' · ')+(r.off&&Object.keys(r.off).length?'  | tilbud: '+Object.keys(r.off).map(function(s){return s+' '+r.off[s].p}).join(' · '):''));
     await new Promise(function(res){setTimeout(res,600)});
   }
   var left=keys.filter(function(k){return !cache[k]}).length;
@@ -165,7 +178,11 @@ async function run(){
   await cacheRef.set({items:cache,at:Date.now()});
   /* 3) each user gets the prices for their own items, privately */
   for(var u of g.users){
-    var o={};Object.keys(u.mine).forEach(function(k){var c=cache[k];if(c&&c.sp&&Object.keys(c.sp).length&&c.unit===u.mine[k]){o[k]={u:c.unit,v:c.sp};if(c.q){o[k].q=c.q;o[k].qu=c.qu}}});
+    var today=new Date().toISOString().slice(0,10);
+    var o={};Object.keys(u.mine).forEach(function(k){var c=cache[k];if(!c||c.unit!==u.mine[k])return;
+      var off={};if(c.unit==='pk'&&c.off)Object.keys(c.off).forEach(function(st){if(!c.off[st].to||c.off[st].to>=today)off[st]=c.off[st]});
+      var hasSp=c.sp&&Object.keys(c.sp).length;if(!hasSp&&!Object.keys(off).length)return;
+      o[k]={u:c.unit,v:hasSp?c.sp:{}};if(c.q){o[k].q=c.q;o[k].qu=c.qu}if(Object.keys(off).length)o[k].off=off});
     await db.doc('data/users/'+u.id+'/u/store/prices').set({items:o,at:new Date().toISOString().slice(0,10),src:'Prej (kædernes egne kataloger)'});
     console.log('Bruger '+u.id.slice(0,6)+'…: priser for '+Object.keys(o).length+' af '+Object.keys(u.mine).length+' varer');
   }

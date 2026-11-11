@@ -247,7 +247,7 @@ function lineCost(it){if(it.unit==='pk'){var e=xsp(it.k);return e?xavg(e)*(it.qt
 function activeOffers(w){var as=activeStores();return ((S.offers[w]||{}).items||[]).filter(function(o){return as.indexOf(o.store)>-1})}
 function ofactor(o,it){if(o.qty>0&&o.unit===it.unit)return Math.max(1,Math.ceil(it.qty/o.qty-1e-9));return it.packs||1}
 function bestOfferAt(it,w,store,loose){
-  var best=null;activeOffers(w).forEach(function(o){
+  var best=null;(it.x?activeOffers(w).concat(xOffs(it.k)):activeOffers(w)).forEach(function(o){
     if(store&&o.store!==store)return;
     if(!brandOk(o,it))return;
     if(!(it.x?xMatch(o,it):loose?rawMatch(o,it):offerMatch(o,it)))return;
@@ -261,6 +261,12 @@ function bestOffer(it,w){return bestOfferAt(it,w,null)}
    from the user's stock (Lager), or a typical pack price per chain from the nightly price job (S.sp[k].u==='pk'). */
 function xsp(k){var e=S.sp&&S.sp[k];return e&&e.u==='pk'&&e.v&&Object.keys(e.v).some(function(s){return e.v[s]>0})?e:null}
 function xavg(e){var v=Object.keys(e.v).map(function(s){return +e.v[s]}).filter(function(x){return x>0});return v.length?v.reduce(function(a,b){return a+b},0)/v.length:0}
+/* this week's offers on an own item, found by the nightly price job (S.sp[k].off) */
+function xOffs(k){
+  var e=S.sp&&S.sp[k],as=activeStores(),t=todayStr();if(!e||e.u!=='pk'||!e.off)return [];
+  return Object.keys(e.off).filter(function(s){var o=e.off[s];return as.indexOf(s)>-1&&o&&o.p>0&&(!o.to||o.to>=t)}).map(function(s){var o=e.off[s];
+    return {id:'xo_'+k+'_'+s,store:s,name:o.n,price:o.p,was:o.w||0,qty:0,unit:'',match:k,q:'',to:o.to?(+o.to.slice(8,10))+'.'+(+o.to.slice(5,7)):''}});
+}
 function xTerm(x){return x.id==='slik'?'slik':String(x.name||'').toLowerCase().replace(/\s+/g,' ').trim()}
 function xItems(w){
   var L=S.lists[w]||{},its=S.pantry.items||{};

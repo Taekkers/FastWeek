@@ -15,6 +15,8 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
   - Normalpris: findes varen på lageret, bruges dens pris. Ellers henter den natlige prisopdatering en typisk pakkepris pr. kæde (median pakkestørrelse × billigste kilo-/liter-/stykpris), første gang natten efter varen er skrevet på listen.
   - Varer med kendt pris regnes med i butikkernes totaler og i valget af butik(ker); i flere-butikker-visningen står prisen pr. butik. Varer uden kendt pris viser kun tilbuddet og påvirker ikke butiksvalget.
   - *Weekendslik* søges som "slik".
+  - **Tilbud på alle egne varer** (fx skyr): ugens faste tilbudsliste indeholder kun de ca. 90 varer, som appens retter bruger. Derfor slår den natlige prisopdatering også egne varer op hos Prej og gemmer ugens tilbud pr. kæde (billigste pr. kæde, med sidste dag og før-pris). Nye varer søges første nat, og igen hver uge, så nye tilbud kommer med; tilbuddene opdateres hver nat.
+- Egne varer står under *Tilføjet af dig* lige under tilføj-feltet øverst.
 - Feltet til at tilføje varer ligger øverst på indkøbslisten (Enter tilføjer).
 - Mærkerne i *Indkøb*: **Billigst** står kun på den mulighed, der reelt er billigst (også blandt kombinationer af butikker). **Nemmest** står på at handle i én butik. Er en kombination billigere, kaldes den billigste enkeltbutik *Nemmest* i butiksfelterne. Den valgte mulighed har grøn kant.
 
