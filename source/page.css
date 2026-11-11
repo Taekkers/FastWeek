@@ -527,3 +527,6 @@ body.cns-on{overflow:hidden}
 .imp-row input{flex:1 1 auto;min-width:0}
 .imp-row .btn{flex:0 0 auto}
 #rf-ist:not(:empty){margin-top:8px}
+
+.add-top{margin:0 0 14px}
+.o-n .best+.best{margin-left:-2px}

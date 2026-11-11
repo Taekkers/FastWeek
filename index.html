@@ -547,6 +547,9 @@ body.cns-on{overflow:hidden}
 .imp-row .btn{flex:0 0 auto}
 #rf-ist:not(:empty){margin-top:8px}
 
+.add-top{margin:0 0 14px}
+.o-n .best+.best{margin-left:-2px}
+
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));overflow:auto}
 #login[hidden]{display:none!important}
 .lg-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:22px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;box-shadow:0 10px 30px rgba(21,35,28,.08)}
@@ -1641,28 +1644,32 @@ function viewWeek(){
 }
 
 /* --- Indkøb --- */
-function storeTiles(sc,sel,best,pair){
+function storeTiles(sc,sel,best,pair,op){
+  var ci=op?cheapI(op):0,oneCheapest=!op||op.opts[ci].k===1;
   var act=byCost(sc,activeStores()),mx=Math.max.apply(null,act.map(function(s){return sc.stores[s].total}))||1;
   var h='<div class="stores" role="group" aria-label="Butikker">'+act.map(function(s){
     var x=sc.stores[s],on=s===sel;
-    return '<button class="sto" data-act="pickstore" data-s="'+esc(s)+'" aria-pressed="'+on+'">'+(best===s&&act.length>1?'<span class="best">Billigst</span>':'')+
+    return '<button class="sto" data-act="pickstore" data-s="'+esc(s)+'" aria-pressed="'+on+'">'+(best===s&&act.length>1?'<span class="best">'+(oneCheapest?'Billigst':'Nemmest')+'</span>':'')+
       '<b>'+esc(s)+'</b><span class="tot">'+nf(Math.round(x.total),0)+'<small>kr</small></span>'+
       '<span class="sv">'+(x.n?x.n+' tilbud · −'+nf(Math.round(x.save),0)+' kr':'Ingen tilbud')+'</span>'+
       '<span class="bar"><i style="width:'+Math.max(8,Math.round(x.total/mx*100))+'%"></i></span></button>'}).join('');
-  if(pair)h+='<button class="sto pair" data-act="pickstore" data-s="'+pair.sel+'" aria-pressed="'+(sel===pair.sel)+'"><span class="best">Nemmest</span><b>'+esc(pair.stores.join(' + '))+'</b><span class="tot">'+nf(Math.round(pair.total),0)+'<small>kr</small></span><span class="sv">−'+nf(Math.round(pair.save),0)+' kr mod én butik</span><span class="bar"><i style="width:'+Math.max(8,Math.round(pair.total/mx*100))+'%"></i></span></button>';
+  if(pair)h+='<button class="sto pair" data-act="pickstore" data-s="'+pair.sel+'" aria-pressed="'+(sel===pair.sel)+'">'+(op&&op.opts[ci]===pair?'<span class="best">Billigst</span>':'')+'<b>'+esc(pair.stores.join(' + '))+'</b><span class="tot">'+nf(Math.round(pair.total),0)+'<small>kr</small></span><span class="sv">−'+nf(Math.round(pair.save),0)+' kr mod én butik</span><span class="bar"><i style="width:'+Math.max(8,Math.round(pair.total/mx*100))+'%"></i></span></button>';
   return h+'</div>';
 }
 var STSHORT={'Rema 1000':'Rema','Coop 365':'365','SuperBrugsen':'SuperB.','Løvbjerg':'Løvbj.'};
 var SPON=false;
 function stShort(s){return STSHORT[s]||s}
 function nameList(a){a=a.map(function(x){return '<em>'+esc(x)+'</em>'});return a.length<2?a.join(''):a.slice(0,-1).join(', ')+' og '+a[a.length-1]}
+/* "Billigst" = the lowest total of all options; "Nemmest" = one store */
+function cheapI(op){var ci=0;op.opts.forEach(function(o,i){if(o.total<op.opts[ci].total-.5)ci=i});return ci}
 function optsHtml(sc,w,op){
   var sv=op.sv,rec=op.opts[op.rec],act=byCost(sc,activeStores()),h='<div class="opts"><div class="lbl">Én butik eller flere?</div><div class="optl" role="group" aria-label="Sammenlign butikker">';
+  var ci=cheapI(op);
   op.opts.forEach(function(o,i){
     var on=S.sel===o.sel,nm=o.k===1?'Kun '+esc(o.stores[0]):esc(o.stores.join(' + '));
     var d=o.k+(o.k===1?' butik':' butikker')+(o.k>1?(o.save>=1?' · spar ca. '+kr(Math.round(o.save)):' · ingen besparelse')+(o.k>2&&o.extra>=1?' ('+kr(Math.round(o.extra))+' mere end '+(o.k-1)+')':''):'');
     var split=o.k>1?'<span class="o-s">'+o.stores.map(function(s){return esc(s)+' ca. '+kr(Math.round(o.sub[s]))}).join(' · ')+'</span>':'';
-    h+='<button class="opt'+(i===op.rec?' rec':'')+'" data-act="pickstore" data-s="'+esc(o.sel)+'" aria-pressed="'+on+'"><span class="o-n">'+(i===op.rec?'<span class="best">Nemmest</span>':'')+nm+'</span><span class="o-t">'+nf(Math.round(o.total),0)+'<small> kr</small></span><span class="o-d">'+d+'</span>'+split+'</button>';
+    h+='<button class="opt'+(i===op.rec?' rec':'')+'" data-act="pickstore" data-s="'+esc(o.sel)+'" aria-pressed="'+on+'"><span class="o-n">'+(i===0?'<span class="best">Nemmest</span>':'')+(i===ci?'<span class="best">Billigst</span>':'')+nm+'</span><span class="o-t">'+nf(Math.round(o.total),0)+'<small> kr</small></span><span class="o-d">'+d+'</span>'+split+'</button>';
   });
   h+='</div>';
   var top=op.cheapest,msg;
@@ -1701,6 +1708,7 @@ function brandBtn(it){
 function viewShop(){
   SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
+  h+='<form class="add-row add-top"><input id="xin" type="text" enterkeyhint="done" autocomplete="off" placeholder="Tilføj vare, fx skyr eller kaffe" aria-label="Tilføj vare til indkøbslisten"><button class="btn" type="submit">Tilføj</button></form>';
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
   var xs=xItems(w),xp=xs.filter(function(it){return lineCost(it)>0});
   var sc=storeCosts(items.concat(xp),w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
@@ -1711,7 +1719,7 @@ function viewShop(){
     op=shopOptions(sc);recO=op.opts[op.rec];
     if((S.sel==='pair'||S.sel==='trio')&&!op.opts.some(function(o){return o.sel===S.sel}))S.sel='';
     if(!S.sel||(S.sel!=='pair'&&S.sel!=='trio'&&act.indexOf(S.sel)<0)||!S.selSet)S.sel=recO.sel;
-    h+=storeTiles(sc,S.sel,best,recO.k>1?recO:null)+recoHtml(sc,best,w,op)+budgetHtml(op.recTotal);
+    h+=storeTiles(sc,S.sel,best,recO.k>1?recO:null,op)+recoHtml(sc,best,w,op)+budgetHtml(op.recTotal);
   }
   var sel=sc.norm>0?S.sel:'',combo=(op&&(sel==='pair'||sel==='trio'))?op.opts.filter(function(o){return o.sel===sel})[0]:null;
   var storeOf=function(it){return !sel?'':(combo?(combo.assign[it.k+'_'+it.unit]||combo.stores[0]):sel)};
@@ -1767,8 +1775,7 @@ function viewShop(){
       if(bo){via=bo;price='<span class="pr off">'+kr(Math.round(bo.cost))+'</span>'+(bo.o.was>bo.o.price?'<span class="was">'+kr(Math.round(bo.o.was*bo.f))+'</span>':'');
       ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'}}
     var rh='<label class="it'+(on?' on':'')+(cells?' cmp':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span>'+(via?'<span class="it-m"><span class="chip off">Tilbud</span></span>':'')+ot+'</span>'+(cells||'<span class="it-p">'+price+'</span>')+'</label>';
-    if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div>'+
-    '<div class="add-row"><input id="xin" type="text" placeholder="Tilføj vare, fx slik eller brød" aria-label="Ny ekstra vare"><button class="btn" data-act="addx">Tilføj</button></div></div>';
+    if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div></div>';
   if(items.length&&!openN&&doneRows.length)h+='<p class="hint">Alt fra madplanen er krydset af.</p>';
   if(doneRows.length)h+='<div class="sec bought"><div class="lbl">Købt ('+doneRows.length+')</div><div class="group">'+doneRows.join('')+'</div></div>';
   var nsk=Array.isArray(L.skip)?L.skip.length:0;
@@ -2806,6 +2813,7 @@ document.addEventListener('click',function(e){
   if(SW.eat){SW.eat=false;e.preventDefault();e.stopPropagation()}
 },true);
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&SW.open)swClose()});
+document.addEventListener('submit',function(e){if(e.target&&e.target.classList&&e.target.classList.contains('add-top')){e.preventDefault();ACT.addx()}});
 document.addEventListener('click',function(e){var el=e.target.closest('[data-act]');if(!el)return;var f=ACT[el.dataset.act];if(f)f(el.dataset,el,e)});
 document.addEventListener('change',function(e){
   var t=e.target;if(!t.matches)return;

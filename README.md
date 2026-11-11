@@ -15,6 +15,8 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
   - Normalpris: findes varen på lageret, bruges dens pris. Ellers henter den natlige prisopdatering en typisk pakkepris pr. kæde (median pakkestørrelse × billigste kilo-/liter-/stykpris), første gang natten efter varen er skrevet på listen.
   - Varer med kendt pris regnes med i butikkernes totaler og i valget af butik(ker); i flere-butikker-visningen står prisen pr. butik. Varer uden kendt pris viser kun tilbuddet og påvirker ikke butiksvalget.
   - *Weekendslik* søges som "slik".
+- Feltet til at tilføje varer ligger øverst på indkøbslisten (Enter tilføjer).
+- Mærkerne i *Indkøb*: **Billigst** står kun på den mulighed, der reelt er billigst (også blandt kombinationer af butikker). **Nemmest** står på at handle i én butik. Er en kombination billigere, kaldes den billigste enkeltbutik *Nemmest* i butiksfelterne. Den valgte mulighed har grøn kant.
 
 ## Det kan appen (version 15)
 
