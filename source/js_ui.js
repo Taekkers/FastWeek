@@ -177,7 +177,6 @@ function brandBtn(it){
 function viewShop(){
   SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
-  h+='<form class="add-row add-top"><input id="xin" type="text" enterkeyhint="done" autocomplete="off" placeholder="Tilføj vare, fx skyr eller kaffe" aria-label="Tilføj vare til indkøbslisten"><button class="btn" type="submit">Tilføj</button></form><!--XTRA-->';
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
   var xs=xItems(w),xp=xs.filter(function(it){return lineCost(it)>0});
   var sc=storeCosts(items.concat(xp),w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
@@ -216,6 +215,8 @@ function viewShop(){
     .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){var xi=xs.filter(function(it){return it.xid===x.id})[0],so=combo&&xi&&xp.indexOf(xi)>-1?storeOf(xi):'';return x.name.charAt(0).toUpperCase()+x.name.slice(1)+(so?' · '+so:'')}));
   S.shareTxt=shareL.length?{title:'Indkøb uge '+isoWeek(S.mon)[1]+(sel&&!combo?' · '+sel:''),lines:shareL}:null;
   if(S.shareTxt)h+='<div class="share-row"><button class="btn ghost sm" data-act="shareshop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Del listen</button><span class="fine">Til Noter: markér varerne i noten, og tryk på tjeklisteknappen, så kan de krydses af.</span></div>';
+  /* add your own items right above the list */
+  h+='<form class="add-row add-top"><input id="xin" type="text" enterkeyhint="done" autocomplete="off" placeholder="Tilføj vare, fx skyr eller kaffe" aria-label="Tilføj vare til indkøbslisten"><button class="btn" type="submit">Tilføj</button></form><!--XTRA-->';
   if(combo){
     h+='<p class="legend"><span class="cc min">kr</span> billigste butik <span class="cc off">kr</span> tilbud'+(SPON?' <span class="cc est">≈kr</span> skøn':'')+'</p>';
     combo.stores.forEach(function(s){
