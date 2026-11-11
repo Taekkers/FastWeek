@@ -816,25 +816,48 @@ function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
 /* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
 /* Normal shelf price in each chain (data/ref.json items[k].sp, kr per kg / l / stk, from the chains' own catalogues).
    Where a chain has no published shelf price (Coop chains, Løvbjerg) the chain's price level (pidx) is used: an estimate. */
-function spOf(k,s){var e=S.sp&&S.sp[k],p=pan(k);if(e&&e.v&&e.v[s]>0&&p&&e.u===p.unit)return e.v[s];var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
-function realP(k,s){var p=pan(k);return !!(p&&!qbest(p)&&spOf(k,s)>0&&ppu(p)>0)}
-function pfac(k,s){return realP(k,s)?spOf(k,s)/ppu(pan(k)):pidx(s)}
+function spOf(k,s){var e=S.sp&&S.sp[k],p=pan(k);if(e&&e.u==='pk')return e.v&&e.v[s]>0?e.v[s]:0;if(e&&e.v&&e.v[s]>0&&p&&e.u===p.unit)return e.v[s];var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
+function realP(k,s){var e=xsp(k);if(e)return e.v[s]>0;var p=pan(k);return !!(p&&!qbest(p)&&spOf(k,s)>0&&ppu(p)>0)}
+function pfac(k,s){var e=xsp(k);if(e)return e.v[s]>0?e.v[s]/xavg(e):pidx(s);return realP(k,s)?spOf(k,s)/ppu(pan(k)):pidx(s)}
 function hasSP(){if(S.sp&&Object.keys(S.sp).length)return true;var it=(S.ref&&S.ref.items)||{};for(var k in it){if(it[k]&&it[k].sp&&Object.keys(it[k].sp).length)return true}return false}
 function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
 function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
-function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
+function lineCost(it){if(it.unit==='pk'){var e=xsp(it.k);return e?xavg(e)*(it.qty||1):0}var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
 function activeOffers(w){var as=activeStores();return ((S.offers[w]||{}).items||[]).filter(function(o){return as.indexOf(o.store)>-1})}
 function ofactor(o,it){if(o.qty>0&&o.unit===it.unit)return Math.max(1,Math.ceil(it.qty/o.qty-1e-9));return it.packs||1}
 function bestOfferAt(it,w,store,loose){
   var best=null;activeOffers(w).forEach(function(o){
     if(store&&o.store!==store)return;
     if(!brandOk(o,it))return;
-    if(!(loose?rawMatch(o,it):offerMatch(o,it)))return;
+    if(!(it.x?xMatch(o,it):loose?rawMatch(o,it):offerMatch(o,it)))return;
     var f=ofactor(o,it),c=o.price*f;if(!best||c<best.cost)best={o:o,cost:c,f:f,sv:o.was>o.price?(o.was-o.price)*f:0};
   });
   return best;
 }
 function bestOffer(it,w){return bestOfferAt(it,w,null)}
+/* ---------- own items on the shopping list (Ekstra) ----------
+   Matched against the week's offers by name, and priced like the other items where the app knows a normal price:
+   from the user's stock (Lager), or a typical pack price per chain from the nightly price job (S.sp[k].u==='pk'). */
+function xsp(k){var e=S.sp&&S.sp[k];return e&&e.u==='pk'&&e.v&&Object.keys(e.v).some(function(s){return e.v[s]>0})?e:null}
+function xavg(e){var v=Object.keys(e.v).map(function(s){return +e.v[s]}).filter(function(x){return x>0});return v.length?v.reduce(function(a,b){return a+b},0)/v.length:0}
+function xTerm(x){return x.id==='slik'?'slik':String(x.name||'').toLowerCase().replace(/\s+/g,' ').trim()}
+function xItems(w){
+  var L=S.lists[w]||{},its=S.pantry.items||{};
+  return (L.extra||[]).map(function(x){
+    var term=xTerm(x),k=slug(term),p=pan(k);
+    if(!p)for(var kk in its){if(its[kk]&&!its[kk].leftover&&String(its[kk].name||'').toLowerCase()===term){p=its[kk];k=kk;break}}
+    var it={k:k,name:term,label:x.name,x:1,xid:x.id,cat:'Ekstra',reason:'extra',need:0,stock:0,packs:1};
+    if(p&&ppu(p)>0&&!xsp(k)){it.unit=p.unit;it.pack=p.pack||0;it.qty=p.pack>0?p.pack:(p.unit==='stk'?1:p.unit==='g'?500:1000)}
+    else{it.unit='pk';it.pack=0;it.qty=1}
+    return it;
+  });
+}
+/* whole words: "kaffe" matches "Gevalia kaffe 400 g" and "bananer" matches "Øko bananer", not "kaffefløde" */
+function xMatch(o,it){
+  if(o.match&&slug(o.match)===it.k)return true;
+  var iw=words(it.name),ow=words(o.name);if(!iw.length||!ow.length)return false;
+  return iw.every(function(w){return ow.some(function(x){return x===w||(x.indexOf(w)===0&&/^(e|r|er|n|en|ne|s|et|erne)$/.test(x.slice(w.length)))||(w.indexOf(x)===0&&x.length>=4&&/^(e|r|er|n|en|ne|s|et|erne)$/.test(w.slice(x.length)))})});
+}
 /* Price per store: the normal estimate, or the offer where it is cheaper. */
 function storeCosts(items,w){
   var res={},unpriced=0,norm=0,skipped=0,looked=0,priced=0;
@@ -1679,7 +1702,8 @@ function viewShop(){
   SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
-  var sc=storeCosts(items,w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
+  var xs=xItems(w),xp=xs.filter(function(it){return lineCost(it)>0});
+  var sc=storeCosts(items.concat(xp),w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
   items.forEach(function(it){if(qual(it.k))hasQ=true});
   if(sc.norm>0){
     var tot=act.map(function(s){return sc.stores[s]}).sort(function(a,b){return a.total-b.total||b.n-a.n});
@@ -1712,7 +1736,7 @@ function viewShop(){
   /* text for sharing (fx to Notes): one line per item still to buy */
   var shareL=items.filter(function(it){return !chk[it.k+'_'+it.unit]}).map(function(it){var so=storeOf(it),qt=it.pack>0?it.packs+' pk. ('+fq(it.qty,it.unit)+')':fq(it.qty,it.unit);
       return {s:combo?so:'',t:it.name.charAt(0).toUpperCase()+it.name.slice(1)+', '+qt+(combo&&so?' · '+so:'')}}).sort(function(a,b){return a.s.localeCompare(b.s,'da')}).map(function(x){return x.t})
-    .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){return x.name.charAt(0).toUpperCase()+x.name.slice(1)}));
+    .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){var xi=xs.filter(function(it){return it.xid===x.id})[0],so=combo&&xi&&xp.indexOf(xi)>-1?storeOf(xi):'';return x.name.charAt(0).toUpperCase()+x.name.slice(1)+(so?' · '+so:'')}));
   S.shareTxt=shareL.length?{title:'Indkøb uge '+isoWeek(S.mon)[1]+(sel&&!combo?' · '+sel:''),lines:shareL}:null;
   if(S.shareTxt)h+='<div class="share-row"><button class="btn ghost sm" data-act="shareshop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Del listen</button><span class="fine">Til Noter: markér varerne i noten, og tryk på tjeklisteknappen, så kan de krydses af.</span></div>';
   if(combo){
@@ -1722,6 +1746,7 @@ function viewShop(){
       if(!part.length)return;
       var openP=part.filter(function(it){return !chk[it.k+'_'+it.unit]}),rem=combo.sub[s];
       part.forEach(function(it){var key=it.k+'_'+it.unit;if(chk[key]){var ln=sc.stores[s]&&sc.stores[s].lines[key];if(ln)rem-=ln.cost}});
+      xp.forEach(function(it){if(storeOf(it)===s){var ln=sc.stores[s]&&sc.stores[s].lines[it.k+'_'+it.unit];if(ln)rem-=ln.cost}});   /* own items are shown under Ekstra */
       if(openP.length)h+='<div class="storehead"><b>Køb i '+esc(s)+'</b><span>'+openP.length+(openP.length===1?' vare':' varer')+' · ca. '+kr(Math.max(0,Math.round(rem)))+'</span></div>';
       h+=groupsHtml(part);
     });
@@ -1730,7 +1755,18 @@ function viewShop(){
     var rest=items.filter(function(it){return !storeOf(it)});if(rest.length)h+=groupsHtml(rest);
   }else h+=groupsHtml(items);
   h+='<div class="sec"><div class="lbl">Ekstra</div><div class="group">'+extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
-    var rh='<label class="it'+(on?' on':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span><span></span></label>';
+    /* own items: the best offer this week, and the price where the app knows one */
+    var xi=xs.filter(function(it){return it.xid===x.id})[0],key=xi?xi.k+'_'+xi.unit:'',priced=!!xi&&xp.indexOf(xi)>-1,so=priced?storeOf(xi):'',ln=null,via=null,price='',ot='',cells='';
+    if(priced&&so&&sc.stores[so]){ln=sc.stores[so].lines[key];via=ln&&ln.via;
+      price='<span class="pr'+(via?' off':'')+'">'+(ln.est&&!via&&SPON?'≈ ':'ca. ')+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':'');
+      if(combo)cells='<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>';
+      if(via||combo)ot='<span class="it-o">'+esc(so)+(via?' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):''):'')+'</span>';
+    }else if(xi){
+      /* an offer in the store(s) you are going to anyway first, otherwise the best offer anywhere */
+      var mine=combo?combo.stores:sel?[sel]:[],bo=null;mine.forEach(function(s2){var b2=bestOfferAt(xi,w,s2);if(b2&&(!bo||b2.cost<bo.cost))bo=b2});if(!bo)bo=bestOffer(xi,w);
+      if(bo){via=bo;price='<span class="pr off">'+kr(Math.round(bo.cost))+'</span>'+(bo.o.was>bo.o.price?'<span class="was">'+kr(Math.round(bo.o.was*bo.f))+'</span>':'');
+      ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'}}
+    var rh='<label class="it'+(on?' on':'')+(cells?' cmp':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span>'+(via?'<span class="it-m"><span class="chip off">Tilbud</span></span>':'')+ot+'</span>'+(cells||'<span class="it-p">'+price+'</span>')+'</label>';
     if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div>'+
     '<div class="add-row"><input id="xin" type="text" placeholder="Tilføj vare, fx slik eller brød" aria-label="Ny ekstra vare"><button class="btn" data-act="addx">Tilføj</button></div></div>';
   if(items.length&&!openN&&doneRows.length)h+='<p class="hint">Alt fra madplanen er krydset af.</p>';
@@ -2862,7 +2898,7 @@ function boot(){
   }).catch(function(){});
 }
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,xItems:xItems,xMatch:xMatch,wid:wid,render:render,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();
 

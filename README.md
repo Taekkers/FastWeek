@@ -8,6 +8,14 @@ Det hele kører på gratis tjenester: **Firebase** (login og data), **GitHub Pag
 
 ---
 
+## Det kan appen (version 16)
+
+- **Egne varer på indkøbslisten** (under *Ekstra*, fx "kaffe", "toiletpapir", "bananer") behandles nu som de andre varer:
+  - Ugens tilbud gennemsøges på hele ord ("kaffe" finder "Gevalia kaffe 400 g", ikke "Kaffefløde"; "banan" finder "Bananer"). Tilbud i en butik, du alligevel skal i, vises før andre. Rækken viser butik, vare, pris og før-pris.
+  - Normalpris: findes varen på lageret, bruges dens pris. Ellers henter den natlige prisopdatering en typisk pakkepris pr. kæde (median pakkestørrelse × billigste kilo-/liter-/stykpris), første gang natten efter varen er skrevet på listen.
+  - Varer med kendt pris regnes med i butikkernes totaler og i valget af butik(ker); i flere-butikker-visningen står prisen pr. butik. Varer uden kendt pris viser kun tilbuddet og påvirker ikke butiksvalget.
+  - *Weekendslik* søges som "slik".
+
 ## Det kan appen (version 15)
 
 - **Tilføj retter** (hed før *Scan kogebog*) samler to måder: **Fra et link** og **Fra en kogebog** (billeder). I *Ny ret* findes også feltet *Hent fra et link*.

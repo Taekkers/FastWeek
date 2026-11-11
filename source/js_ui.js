@@ -174,7 +174,8 @@ function viewShop(){
   SPON=hasSP();
   var w=wid(),items=computeList(w),L=S.lists[w]||{},chk=L.checked||{},extra=L.extra||[],h=weekNav();
   if(!planIds(w,false).length&&!items.length)h+='<section class="card hero"><h2>Listen er tom</h2><p>Lav en madplan, så beregner appen indkøb og pris.</p><button class="btn block" data-act="tab" data-tab="week">Til ugeplanen</button></section>';
-  var sc=storeCosts(items,w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
+  var xs=xItems(w),xp=xs.filter(function(it){return lineCost(it)>0});
+  var sc=storeCosts(items.concat(xp),w),best=null,hasQ=false,act=activeStores(),op=null,recO=null;
   items.forEach(function(it){if(qual(it.k))hasQ=true});
   if(sc.norm>0){
     var tot=act.map(function(s){return sc.stores[s]}).sort(function(a,b){return a.total-b.total||b.n-a.n});
@@ -207,7 +208,7 @@ function viewShop(){
   /* text for sharing (fx to Notes): one line per item still to buy */
   var shareL=items.filter(function(it){return !chk[it.k+'_'+it.unit]}).map(function(it){var so=storeOf(it),qt=it.pack>0?it.packs+' pk. ('+fq(it.qty,it.unit)+')':fq(it.qty,it.unit);
       return {s:combo?so:'',t:it.name.charAt(0).toUpperCase()+it.name.slice(1)+', '+qt+(combo&&so?' · '+so:'')}}).sort(function(a,b){return a.s.localeCompare(b.s,'da')}).map(function(x){return x.t})
-    .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){return x.name.charAt(0).toUpperCase()+x.name.slice(1)}));
+    .concat(extra.filter(function(x){return !chk['x_'+x.id]}).map(function(x){var xi=xs.filter(function(it){return it.xid===x.id})[0],so=combo&&xi&&xp.indexOf(xi)>-1?storeOf(xi):'';return x.name.charAt(0).toUpperCase()+x.name.slice(1)+(so?' · '+so:'')}));
   S.shareTxt=shareL.length?{title:'Indkøb uge '+isoWeek(S.mon)[1]+(sel&&!combo?' · '+sel:''),lines:shareL}:null;
   if(S.shareTxt)h+='<div class="share-row"><button class="btn ghost sm" data-act="shareshop"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>Del listen</button><span class="fine">Til Noter: markér varerne i noten, og tryk på tjeklisteknappen, så kan de krydses af.</span></div>';
   if(combo){
@@ -217,6 +218,7 @@ function viewShop(){
       if(!part.length)return;
       var openP=part.filter(function(it){return !chk[it.k+'_'+it.unit]}),rem=combo.sub[s];
       part.forEach(function(it){var key=it.k+'_'+it.unit;if(chk[key]){var ln=sc.stores[s]&&sc.stores[s].lines[key];if(ln)rem-=ln.cost}});
+      xp.forEach(function(it){if(storeOf(it)===s){var ln=sc.stores[s]&&sc.stores[s].lines[it.k+'_'+it.unit];if(ln)rem-=ln.cost}});   /* own items are shown under Ekstra */
       if(openP.length)h+='<div class="storehead"><b>Køb i '+esc(s)+'</b><span>'+openP.length+(openP.length===1?' vare':' varer')+' · ca. '+kr(Math.max(0,Math.round(rem)))+'</span></div>';
       h+=groupsHtml(part);
     });
@@ -225,7 +227,18 @@ function viewShop(){
     var rest=items.filter(function(it){return !storeOf(it)});if(rest.length)h+=groupsHtml(rest);
   }else h+=groupsHtml(items);
   h+='<div class="sec"><div class="lbl">Ekstra</div><div class="group">'+extra.map(function(x){var on=!!chk['x_'+x.id];if(on)nchk++;
-    var rh='<label class="it'+(on?' on':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span><span></span></label>';
+    /* own items: the best offer this week, and the price where the app knows one */
+    var xi=xs.filter(function(it){return it.xid===x.id})[0],key=xi?xi.k+'_'+xi.unit:'',priced=!!xi&&xp.indexOf(xi)>-1,so=priced?storeOf(xi):'',ln=null,via=null,price='',ot='',cells='';
+    if(priced&&so&&sc.stores[so]){ln=sc.stores[so].lines[key];via=ln&&ln.via;
+      price='<span class="pr'+(via?' off':'')+'">'+(ln.est&&!via&&SPON?'≈ ':'ca. ')+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':'');
+      if(combo)cells='<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>';
+      if(via||combo)ot='<span class="it-o">'+esc(so)+(via?' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):''):'')+'</span>';
+    }else if(xi){
+      /* an offer in the store(s) you are going to anyway first, otherwise the best offer anywhere */
+      var mine=combo?combo.stores:sel?[sel]:[],bo=null;mine.forEach(function(s2){var b2=bestOfferAt(xi,w,s2);if(b2&&(!bo||b2.cost<bo.cost))bo=b2});if(!bo)bo=bestOffer(xi,w);
+      if(bo){via=bo;price='<span class="pr off">'+kr(Math.round(bo.cost))+'</span>'+(bo.o.was>bo.o.price?'<span class="was">'+kr(Math.round(bo.o.was*bo.f))+'</span>':'');
+      ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'}}
+    var rh='<label class="it'+(on?' on':'')+(cells?' cmp':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span>'+(via?'<span class="it-m"><span class="chip off">Tilbud</span></span>':'')+ot+'</span>'+(cells||'<span class="it-p">'+price+'</span>')+'</label>';
     if(on){doneRows.push(rh);return ''}return rh}).join('')+'</div>'+
     '<div class="add-row"><input id="xin" type="text" placeholder="Tilføj vare, fx slik eller brød" aria-label="Ny ekstra vare"><button class="btn" data-act="addx">Tilføj</button></div></div>';
   if(items.length&&!openN&&doneRows.length)h+='<p class="hint">Alt fra madplanen er krydset af.</p>';
@@ -1357,6 +1370,6 @@ function boot(){
   }).catch(function(){});
 }
 if(window.UGEKURV_WEB)window.UGEKURV_WEB.known=function(){var o=Object.keys((S.pantry&&S.pantry.items)||{}).map(function(k){return S.pantry.items[k].name});Object.keys(S.recipes||{}).forEach(function(id){(S.recipes[id].ing||[]).forEach(function(g){o.push(g.n)})});return o.filter(Boolean)};
-if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
+if(window.__TEST__)window.__TEST__.api={MIN_EXTRA:MIN_EXTRA,xItems:xItems,xMatch:xMatch,wid:wid,render:render,aggNeeds:aggNeeds,ingIn:ingIn,amtTxt:amtTxt,measureOf:measureOf,baseQU:baseQU,dens:dens,spOf:spOf,realP:realP,handlePhoto:handlePhoto,heroHtml:heroHtml,pnSwitch:pnSwitch,webRefresh:webRefresh,qbest:qbest,qualOk:qualOk,pan:pan,setOFW:function(x){OFW=x},offerModel:offerModel,planOfferValue:planOfferValue,fixedN:fixedN,offerPlanHtml:offerPlanHtml,offerStat:offerStat,S:S,generate:generate,computeList:computeList,wasteOf:wasteOf,coverage:coverage,routeLine:routeLine,curQty:curQty,isLow:isLow,weekId:weekId,draw:draw,ruleSummary:ruleSummary,recCov:recCov,buyCalc:buyCalc,ACT:ACT,openStock:openStock,openRecipe:openRecipe,openRecipes:openRecipes,openScan:openScan,scanFiles:scanFiles,guessProt:guessProt,draftList:draftList,openPick:openPick,ruleHtml:ruleHtml,ingRow:ingRow,bestOffer:bestOffer,lineCost:lineCost,qual:qual,ppu:ppu,setDb:function(x){db=x},activeStores:activeStores,bestPair:bestPair,bestSet:bestSet,shopOptions:shopOptions,recoHtml:recoHtml,applyRef:applyRef,storeCosts:storeCosts,kcalOf:kcalOf,getPrefs:getPrefs,effModes:effModes,artKey:artKey,artSVG:artSVG,openWizard:openWizard,planIds:planIds,targetMon:targetMon,prefsSummary:prefsSummary,wzBody:wzBody,maybeWizard:maybeWizard,LOW_MAX:LOW_MAX,tasteModel:tasteModel,tasteLabels:tasteLabels,carryIn:carryIn,qbest:qbest,qprices:qprices,normSettings:normSettings,openRate:openRate,openCook:openCook,openFavs:openFavs,syncCarry:syncCarry,monOfWeek:monOfWeek,ctxFor:ctxFor,fit:fit,tagsOf:tagsOf,featOf:featOf,openOnboard:openOnboard,getPrefs:getPrefs,algOf:algOf,stockUse:stockUse,recAlg:recAlg,recBad:recBad,isVeg:isVeg,recAllowed:recAllowed,planEst:planEst,weekBudget:weekBudget,hhLabel:hhLabel,daysIds:daysIds,STORES:STORES,brandsOf:brandsOf,brandGuess:brandGuess,brandSuggest:brandSuggest,parseBrands:parseBrands,brandOk:brandOk,openBrand:openBrand,openBrands:openBrands,ALG_KEYS:ALG_KEYS,genWhy:function(){return GEN_WHY},makePlan:makePlan,openSettings:openSettings,viewShop:viewShop,pidx:pidx,budgetHtml:budgetHtml};
 if(!window.__TEST__||window.__TEST__.boot)boot();
 })();

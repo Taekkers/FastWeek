@@ -237,25 +237,48 @@ function ppu(p){if(!p)return 0;var b=qbest(p);return b?b.price:(p.kp||0)}
 /* Normal shelf price level per store, relative to Rema 1000 (Madprisluppen basket, ~100 everyday items). */
 /* Normal shelf price in each chain (data/ref.json items[k].sp, kr per kg / l / stk, from the chains' own catalogues).
    Where a chain has no published shelf price (Coop chains, Løvbjerg) the chain's price level (pidx) is used: an estimate. */
-function spOf(k,s){var e=S.sp&&S.sp[k],p=pan(k);if(e&&e.v&&e.v[s]>0&&p&&e.u===p.unit)return e.v[s];var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
-function realP(k,s){var p=pan(k);return !!(p&&!qbest(p)&&spOf(k,s)>0&&ppu(p)>0)}
-function pfac(k,s){return realP(k,s)?spOf(k,s)/ppu(pan(k)):pidx(s)}
+function spOf(k,s){var e=S.sp&&S.sp[k],p=pan(k);if(e&&e.u==='pk')return e.v&&e.v[s]>0?e.v[s]:0;if(e&&e.v&&e.v[s]>0&&p&&e.u===p.unit)return e.v[s];var r=S.ref&&S.ref.items&&S.ref.items[k];return r&&r.sp&&r.sp[s]>0?r.sp[s]:0}
+function realP(k,s){var e=xsp(k);if(e)return e.v[s]>0;var p=pan(k);return !!(p&&!qbest(p)&&spOf(k,s)>0&&ppu(p)>0)}
+function pfac(k,s){var e=xsp(k);if(e)return e.v[s]>0?e.v[s]/xavg(e):pidx(s);return realP(k,s)?spOf(k,s)/ppu(pan(k)):pidx(s)}
 function hasSP(){if(S.sp&&Object.keys(S.sp).length)return true;var it=(S.ref&&S.ref.items)||{};for(var k in it){if(it[k]&&it[k].sp&&Object.keys(it[k].sp).length)return true}return false}
 function pidx(s){var m=(S.ref&&S.ref.stores&&S.ref.stores.pidx)||PIDX0,v=+m[s];return v>0?v:(PIDX0[s]||1)}
 function activeStores(){var a=(S.settings.stores||[]).filter(function(s){return STORES.indexOf(s)>-1});return a.length?a:STORES.slice()}
-function lineCost(it){var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
+function lineCost(it){if(it.unit==='pk'){var e=xsp(it.k);return e?xavg(e)*(it.qty||1):0}var p=pan(it.k);if(!p||p.unit!==it.unit)return 0;var u=ppu(p);if(!(u>0))return 0;return it.unit==='stk'?it.qty*u:it.qty/1000*u}
 function activeOffers(w){var as=activeStores();return ((S.offers[w]||{}).items||[]).filter(function(o){return as.indexOf(o.store)>-1})}
 function ofactor(o,it){if(o.qty>0&&o.unit===it.unit)return Math.max(1,Math.ceil(it.qty/o.qty-1e-9));return it.packs||1}
 function bestOfferAt(it,w,store,loose){
   var best=null;activeOffers(w).forEach(function(o){
     if(store&&o.store!==store)return;
     if(!brandOk(o,it))return;
-    if(!(loose?rawMatch(o,it):offerMatch(o,it)))return;
+    if(!(it.x?xMatch(o,it):loose?rawMatch(o,it):offerMatch(o,it)))return;
     var f=ofactor(o,it),c=o.price*f;if(!best||c<best.cost)best={o:o,cost:c,f:f,sv:o.was>o.price?(o.was-o.price)*f:0};
   });
   return best;
 }
 function bestOffer(it,w){return bestOfferAt(it,w,null)}
+/* ---------- own items on the shopping list (Ekstra) ----------
+   Matched against the week's offers by name, and priced like the other items where the app knows a normal price:
+   from the user's stock (Lager), or a typical pack price per chain from the nightly price job (S.sp[k].u==='pk'). */
+function xsp(k){var e=S.sp&&S.sp[k];return e&&e.u==='pk'&&e.v&&Object.keys(e.v).some(function(s){return e.v[s]>0})?e:null}
+function xavg(e){var v=Object.keys(e.v).map(function(s){return +e.v[s]}).filter(function(x){return x>0});return v.length?v.reduce(function(a,b){return a+b},0)/v.length:0}
+function xTerm(x){return x.id==='slik'?'slik':String(x.name||'').toLowerCase().replace(/\s+/g,' ').trim()}
+function xItems(w){
+  var L=S.lists[w]||{},its=S.pantry.items||{};
+  return (L.extra||[]).map(function(x){
+    var term=xTerm(x),k=slug(term),p=pan(k);
+    if(!p)for(var kk in its){if(its[kk]&&!its[kk].leftover&&String(its[kk].name||'').toLowerCase()===term){p=its[kk];k=kk;break}}
+    var it={k:k,name:term,label:x.name,x:1,xid:x.id,cat:'Ekstra',reason:'extra',need:0,stock:0,packs:1};
+    if(p&&ppu(p)>0&&!xsp(k)){it.unit=p.unit;it.pack=p.pack||0;it.qty=p.pack>0?p.pack:(p.unit==='stk'?1:p.unit==='g'?500:1000)}
+    else{it.unit='pk';it.pack=0;it.qty=1}
+    return it;
+  });
+}
+/* whole words: "kaffe" matches "Gevalia kaffe 400 g" and "bananer" matches "Øko bananer", not "kaffefløde" */
+function xMatch(o,it){
+  if(o.match&&slug(o.match)===it.k)return true;
+  var iw=words(it.name),ow=words(o.name);if(!iw.length||!ow.length)return false;
+  return iw.every(function(w){return ow.some(function(x){return x===w||(x.indexOf(w)===0&&/^(e|r|er|n|en|ne|s|et|erne)$/.test(x.slice(w.length)))||(w.indexOf(x)===0&&x.length>=4&&/^(e|r|er|n|en|ne|s|et|erne)$/.test(w.slice(x.length)))})});
+}
 /* Price per store: the normal estimate, or the offer where it is cheaper. */
 function storeCosts(items,w){
   var res={},unpriced=0,norm=0,skipped=0,looked=0,priced=0;
