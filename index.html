@@ -316,6 +316,8 @@ input[type=checkbox]{accent-color:var(--pine)}
 .ask-go{font-size:28px;line-height:1;color:var(--pine)}
 .it-main{display:flex;flex-direction:column;gap:2px;min-width:0}
 .it-o{font-size:12.5px;color:var(--offer)}
+.it-ref{display:block;font-size:12px;line-height:1.4;color:var(--ink2);margin-top:2px}
+.it-lnk{color:var(--offer);text-decoration:underline;white-space:nowrap}
 .hero-img .art.wide{width:100%;height:100%;border-radius:0}
 .hero h2{text-align:left}
 .sec>.btn{align-self:flex-start}
@@ -1585,6 +1587,10 @@ function wishesHtml(w){
   var P=getPrefs(w),self=P.mode==='self',bits=self?[]:prefsSummary(P);
   return '<div class="wishes"><span class="chip pm">'+(self?'Egne valg':'Efter tilbud')+'</span>'+bits.map(function(b){return '<span class="chip">'+esc(b)+'</span>'}).join('')+'<button class="edit-w" data-act="wizard">Ændr</button></div>';
 }
+/* several packs of an offer: say how many and the price of each, so the total is plain */
+function offPk(v){return v&&v.f>1?' · '+v.f+' × '+nf(v.o.price,2)+' kr.':''}
+/* where an offer's weight or price had to be worked out: show the flyer's own words and a link to the flyer */
+function offRef(o){if(!o||!(o.ref||o.note))return '';return '<span class="it-ref">'+(o.ref?'Avisen: \u201c'+esc(o.ref)+'\u201d ':'')+(o.note?esc(o.note)+' ':'')+(o.u?'<a href="'+esc(o.u)+'" target="_blank" rel="noopener" class="it-lnk">Se avisen'+(o.pg?' (side '+esc(o.pg)+')':'')+'</a>':'')+'</span>'}
 function offerStat(w){var o=activeOffers(w),st={};o.forEach(function(x){st[x.store]=1});var n=Object.keys(st).length;return o.length?o.length+' tilbud hos '+n+(n===1?' butik':' butikker'):'Ingen tilbud hentet endnu'}
 function offerPlanHtml(w,P){
   if(P.mode!=='offers')return '';
@@ -1738,7 +1744,7 @@ function viewShop(){
         var so=storeOf(it),ln=so&&sc.stores[so]?sc.stores[so].lines[key]:null,via=ln&&ln.via,qt=it.pack>0?it.packs+' pk. · '+fq(it.qty,it.unit):fq(it.qty,it.unit);
         var cells=combo?'<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>':'';
         var price=ln?'<span class="pr'+(via?' off':'')+'">ca. '+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':''):'';
-        var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>':'';
+        var ot=via?'<span class="it-o">'+esc(so)+' · '+esc(via.o.name)+offPk(via)+(via.o.to?' · til '+esc(via.o.to):'')+'</span>'+offRef(via.o):'';
         var rh='<label class="it'+(on?' on':'')+(combo?' cmp':'')+'" data-sw="skipit" data-k="'+esc(key)+'"><input type="checkbox" data-chk="'+esc(key)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-n">'+esc(it.name)+'</span><span class="it-m"><span class="mono">'+qt+'</span>'+(qual(it.k)?'<span class="chip">'+qname(via&&via.o.q?via.o.q:qbest(pan(it.k)).q)+'</span>':'')+(via?'<span class="chip off">Tilbud</span>':'')+brandBtn(it)+'</span>'+ot+'</span>'+(combo?cells:'<span class="it-p">'+price+'</span>')+'</label>';
         if(on){doneRows.push(rh);return ''}openN++;return rh}).filter(Boolean);
       var lb=combo?'<div class="lbl cmp-l"><span>'+esc(c)+'</span><span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){return '<span>'+esc(stShort(s2))+'</span>'}).join('')+'</span></div>':'<div class="lbl">'+esc(c)+'</div>';
@@ -1776,12 +1782,12 @@ function viewShop(){
     if(priced&&so&&sc.stores[so]){ln=sc.stores[so].lines[key];via=ln&&ln.via;
       price='<span class="pr'+(via?' off':'')+'">'+(ln.est&&!via&&SPON?'≈ ':'ca. ')+kr(Math.round(ln.cost))+'</span>'+(via?'<span class="was">'+kr(Math.round(ln.norm))+'</span>':'');
       if(combo)cells='<span class="cmp-p" style="--n:'+combo.stores.length+'">'+combo.stores.map(function(s2){var l2=sc.stores[s2]&&sc.stores[s2].lines[key];return '<span class="cc'+(s2===so?' min':'')+(l2&&l2.via?' off':'')+(l2&&l2.est&&!l2.via&&SPON?' est':'')+'">'+(l2?(l2.est&&!l2.via&&SPON?'≈':'')+nf(Math.round(l2.cost),0):'–')+'</span>'}).join('')+'</span>';
-      if(via||combo)ot='<span class="it-o">'+esc(so)+(via?' · '+esc(via.o.name)+(via.o.to?' · til '+esc(via.o.to):''):'')+'</span>';
+      if(via||combo)ot='<span class="it-o">'+esc(so)+(via?' · '+esc(via.o.name)+offPk(via)+(via.o.to?' · til '+esc(via.o.to):''):'')+'</span>'+(via?offRef(via.o):'');
     }else if(xi){
       /* an offer in the store(s) you are going to anyway first, otherwise the best offer anywhere */
       var mine=combo?combo.stores:sel?[sel]:[],bo=null;mine.forEach(function(s2){var b2=bestOfferAt(xi,w,s2);if(b2&&(!bo||b2.cost<bo.cost))bo=b2});if(!bo)bo=bestOffer(xi,w);
       if(bo){via=bo;price='<span class="pr off">'+kr(Math.round(bo.cost))+'</span>'+(bo.o.was>bo.o.price?'<span class="was">'+kr(Math.round(bo.o.was*bo.f))+'</span>':'');
-      ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'}}
+      ot='<span class="it-o">'+esc(bo.o.store)+' · '+esc(bo.o.name)+offPk(bo)+(bo.o.to?' · til '+esc(bo.o.to):'')+'</span>'+offRef(bo.o)}}
     var rh='<label class="it'+(on?' on':'')+(cells?' cmp':'')+'" data-sw="delx" data-id="'+esc(x.id)+'"><input type="checkbox" data-chk="x_'+esc(x.id)+'"'+(on?' checked':'')+'><span class="it-main"><span class="it-x"><span class="it-n">'+esc(x.name)+'</span><button class="x" data-act="delx" data-id="'+esc(x.id)+'" aria-label="Fjern '+esc(x.name)+'">×</button></span>'+(via?'<span class="it-m"><span class="chip off">Tilbud</span></span>':'')+ot+'</span>'+(cells||'<span class="it-p">'+price+'</span>')+'</label>';
     if(on){doneRows.push(rh);return ''}return rh}).join('');
   h=h.replace('<!--XTRA-->',xrows?'<div class="sec xsec"><div class="lbl">Tilføjet af dig</div><div class="group">'+xrows+'</div></div>':'');
